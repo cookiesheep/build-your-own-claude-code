@@ -64,6 +64,7 @@ nav:
   - 参考资料:
       - guide/index.md
       - Claude Code 源码学习指南: guide/claude-code-source-guide.md
+      - AI 辅助学习提示词: guide/ai-study-prompts.md
       - TypeScript 基础: guide/typescript.md
       - Anthropic Messages API: guide/messages-api.md
       - Tool Calling 原理: guide/tool-calling.md
