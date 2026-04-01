@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+coverage/
+*.tsbuildinfo
+
+# Solution files can be optionally gitignored for "no-spoiler" mode
+# tasks/**/solution/
