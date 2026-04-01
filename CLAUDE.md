@@ -6,49 +6,115 @@
 **Tagline**: Learn to build an agent harness from scratch — the "other 40%" that makes AI coding agents actually work.
 **Type**: Task-driven, learn-by-building open source educational project
 **License**: MIT
+**Docs Site**: Material for MkDocs (GitHub Pages)
+**Sister Project**: [claude-code-diy](https://github.com/cookiesheep/claude-code-diy) — recovered Claude Code source running on Node.js
 
 ## What This Project Is
 
-This is NOT a product. It's a **structured learning experience** that teaches people how to build a coding agent (like Claude Code, Cursor Agent, etc.) from scratch.
+A structured learning experience that teaches people how to build a coding agent harness (like the one inside Claude Code) through **5 progressive Labs**. The key differentiator: **learners' code runs inside the real Claude Code system**, not a toy environment.
 
-The project decomposes a coding agent into 7 progressive tasks. Learners complete TODO sections in skeleton code, run tests to verify, and gradually build up a fully functional coding agent.
+The final experience: learner implements the agent loop → builds the project → launches Claude Code's full TUI → the agent loop driving everything is the code they wrote.
 
-After completing all 7 tasks, the learner will have built:
-- A message protocol for LLM conversations
-- An LLM API client with streaming
-- A tool definition and registration system
-- Real coding tools (file read/write, bash execute)
-- A tool execution engine
-- The core agent loop
-- A working CLI coding agent
-
-## Key Concept: Agent Harness
+## Core Concept: Agent Harness
 
 A "coding agent" = **Model (60%) + Harness (40%)**
 
-The model (Claude, GPT, etc.) provides intelligence. The **harness** is everything else:
-- How you format and manage messages
-- How you define and execute tools
-- How you orchestrate the agent loop (prompt → LLM → tool call → execute → feedback → repeat)
-- How you manage context, safety, and UX
+The model (Claude, GPT) provides intelligence. The **harness** is everything else:
+- **Message protocol**: how conversations are structured and managed
+- **Tool system**: how LLM "uses" external tools via JSON Schema
+- **Agent loop**: the while(true) cycle — call LLM → execute tools → feed back results → repeat
+- **Context management**: when to truncate, compact, or summarize history
 
-This project teaches the harness — the 40% that most tutorials skip.
+The harness is what turns a chatbot into an agent. This project teaches that 40%.
+
+Claude Code's real `query.ts` (1,729 lines) implements this loop with production complexity. Strip away error recovery, context compression, permissions, and streaming optimizations — the core logic is ~100 lines. That's what learners implement.
 
 ## Project Background
 
-This project originated from the team lead's deep exploration of Claude Code's source code through the [claude-code-diy](https://github.com/cookiesheep/claude-code-diy) project, where they recovered and fixed ~1888 TypeScript source files from npm source maps. That hands-on experience revealed how the agent harness works internally, and inspired this educational project.
+The team lead explored Claude Code's internal architecture through [claude-code-diy](https://github.com/cookiesheep/claude-code-diy), recovering and running ~1,888 TypeScript source files (416,500 lines) from npm source maps. Key finding:
+
+- Total codebase: 416,500 lines across 1,916 files
+- Core harness (`query.ts`, `QueryEngine.ts`, tool execution): ~12,000 lines (3%)
+- TUI/React/Ink UI: ~73,000 lines (18%)
+- Tool implementations (50+): ~50,829 lines (12%)
+- Infrastructure (auth, telemetry, etc.): ~32,000 lines (8%)
+- Utilities, commands, other: ~248,000 lines (59%)
+
+The core agent loop in `query.ts` already has dependency injection (`QueryDeps`), making it possible to swap in a learner's simplified implementation.
 
 ## Team
 
 - **Size**: 5-person undergraduate student team (sophomore year)
 - **Context**: Software engineering course final project
 - **University**: Sun Yat-sen University (SYSU)
-- **Semester**: Fall 2025 (approximately 12 effective weeks)
-- **Goals**:
-  1. Complete course requirements with high quality
-  2. Create a genuinely useful open source project
-  3. Build portfolio-worthy work
-  4. Learn AI agent architecture hands-on
+- **Semester**: Fall 2025 (~12 effective weeks)
+- **Reference project**: YatSenOS v2 (OS lab series, same university, similar structure)
+
+## Architecture Overview
+
+### Two-track design
+
+```
+Track A: Standalone Agent (~800 lines)
+  Labs 0-4 build a standalone CLI agent from scratch.
+  Each lab adds a visible capability.
+  Tests use Mock LLM (deterministic, no API key needed).
+
+Track B: Claude Code Integration (Lab 5)
+  Learner's agent-loop implementation replaces query.ts
+  in the real Claude Code system (via claude-code-diy).
+  Full TUI runs with learner's code as the engine.
+```
+
+### Lab structure (5 Labs, not 7)
+
+| Lab | Topic | Priority | Core Deliverable | Visible Feedback |
+|-----|-------|----------|-----------------|-----------------|
+| **0** | Environment + Experience | P0 | Clone, build, run Claude Code | See full TUI running |
+| **1** | Messages + LLM Client | P1 | Message types, API call | "I called Claude API and got a response" |
+| **2** | Tool System | P1 | Tool registry, execution | "I triggered a tool and it ran" |
+| **3** | Agent Loop (★ CORE) | P0 | The while(true) cycle | "Agent autonomously called tools in a loop!" |
+| **4** | Integration | P0 | Insert into Claude Code | "Full Claude Code TUI, driven by MY code" |
+
+**Lab 3 is the heart of the project. Labs 1-2 are fast prerequisites. Lab 4 is the climax.**
+
+### Feedback design (inspired by YatSenOS)
+
+Each lab has two feedback mechanisms:
+1. **Unit tests** (`npx vitest run`) — deterministic, Mock LLM, works offline
+2. **Demo script** (`npx tsx labs/lab-XX/demo.ts`) — visual output showing what the lab achieved
+   - Without API key: uses recorded mock responses (same visual effect)
+   - With API key: uses live API (real interaction)
+
+### File structure
+
+```
+build-your-own-agent/
+├── CLAUDE.md                     # This file
+├── README.md                     # GitHub landing page
+├── mkdocs.yml                    # Documentation site config
+├── docs/                         # MkDocs content (Material for MkDocs)
+│   ├── index.md                  # Homepage
+│   ├── labs/                     # Lab guides
+│   │   ├── lab-00/               # Lab 0: Environment
+│   │   ├── lab-01/               # Lab 1: Messages + LLM
+│   │   ├── lab-02/               # Lab 2: Tools
+│   │   ├── lab-03/               # Lab 3: Agent Loop
+│   │   └── lab-04/               # Lab 4: Integration
+│   ├── guide/                    # Reference materials
+│   └── about/                    # Project background
+├── labs/                         # Lab code (skeleton + tests + solution)
+│   ├── lab-00-environment/
+│   ├── lab-01-messages/
+│   ├── lab-02-tools/
+│   ├── lab-03-agent-loop/
+│   └── lab-04-integration/
+├── src/                          # Reference implementation (~800 lines)
+├── shared/                       # Shared types
+├── package.json
+├── tsconfig.json
+└── vitest.config.ts
+```
 
 ## Tech Stack
 
@@ -56,93 +122,51 @@ This project originated from the team lead's deep exploration of Claude Code's s
 |----------|--------|--------|
 | Language | TypeScript | Type safety for learning, matches Claude Code |
 | Runtime | Node.js >= 18 | Universal, ESM support |
-| Testing | Vitest | Fast, modern, good DX |
-| LLM API | Anthropic SDK | Primary target, can abstract later |
-| CLI | Node.js readline | Simple, no framework dependency |
-
-## Project Structure
-
-```
-build-your-own-agent/
-├── CLAUDE.md                     # This file — AI session context
-├── README.md                     # Project overview (bilingual CN/EN)
-├── docs/
-│   ├── PRD.md                    # Product requirements document
-│   ├── MVP_SCOPE.md              # MVP boundaries & task design
-│   ├── ARCHITECTURE.md           # Technical architecture
-│   └── TEAM_BRIEF.md             # Team introduction & sprint plan
-├── tasks/
-│   ├── task-01-messages/         # Task 1: Message protocol
-│   │   ├── README.md             # Knowledge + learning objectives
-│   │   ├── src/                  # Skeleton code with TODOs
-│   │   ├── tests/                # Automated tests
-│   │   ├── solution/             # Reference implementation
-│   │   └── hints.md              # Progressive hints
-│   ├── task-02-llm-client/       # Task 2: LLM API client
-│   ├── task-03-tool-definition/  # Task 3: Tool schema & registry
-│   ├── task-04-core-tools/       # Task 4: File/bash tools
-│   ├── task-05-tool-execution/   # Task 5: Tool dispatch engine
-│   ├── task-06-agent-loop/       # Task 6: Core agent loop
-│   └── task-07-integration/      # Task 7: Complete CLI agent
-├── shared/                       # Shared types used across tasks
-│   └── types.ts
-├── src/                          # Reference implementation (complete)
-│   └── main.ts                   # Entry point for reference agent
-├── package.json
-├── tsconfig.json
-├── vitest.config.ts
-└── .env.example
-```
+| Testing | Vitest | Fast, modern, TypeScript native |
+| LLM API | Anthropic SDK | Primary target, matches Claude Code |
+| Docs | Material for MkDocs | Same as YatSenOS, professional, easy to maintain |
+| Deployment | GitHub Pages | Free, CI/CD via GitHub Actions |
 
 ## Development Conventions
 
 ### Code Style
-- TypeScript strict mode
-- ESM modules (`"type": "module"`)
+- TypeScript strict mode, ESM modules
 - Prefer explicit types over `any`
-- Functions should be small and well-named (no comments needed if self-explanatory)
-- Each task module should be independently testable
+- Functions should be small and well-named
+- Each lab module independently testable
 
 ### Testing Strategy
-- **Unit tests**: Use mock LLM responses (fixed JSON), never depend on real API for grading
-- **Mock fixtures**: Store in `tasks/task-XX/tests/fixtures/` as JSON files
-- **Integration tests**: Optional, require API key, labeled with `describe.skip` by default
-- **Coverage target**: Each task's skeleton should have 90%+ test coverage when correctly implemented
+- **Unit tests**: Mock LLM (fixed JSON responses), deterministic, no API dependency
+- **Demo scripts**: dual-mode (mock / live), always produce visual output
+- **Integration tests**: optional, require API key, skip by default
 
-### Git Conventions
-- Branch naming: `feat/task-01-messages`, `fix/task-03-schema-validation`
-- Commit messages: conventional commits (`feat:`, `fix:`, `docs:`, `test:`)
-- PR required for merging to main
+### Git
+- Branch: `feat/lab-01`, `fix/lab-03-loop`, `docs/lab-02-guide`
+- Conventional commits: `feat:`, `fix:`, `docs:`, `test:`
+- PR required for main
 
-### Task Design Principles
-1. **One clear learning objective per task** — don't mix concerns
-2. **Tests are the specification** — learner knows they're done when tests pass
-3. **Progressive difficulty** — Task 1 is approachable, Task 7 requires synthesizing everything
-4. **No hidden dependencies** — each task's README lists exact prerequisites
-5. **Time-boxed** — each task should be completable in 1-3 hours
-6. **Real code, not pseudocode** — the skeleton compiles and runs, just returns wrong/placeholder values
-
-### Documentation Standards
-- Each task README follows a fixed template (see docs/MVP_SCOPE.md)
-- Bilingual: primary Chinese, English section below
-- Code comments only where logic is non-obvious
+### Lab Design Principles
+1. **Visible feedback for every lab** — not just "tests pass" but "I can see something new working"
+2. **Tests are the spec** — pass all tests = lab complete
+3. **Progressive capability** — each lab adds one observable agent capability
+4. **Mock-first** — all grading tests work offline, no API key needed
+5. **Real code** — skeleton compiles and runs, just returns placeholder values
+6. **Core lab gets 80% effort** — Lab 3 (Agent Loop) is the star, others are supporting cast
 
 ## Working Guidelines for AI Sessions
 
-When working on this project in a new Claude Code session:
-
-1. **Read this file first** to understand project context
-2. **Check docs/MVP_SCOPE.md** for current task design status
-3. **Check git log** for recent changes and current state
-4. **Ask which task or doc the user wants to work on** before starting
-5. **Never create solution code without the corresponding skeleton + tests first**
-6. **Test everything** — run `npx vitest run` before claiming anything works
+1. **Read this file first** for full project context
+2. **Check git log** for current state
+3. **Ask what the user wants to work on** before starting
+4. **Prioritize Lab 3** — if anything conflicts with Lab 3 quality, Lab 3 wins
+5. **Test everything** — `npx vitest run` before claiming done
+6. **PoC first** — before building a feature, verify the approach works
 
 ## What NOT To Do
 
-- Don't over-engineer — this is an educational project, clarity > cleverness
-- Don't add frameworks (React, Express, etc.) — keep dependencies minimal
-- Don't create WebUI — CLI only for MVP
-- Don't implement multi-model support — Anthropic SDK only for MVP
-- Don't write solution code in the skeleton files — keep TODOs clean
-- Don't use LangChain, CrewAI, or other agent frameworks — the point is to build from scratch
+- Don't over-engineer — clarity > cleverness
+- Don't add heavy frameworks — minimal dependencies
+- Don't treat all labs equally — Lab 3 is king, Labs 1-2 are quick setup
+- Don't write solution before skeleton + tests
+- Don't use LangChain/CrewAI — the point is from scratch
+- Don't skip visual feedback — every lab must produce something the learner can see

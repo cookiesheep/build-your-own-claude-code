@@ -1,0 +1,90 @@
+site_name: Build Your Own Agent
+site_url: https://cookiesheep.github.io/build-your-own-agent
+repo_url: https://github.com/cookiesheep/build-your-own-agent
+repo_name: build-your-own-agent
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: 切换到浅色模式
+  features:
+    - navigation.top
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.indexes
+    - navigation.footer
+    - navigation.tracking
+    - navigation.instant
+    - navigation.instant.progress
+    - content.code.copy
+    - content.code.select
+    - content.tabs.link
+    - toc.follow
+  font:
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - 主页:
+      - index.md
+      - 项目背景: about/background.md
+      - 常见问题: about/faq.md
+  - 实验指南:
+      - labs/index.md
+      - Lab 0：环境与体验:
+          - labs/lab-00/index.md
+          - 实验任务: labs/lab-00/tasks.md
+      - Lab 1：消息协议与 LLM 调用:
+          - labs/lab-01/index.md
+          - 实验任务: labs/lab-01/tasks.md
+      - Lab 2：工具系统:
+          - labs/lab-02/index.md
+          - 实验任务: labs/lab-02/tasks.md
+      - Lab 3：Agent Loop（核心）:
+          - labs/lab-03/index.md
+          - 实验任务: labs/lab-03/tasks.md
+      - Lab 4：接入 Claude Code:
+          - labs/lab-04/index.md
+          - 实验任务: labs/lab-04/tasks.md
+  - 参考资料:
+      - guide/index.md
+      - TypeScript 基础: guide/typescript.md
+      - Anthropic Messages API: guide/messages-api.md
+      - Tool Calling 原理: guide/tool-calling.md
+      - Agent Loop 详解: guide/agent-loop.md
+      - Claude Code 架构分析: guide/claude-code-architecture.md
+
+markdown_extensions:
+  - attr_list:
+  - pymdownx.highlight:
+      linenums: true
+      use_pygments: true
+      pygments_lang_class: true
+  - pymdownx.superfences:
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details:
+  - admonition:
+  - toc:
+      permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search:

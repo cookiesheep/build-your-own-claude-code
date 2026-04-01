@@ -10,5 +10,8 @@ Thumbs.db
 coverage/
 *.tsbuildinfo
 
+# MkDocs build output
+site/
+
 # Solution files can be optionally gitignored for "no-spoiler" mode
-# tasks/**/solution/
+# labs/**/solution/
