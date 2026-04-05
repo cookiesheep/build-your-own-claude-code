@@ -1,7 +1,7 @@
-site_name: Build Your Own Agent
-site_url: https://cookiesheep.github.io/build-your-own-agent
-repo_url: https://github.com/cookiesheep/build-your-own-agent
-repo_name: build-your-own-agent
+site_name: Build Your Own Claude Code
+site_url: https://cookiesheep.github.io/build-your-own-claude-code
+repo_url: https://github.com/cookiesheep/build-your-own-claude-code
+repo_name: build-your-own-claude-code
 
 theme:
   name: material

@@ -40,8 +40,8 @@ Claude Code、Cursor Agent 这些 AI 编程工具的能力 = **大模型 (60%) +
 ## 快速开始
 
 ```bash
-git clone https://github.com/cookiesheep/build-your-own-agent.git
-cd build-your-own-agent
+git clone https://github.com/cookiesheep/build-your-own-claude-code.git
+cd build-your-own-claude-code
 npm install
 ```
 

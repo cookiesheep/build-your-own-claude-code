@@ -2,7 +2,7 @@
 
 ## Project Identity
 
-**Name**: build-your-own-agent
+**Name**: build-your-own-claude-code
 **Tagline**: Learn to build an agent harness from scratch — the "other 40%" that makes AI coding agents actually work.
 **Type**: Task-driven, learn-by-building open source educational project
 **License**: MIT
@@ -89,7 +89,7 @@ Each lab has two feedback mechanisms:
 ### File structure
 
 ```
-build-your-own-agent/
+build-your-own-claude-code/
 ├── CLAUDE.md                     # This file
 ├── README.md                     # GitHub landing page
 ├── mkdocs.yml                    # Documentation site config

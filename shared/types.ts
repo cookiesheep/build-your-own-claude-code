@@ -1,5 +1,5 @@
 /**
- * Shared type definitions for build-your-own-agent.
+ * Shared type definitions for build-your-own-claude-code.
  *
  * These types are used across all tasks and the reference implementation.
  * They mirror the Anthropic Messages API format for minimal abstraction.

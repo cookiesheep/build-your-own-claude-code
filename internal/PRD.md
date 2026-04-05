@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-## build-your-own-agent — 从零构建 Coding Agent 教学项目
+## build-your-own-claude-code — 从零构建 Coding Agent 教学项目
 
 **Version**: 0.1 (MVP)
 **Date**: 2026-04-01

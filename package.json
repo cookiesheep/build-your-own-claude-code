@@ -1,5 +1,5 @@
 {
-  "name": "build-your-own-agent",
+  "name": "build-your-own-claude-code",
   "version": "0.1.0",
   "description": "A task-driven, learn-by-building tutorial for creating a coding agent harness from scratch",
   "type": "module",

@@ -111,12 +111,12 @@
 
 ## 给新 Claude Code 会话的开场白
 
-当在 `D:\code\build-your-own-agent` 目录启动新的 Claude Code 会话时，可以用以下 prompt 开始：
+当在 `D:\code\build-your-own-claude-code` 目录启动新的 Claude Code 会话时，可以用以下 prompt 开始：
 
 ---
 
 ```
-我正在开发一个开源教学项目 build-your-own-agent。
+我正在开发一个开源教学项目 build-your-own-claude-code。
 
 这个项目教学习者通过 7 个渐进式任务，从零构建一个 coding agent（类似简化版 Claude Code）。每个任务有知识讲解、带 TODO 的骨架代码、自动化测试和参考答案。
 

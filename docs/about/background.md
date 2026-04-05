@@ -8,7 +8,7 @@
 
 **关键发现：Claude Code 416,500 行代码中，核心 Agent Harness 只有 ~12,000 行（3%）。** 其中最关键的 Agent Loop（`query.ts`）剥掉生产级复杂度后只有约 100 行核心逻辑。
 
-这个发现直接催生了 build-your-own-agent 项目：如果核心只有 100 行，那每个人都可以理解并实现它。
+这个发现直接催生了 build-your-own-claude-code 项目：如果核心只有 100 行，那每个人都可以理解并实现它。
 
 ## 为什么不是另一个 WebUI
 

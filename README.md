@@ -1,4 +1,4 @@
-# build-your-own-agent
+# build-your-own-claude-code
 
 [中文](#中文) | [English](#english)
 
@@ -57,8 +57,8 @@ Claude Code、Cursor Agent 这些 AI 编程工具的能力 = 大模型 (60%) + A
 ### 安装
 
 ```bash
-git clone https://github.com/cookiesheep/build-your-own-agent.git
-cd build-your-own-agent
+git clone https://github.com/cookiesheep/build-your-own-claude-code.git
+cd build-your-own-claude-code
 npm install
 ```
 
@@ -176,8 +176,8 @@ Each task includes:
 ## Quick Start
 
 ```bash
-git clone https://github.com/cookiesheep/build-your-own-agent.git
-cd build-your-own-agent
+git clone https://github.com/cookiesheep/build-your-own-claude-code.git
+cd build-your-own-claude-code
 npm install
 
 # Start Task 1

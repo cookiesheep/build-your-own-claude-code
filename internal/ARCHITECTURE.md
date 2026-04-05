@@ -2,7 +2,7 @@
 
 ## 系统总览
 
-build-your-own-agent 教学习者构建一个简化版 coding agent。下图是最终产物的架构：
+build-your-own-claude-code 教学习者构建一个简化版 coding agent。下图是最终产物的架构：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -188,7 +188,7 @@ class MockLLMClient implements LLMClientInterface {
 ## 文件结构（最终状态）
 
 ```
-build-your-own-agent/
+build-your-own-claude-code/
 ├── CLAUDE.md
 ├── README.md
 ├── package.json

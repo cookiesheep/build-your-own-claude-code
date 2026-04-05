@@ -102,7 +102,7 @@ LLM 返回 tool_use → ? → ? → ? → tool_result 回传给 LLM
 ## 提示词 5：对比分析（Day 5-6 使用）
 
 ```
-我在做一个教学项目 build-your-own-agent，需要让学习者实现一个简化版的 Agent Loop 来替换 query.ts。
+我在做一个教学项目 build-your-own-claude-code，需要让学习者实现一个简化版的 Agent Loop 来替换 query.ts。
 
 请帮我做一个对比分析：
 

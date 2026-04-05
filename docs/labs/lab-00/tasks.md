@@ -15,8 +15,8 @@ npm --version
 ## 任务 2：克隆并运行项目
 
 ```bash
-git clone https://github.com/cookiesheep/build-your-own-agent.git
-cd build-your-own-agent
+git clone https://github.com/cookiesheep/build-your-own-claude-code.git
+cd build-your-own-claude-code
 npm install
 ```
 

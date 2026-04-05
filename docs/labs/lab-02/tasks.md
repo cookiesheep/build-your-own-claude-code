@@ -86,7 +86,7 @@ npx vitest run labs/lab-02-tools/tests/tool-executor.test.ts
 
     Simulating tool_use: read_file("./package.json")
     Executing...
-    Result: { "name": "build-your-own-agent", ... }
+    Result: { "name": "build-your-own-claude-code", ... }
     ✓ Tool executed successfully
 
     Simulating tool_use: bash_execute("echo hello")
