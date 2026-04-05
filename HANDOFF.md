@@ -281,10 +281,20 @@ CCB 的 learn/phase-2-conversation-loop.md 有 query.ts 每一段的详细标注
 
 ### 已发现的待解决问题：第三方 API 认证
 
-**问题**：Claude Code 原版只支持官方 Anthropic API。第三方代理（packyapi.com 等）报 403。
+**问题**：packyapi.com 的 CC 分组令牌对我们的修改版报 403。
 
-**根因分析**（已深度调研）：
-1. `src/utils/auth.ts:299-309`：ANTHROPIC_API_KEY 必须在 `getGlobalConfig().customApiKeyResponses.approved` 列表中才被使用。已修复（直接返回 env 变量）。
+**最终结论（经大量测试确认）**：这是 packyapi 服务端限制，与代码无关。
+- 用纯 Anthropic SDK + packyapi key 直接请求也是 403
+- 用 curl 带任何 header 组合也是 403
+- packyapi CC 分组令牌只允许通过 cc-switch 本地代理或官方二进制访问
+- CCB (claude-code-best) 的 client.ts 和原版完全一样，没有特殊的第三方 API 处理
+- Owner 之前能用是因为 cc-switch 在后台运行做了代理转发
+
+**对教学项目的影响**：学习者需要使用不限制客户端的 API 代理（如 OpenRouter、其他 Anthropic 兼容代理）或 Anthropic 官方 API Key。packyapi 的 CC 令牌不适用。
+
+**已做的代码修改（保留，对其他代理有用）**：
+1. `src/utils/auth.ts:299`：去掉 approved 列表检查，环境变量有 ANTHROPIC_API_KEY 就直接用
+2. `src/services/api/client.ts`：第三方 BASE_URL 时跳过 OAuth 检查，直接用 AUTH_TOKEN
 2. `src/services/api/client.ts:105`：请求头 `x-app: 'cli'` + `User-Agent` 标识官方客户端。部分代理（如 packyapi）服务端校验这些头，拒绝非官方客户端。
 3. `ANTHROPIC_API_KEY` 走 `x-api-key` 头；`ANTHROPIC_AUTH_TOKEN` 走 `Authorization: Bearer` 头。有些代理只接受后者。
 
@@ -296,28 +306,18 @@ CCB 的 learn/phase-2-conversation-loop.md 有 query.ts 每一段的详细标注
 - 运行时注入为 `process.env.ANTHROPIC_AUTH_TOKEN`（不是 API_KEY）
 - 还加了「OpenAI Chat API」选项支持 DeepSeek 等非 Anthropic 模型
 
-**我们已做的修改**（在 claude-code-diy 的 `D:\test-claude-code\claude-code` 中）：
-1. `src/utils/auth.ts:299`：去掉 approved 列表检查，环境变量有 ANTHROPIC_API_KEY 就直接用
-2. `src/services/api/client.ts`：第三方 API 时跳过 OAuth 检查，直接用 AUTH_TOKEN 作 Bearer + 正确构造 Anthropic SDK
+**我们已做的修改**：
+- `src/utils/auth.ts:299`：去掉 approved 列表检查，环境变量有 ANTHROPIC_API_KEY 就直接用
 
-**测试结果**：
-- packyapi.com 始终返回 403。经调研，packyapi 的 CC 分组令牌要求通过 cc-switch 本地代理（127.0.0.1:15721）访问，直接请求必被拒。这是代理端限制，非代码问题。
-- Owner 没有 Anthropic 官方 API key，无法做完整 API 往返验证
-- DeepSeek key 是 OpenAI 格式，不兼容 Anthropic Messages API
+**建议的后续方案（分两步）**：
 
-**结论**：代码层面的 PoC 已通过（TUI 启动 + 模块加载 + 请求发出），API 往返验证待有合适的 API key 后再做。
+快速方案（临时）：告诉学习者用 `ANTHROPIC_AUTH_TOKEN`（Bearer 头）而不是 `ANTHROPIC_API_KEY`（x-api-key 头）：
+```powershell
+$env:ANTHROPIC_AUTH_TOKEN = "你的key"
+$env:ANTHROPIC_BASE_URL = "https://你的代理地址"
+```
 
-**后续方案（P0，新会话需优先处理）**：
-
-方案 1（推荐）：从 CCB 移植 `/login` 的 `custom_platform`（Anthropic Compatible）和 `openai_chat_api`（OpenAI Compatible）功能。
-- 涉及文件：`src/components/ConsoleOAuthFlow.tsx`
-- CCB 的实现：添加 `custom_platform` state，让用户在 TUI 内填 Base URL + API Key + 模型 ID，保存到 settings
-- CCB 还加了 OpenAI 兼容支持（`src/services/api/claude.ts:1307`，当 `getAPIProvider() === 'openai'` 时走 OpenAI 路径）——这让 DeepSeek 等非 Anthropic 模型也能用
-- 工作量：2-3 天
-
-方案 2（快速验证用）：找一个不限制客户端的 Anthropic 兼容代理（如 OpenRouter），或申请 Anthropic 官方 API key（有免费额度）
-
-**全局 settings.json 注意事项**：`~/.claude/settings.json` 是全局共享的，官方 Claude Code 和修改版共用。里面的 env 字段会被注入到 process.env。当前里面有 packyapi 的配置，会干扰测试。新会话如需测试，要么临时清空 env 字段，要么用项目级 `.claude/settings.json` 覆盖。
+完整方案（P1）：从 CCB 移植 `/login` 的 `custom_platform` 功能到我们的代码中。涉及修改 `src/components/ConsoleOAuthFlow.tsx`，工作量约 1-2 天。
 
 ---
 
