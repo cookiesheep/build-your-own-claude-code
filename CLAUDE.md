@@ -1,172 +1,67 @@
-# CLAUDE.md — Build Your Own Agent
+# CLAUDE.md — Build Your Own Claude Code
 
-## Project Identity
+## 项目一句话
 
-**Name**: build-your-own-claude-code
-**Tagline**: Learn to build an agent harness from scratch — the "other 40%" that makes AI coding agents actually work.
-**Type**: Task-driven, learn-by-building open source educational project
-**License**: MIT
-**Docs Site**: Material for MkDocs (GitHub Pages)
-**Sister Project**: [claude-code-diy](https://github.com/cookiesheep/claude-code-diy) — recovered Claude Code source running on Node.js
+一个基于真实 Claude Code 源码的渐进式教学项目——学习者通过 6 个 Lab 逐步实现 Agent Harness 的核心模块，最终将自己写的代码插入 Claude Code 真实系统运行。
 
-## What This Project Is
+## 项目名称与仓库
 
-A structured learning experience that teaches people how to build a coding agent harness (like the one inside Claude Code) through **5 progressive Labs**. The key differentiator: **learners' code runs inside the real Claude Code system**, not a toy environment.
+- **Name**: build-your-own-claude-code
+- **GitHub**: https://github.com/cookiesheep/build-your-own-claude-code
+- **Sister project**: [claude-code-diy](https://github.com/cookiesheep/claude-code-diy) — 可运行的 Claude Code 源码（416,500 行 TypeScript）
+- **License**: MIT
 
-The final experience: learner implements the agent loop → builds the project → launches Claude Code's full TUI → the agent loop driving everything is the code they wrote.
+## 完整的调研记录、设计决策、需求说明
 
-## Core Concept: Agent Harness
+**请务必阅读 [HANDOFF.md](./HANDOFF.md)**——那里记录了项目的完整上下文，包括：
+- 项目 owner 的背景和核心需求
+- 所有调研过的参考项目及其分析
+- 被否决的方案及原因
+- 最终方案的详细设计
+- 待验证的 PoC 计划
+- 待做事项清单
 
-A "coding agent" = **Model (60%) + Harness (40%)**
+HANDOFF.md 是从前一个 AI 会话传递到本会话的完整交接文档。
 
-The model (Claude, GPT) provides intelligence. The **harness** is everything else:
-- **Message protocol**: how conversations are structured and managed
-- **Tool system**: how LLM "uses" external tools via JSON Schema
-- **Agent loop**: the while(true) cycle — call LLM → execute tools → feed back results → repeat
-- **Context management**: when to truncate, compact, or summarize history
+## 核心理念
 
-The harness is what turns a chatbot into an agent. This project teaches that 40%.
+### Agent Harness
 
-Claude Code's real `query.ts` (1,729 lines) implements this loop with production complexity. Strip away error recovery, context compression, permissions, and streaming optimizations — the core logic is ~100 lines. That's what learners implement.
+Coding Agent = **模型 (60%) + Harness (40%)**
 
-## Project Background
+模型提供智能。Harness 是让智能变成行动的一切：消息协议、工具系统、Agent Loop、上下文管理。Claude Code 的 416,500 行代码中，核心 Harness 只有 ~12,000 行（3%）。其中最关键的 Agent Loop（`query.ts`）剥掉生产级复杂度后，核心逻辑约 100 行。
 
-The team lead explored Claude Code's internal architecture through [claude-code-diy](https://github.com/cookiesheep/claude-code-diy), recovering and running ~1,888 TypeScript source files (416,500 lines) from npm source maps. Key finding:
+### 教学方法：不删不封装，挖空关键文件
 
-- Total codebase: 416,500 lines across 1,916 files
-- Core harness (`query.ts`, `QueryEngine.ts`, tool execution): ~12,000 lines (3%)
-- TUI/React/Ink UI: ~73,000 lines (18%)
-- Tool implementations (50+): ~50,829 lines (12%)
-- Infrastructure (auth, telemetry, etc.): ~32,000 lines (8%)
-- Utilities, commands, other: ~248,000 lines (59%)
+学习者拿到的是**完整可运行的 Claude Code**（通过 claude-code-diy）。关键文件被替换为带 TODO 的骨架。学习者补全 → 构建 → TUI 跑起来。
 
-The core agent loop in `query.ts` already has dependency injection (`QueryDeps`), making it possible to swap in a learner's simplified implementation.
+### 渐进式能力增长
 
-## Team
+Claude Code TUI 是固定的壳，Agent 大脑从空开始逐步获得能力（类比 YatSenOS 的 QEMU）。
 
-- **Size**: 5-person undergraduate student team (sophomore year)
-- **Context**: Software engineering course final project
-- **University**: Sun Yat-sen University (SYSU)
-- **Semester**: Fall 2025 (~12 effective weeks)
-- **Reference project**: YatSenOS v2 (OS lab series, same university, similar structure)
+## Lab 设计（6 个）
 
-## Architecture Overview
+| Lab | 主题 | 学习者实现什么 | TUI 中看到的反馈 |
+|-----|------|--------------|----------------|
+| 0 | 环境 + 体验 | 安装运行完整 Claude Code | 看到完整 TUI |
+| 1 | API 调用 | 调 LLM 返回文字，不用工具 | Agent 能回复但不能做事 |
+| 2 | 工具系统 | 工具注册 + 单轮执行 | Agent 用了一次工具就停 |
+| **3** | **Agent Loop** ★ | **while(true) 循环** | **Agent 自主多轮调用工具** |
+| 4 | 规划 + 子 Agent | TodoWrite + Subagent | Agent 先想再做、会拆任务 |
+| 5 | 上下文压缩 | 三层压缩策略 | Agent 长对话不崩 |
 
-### Two-track design
+## 技术架构
 
-```
-Track A: Standalone Agent (~800 lines)
-  Labs 0-4 build a standalone CLI agent from scratch.
-  Each lab adds a visible capability.
-  Tests use Mock LLM (deterministic, no API key needed).
+- 基线: claude-code-diy (Node.js)
+- 测试: Vitest + Mock LLM
+- 文档: Material for MkDocs
+- Web 编辑器: Monaco Editor (浏览器内写代码 + 测试)
+- 部署: GitHub Pages + GitHub Actions
 
-Track B: Claude Code Integration (Lab 5)
-  Learner's agent-loop implementation replaces query.ts
-  in the real Claude Code system (via claude-code-diy).
-  Full TUI runs with learner's code as the engine.
-```
+## 开发规范
 
-### Lab structure (5 Labs, not 7)
-
-| Lab | Topic | Priority | Core Deliverable | Visible Feedback |
-|-----|-------|----------|-----------------|-----------------|
-| **0** | Environment + Experience | P0 | Clone, build, run Claude Code | See full TUI running |
-| **1** | Messages + LLM Client | P1 | Message types, API call | "I called Claude API and got a response" |
-| **2** | Tool System | P1 | Tool registry, execution | "I triggered a tool and it ran" |
-| **3** | Agent Loop (★ CORE) | P0 | The while(true) cycle | "Agent autonomously called tools in a loop!" |
-| **4** | Integration | P0 | Insert into Claude Code | "Full Claude Code TUI, driven by MY code" |
-
-**Lab 3 is the heart of the project. Labs 1-2 are fast prerequisites. Lab 4 is the climax.**
-
-### Feedback design (inspired by YatSenOS)
-
-Each lab has two feedback mechanisms:
-1. **Unit tests** (`npx vitest run`) — deterministic, Mock LLM, works offline
-2. **Demo script** (`npx tsx labs/lab-XX/demo.ts`) — visual output showing what the lab achieved
-   - Without API key: uses recorded mock responses (same visual effect)
-   - With API key: uses live API (real interaction)
-
-### File structure
-
-```
-build-your-own-claude-code/
-├── CLAUDE.md                     # This file
-├── README.md                     # GitHub landing page
-├── mkdocs.yml                    # Documentation site config
-├── docs/                         # MkDocs content (Material for MkDocs)
-│   ├── index.md                  # Homepage
-│   ├── labs/                     # Lab guides
-│   │   ├── lab-00/               # Lab 0: Environment
-│   │   ├── lab-01/               # Lab 1: Messages + LLM
-│   │   ├── lab-02/               # Lab 2: Tools
-│   │   ├── lab-03/               # Lab 3: Agent Loop
-│   │   └── lab-04/               # Lab 4: Integration
-│   ├── guide/                    # Reference materials
-│   └── about/                    # Project background
-├── labs/                         # Lab code (skeleton + tests + solution)
-│   ├── lab-00-environment/
-│   ├── lab-01-messages/
-│   ├── lab-02-tools/
-│   ├── lab-03-agent-loop/
-│   └── lab-04-integration/
-├── src/                          # Reference implementation (~800 lines)
-├── shared/                       # Shared types
-├── package.json
-├── tsconfig.json
-└── vitest.config.ts
-```
-
-## Tech Stack
-
-| Category | Choice | Reason |
-|----------|--------|--------|
-| Language | TypeScript | Type safety for learning, matches Claude Code |
-| Runtime | Node.js >= 18 | Universal, ESM support |
-| Testing | Vitest | Fast, modern, TypeScript native |
-| LLM API | Anthropic SDK | Primary target, matches Claude Code |
-| Docs | Material for MkDocs | Same as YatSenOS, professional, easy to maintain |
-| Deployment | GitHub Pages | Free, CI/CD via GitHub Actions |
-
-## Development Conventions
-
-### Code Style
-- TypeScript strict mode, ESM modules
-- Prefer explicit types over `any`
-- Functions should be small and well-named
-- Each lab module independently testable
-
-### Testing Strategy
-- **Unit tests**: Mock LLM (fixed JSON responses), deterministic, no API dependency
-- **Demo scripts**: dual-mode (mock / live), always produce visual output
-- **Integration tests**: optional, require API key, skip by default
-
-### Git
-- Branch: `feat/lab-01`, `fix/lab-03-loop`, `docs/lab-02-guide`
-- Conventional commits: `feat:`, `fix:`, `docs:`, `test:`
-- PR required for main
-
-### Lab Design Principles
-1. **Visible feedback for every lab** — not just "tests pass" but "I can see something new working"
-2. **Tests are the spec** — pass all tests = lab complete
-3. **Progressive capability** — each lab adds one observable agent capability
-4. **Mock-first** — all grading tests work offline, no API key needed
-5. **Real code** — skeleton compiles and runs, just returns placeholder values
-6. **Core lab gets 80% effort** — Lab 3 (Agent Loop) is the star, others are supporting cast
-
-## Working Guidelines for AI Sessions
-
-1. **Read this file first** for full project context
-2. **Check git log** for current state
-3. **Ask what the user wants to work on** before starting
-4. **Prioritize Lab 3** — if anything conflicts with Lab 3 quality, Lab 3 wins
-5. **Test everything** — `npx vitest run` before claiming done
-6. **PoC first** — before building a feature, verify the approach works
-
-## What NOT To Do
-
-- Don't over-engineer — clarity > cleverness
-- Don't add heavy frameworks — minimal dependencies
-- Don't treat all labs equally — Lab 3 is king, Labs 1-2 are quick setup
-- Don't write solution before skeleton + tests
-- Don't use LangChain/CrewAI — the point is from scratch
-- Don't skip visual feedback — every lab must produce something the learner can see
+- 分支: `feat/lab-01`, `fix/lab-03-loop`
+- 提交: conventional commits
+- 代码: TypeScript strict, ESM
+- 测试: Mock-first, 所有测试离线可跑
+- Lab 3 是核心，获得 80% 精力
