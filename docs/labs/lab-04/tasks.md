@@ -1,71 +1,82 @@
-# Lab 4：实验任务
+# Lab 4：规划与子 Agent — 实验任务
 
-## 任务 1：理解 query() 接口
+## 任务 1：实现 TodoManager
 
-阅读 `claude-code-diy/src/query.ts` 的前 300 行，回答：
-
-1. `query()` 的完整参数类型是什么？
-2. 它 yield 了哪些类型的消息？
-3. 它返回什么？
-4. `QueryDeps` 包含哪些依赖？
-
-!!! tip "不需要读懂全部 1,729 行，只需要理解接口边界。"
-
-## 任务 2：编写 query-lab.ts
-
-创建 `claude-code-diy/src/query-lab.ts`，实现简化版 `query()`：
+补全 `labs/lab-04/src/todo-manager.ts`：
 
 ```typescript
-// TODO: 导入必要的类型和工具
-// TODO: 实现 query() 函数
-//   1. 接受 QueryParams
-//   2. 使用 deps.callModel() 调用 LLM
-//   3. 收集 tool_use blocks
-//   4. 如果没有 tool_use → return { reason: 'completed' }
-//   5. 使用 runTools() 执行工具
-//   6. yield 执行结果
-//   7. 循环
+// TODO: 定义 Todo 接口（id, content, status）
+// TODO: 实现 TodoManager 类
+//   - create(content: string): Todo        // 创建待办，status = 'pending'
+//   - update(id: string, status): void     // 更新状态
+//   - list(): Todo[]                       // 获取所有待办
+//   - getActive(): Todo[]                  // 获取未完成的待办
+//   - format(): string                     // 格式化为 LLM 可读的文字
 ```
 
-关键：你的实现需要正确 yield 消息，让 TUI 能正常渲染。
-
-## 任务 3：构建并运行
-
-修改 `claude-code-diy/build.mjs`，添加 `--lab` 模式：
-
+验证：
 ```bash
-# 用你的实现替换 query.ts
-node build.mjs --lab
+npx vitest run labs/lab-04/tests/todo-manager.test.ts
+```
 
-# 启动 Claude Code
-node cli.js
+## 任务 2：实现 todo_write 工具
+
+在 Lab 3 的工具系统基础上，注册一个 `todo_write` 工具：
+
+```typescript
+// TODO: 实现 todo_write 工具
+// input: { todos: Array<{ content: string, status: string }> }
+// 作用：接受 LLM 的计划列表，更新 TodoManager
+// 返回：格式化后的计划列表（LLM 可确认）
 ```
 
 !!! success "你应该看到"
 
-    **完整的 Claude Code TUI 启动了**，和官方一模一样的界面。
-
-    试着和它对话：
+    运行 demo，Agent 现在会先创建计划：
     ```
-    > 帮我创建一个 fizzbuzz.js 文件
+    You: 帮我实现一个计算器
+
+    [Agent] 我来制定一个计划：
+    📋 计划：
+    1. [ ] 创建 calculator.js 文件
+    2. [ ] 实现基本运算（加减乘除）
+    3. [ ] 编写测试用例
+    4. [ ] 运行测试验证
+
+    [Agent] 开始执行...
+    [✓] 步骤 1：创建 calculator.js
+    [✓] 步骤 2：实现基本运算
+    ...
     ```
 
-    Agent 会调用工具、创建文件——而驱动这一切的 Agent Loop，是你在 Lab 3 写的代码。
+## 任务 3：实现 Subagent 派生
 
-    **如果你走到了这一步，恭喜你——你真正理解了 Coding Agent 的核心原理。**
+补全 `labs/lab-04/src/subagent.ts`：
 
-## 任务 4（Bonus）：对比分析
+```typescript
+// TODO: 实现 runSubagent 函数
+// 关键：子 Agent 有自己独立的 messages[]，不污染主 Agent
+//
+// async function runSubagent(
+//   client: LLMClient,
+//   tools: ToolDefinition[],
+//   task: string,  // 子任务描述
+// ): Promise<string>  // 返回子 Agent 的最终输出
+//
+// 实现步骤：
+// 1. 创建全新的 messages（独立上下文！）
+// 2. 把 task 作为 user 消息
+// 3. 用 agentLoop 驱动子 Agent 完成任务
+// 4. 返回最终结果
+```
 
-对比你的 `query-lab.ts` 和官方 `query.ts`，列出：
-
-1. 你没有实现但生产环境需要的功能（至少 5 个）
-2. 每个功能解决什么问题
-3. 如果要加上这些功能，你会怎么改你的代码
-
-这是理解"教学版 vs 生产版"差距的最好练习。
+验证：
+```bash
+npx vitest run labs/lab-04/tests/subagent.test.ts
+```
 
 ## 思考题
 
-1. 你的简化版在什么场景下会失败，而官方版本不会？
-2. Claude Code 的 `query.ts` 为什么有 7 个不同的 `continue` 分支？每个解决什么问题？
-3. 如果要把你的 Agent Loop 用在一个不同的 LLM（比如 GPT-4）上，需要改什么？
+1. TodoWrite 和直接在 system prompt 里写「先计划再执行」有什么区别？
+2. 子 Agent 的 messages[] 为什么必须独立？用同一个 messages 会出什么问题？
+3. Claude Code 的 AgentTool 就是 Subagent 的生产实现，你能找到它的源码位置吗？

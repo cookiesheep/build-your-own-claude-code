@@ -1,4 +1,4 @@
-# Lab 2：实验任务
+# Lab 2：给 Agent 一双手 — 实验任务
 
 ## 任务 1：定义 Tool 接口和 ToolRegistry
 

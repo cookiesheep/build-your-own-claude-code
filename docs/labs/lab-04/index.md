@@ -1,54 +1,69 @@
-# Lab 4：接入 Claude Code
+# Lab 4：规划与子 Agent
 
-!!! tip "终极验证 — 你的代码驱动真实的 Claude Code。"
+!!! tip "没有计划的 Agent 走哪算哪。<br/>任务太大一个人干不完，要能分给队友。"
 
 ## 实验目的
 
-1. 理解 Claude Code 的 `query.ts` 接口边界
-2. 将你的 Agent Loop 适配为 Claude Code 需要的格式
-3. 替换核心模块，构建并启动
-4. 在完整的 Claude Code TUI 中使用你自己实现的 Agent Loop
+1. 理解为什么 Agent 需要「先规划再执行」
+2. 实现 TodoWrite 机制：Agent 在执行前先列出步骤
+3. 理解 Subagent 的核心思想：独立的 messages[]，防止上下文污染
+4. 实现子 Agent 派生：把大任务拆分给独立上下文的子 Agent 处理
 
 ## 背景知识
 
-### Claude Code 的模块化设计
+### 为什么需要规划？
 
-Claude Code 的 Agent Loop 在 `src/query.ts` 中，它已经有依赖注入设计：
+没有规划的 Agent：
+
+```
+用户：帮我重构这个项目
+Agent：（立刻开始乱改）→ 改了 A → 改了 B（和 A 冲突了）→ 一团糟
+```
+
+有规划的 Agent（TodoWrite）：
+
+```
+用户：帮我重构这个项目
+Agent：我先制定计划：
+       1. [ ] 读取所有相关文件
+       2. [ ] 分析当前架构
+       3. [ ] 制定重构方案
+       4. [ ] 逐步实施
+
+       → 标记 1 为进行中 → 完成 → 标记 2 为进行中 → ...
+```
+
+来自 learn-claude-code 的格言：*「没有计划的 agent 走哪算哪 — 先列步骤再动手，完成率翻倍」*
+
+### TodoWrite 的核心数据结构
 
 ```typescript
-// query.ts 第 263 行
-const deps = params.deps ?? productionDeps();
-
-// deps 的类型
-type QueryDeps = {
-  callModel: typeof queryModelWithStreaming,
-  microcompact: ...,
-  autocompact: ...,
-  uuid: () => string,
+interface Todo {
+  id: string;
+  content: string;
+  status: 'pending' | 'in_progress' | 'completed';
 }
 ```
 
-这意味着 `query()` 函数是可替换的。`QueryEngine.ts` 调用 `query()` 时：
+Agent 在任务开始时调用 `todo_write` 工具创建计划，每完成一步就更新状态。这和 Claude Code 里的 `TaskCreateTool`、`TaskUpdateTool` 是同一个思路。
 
-```typescript
-// QueryEngine.ts 第 675 行
-for await (const message of query(params)) {
-  // 处理消息
-}
+### 为什么需要子 Agent？
+
+```
+主 Agent 上下文（越来越长）：
+  [system]
+  [user: 帮我实现 5 个功能]
+  [assistant: 功能 1...]  [tool_result]
+  [assistant: 功能 2...]  [tool_result]
+  ...（上下文被前面的对话污染）
+
+子 Agent 上下文（每个都干净）：
+  [system: 你只需要实现功能 3]
+  [user: 开始吧]
+  [assistant: ...]   ← 不受其他任务干扰
 ```
 
-**只要你的实现满足 `query()` 的接口约束，整个系统就能正常工作。**
-
-### 适配的核心挑战
-
-你在 Lab 3 写的是简化版（~100 行），Claude Code 的接口需要：
-
-1. 正确 yield 消息类型（`AssistantMessage`、`UserMessage` 等）
-2. 返回 `Terminal` 对象（包含 `reason` 字段）
-3. 使用 `deps.callModel()` 而不是直接调用 SDK
-4. 处理 `toolUseContext`（工具执行上下文）
-
-这个适配过程本身就是学习"生产级代码 vs 教学代码"差距的最好方式。
+来自 learn-claude-code 的格言：*「大任务拆小，每个小任务干净的上下文」*
 
 ## 实验任务
 

@@ -49,18 +49,21 @@ nav:
       - Lab 0：环境与体验:
           - labs/lab-00/index.md
           - 实验任务: labs/lab-00/tasks.md
-      - Lab 1：消息协议与 LLM 调用:
+      - Lab 1：让 Agent 会说话:
           - labs/lab-01/index.md
           - 实验任务: labs/lab-01/tasks.md
-      - Lab 2：工具系统:
+      - Lab 2：给 Agent 一双手:
           - labs/lab-02/index.md
           - 实验任务: labs/lab-02/tasks.md
       - Lab 3：Agent Loop（核心）:
           - labs/lab-03/index.md
           - 实验任务: labs/lab-03/tasks.md
-      - Lab 4：接入 Claude Code:
+      - Lab 4：规划与子 Agent:
           - labs/lab-04/index.md
           - 实验任务: labs/lab-04/tasks.md
+      - Lab 5：上下文压缩:
+          - labs/lab-05/index.md
+          - 实验任务: labs/lab-05/tasks.md
   - 参考资料:
       - guide/index.md
       - TypeScript 基础: guide/typescript.md

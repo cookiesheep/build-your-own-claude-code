@@ -14,7 +14,7 @@
 
 ### 已有的成果
 
-1. **claude-code-diy** ([GitHub](https://github.com/cookiesheep/claude-code-diy))：从 Claude Code npm 包 source map 恢复了 ~1,888 个 TypeScript 文件（416,500 行），并在 Node.js 上修复所有运行问题使其完整运行。这给了 owner 对 Claude Code 内部架构的深入理解。
+1. **claude-code-diy** ([GitHub](https://github.com/cookiesheep/claude-code-diy))：从 Claude Code npm 包 source map 恢复了 ~1,888 个 TypeScript 文件（416,500 行），并在 Node.js 上修复所有运行问题使其完整运行。这给了 owner 对 Claude Code 内部架构的深入理解。这个本地目录在 D:\test-claude-code\claude-code 代码几乎和 build-your-own-claude-code一模一样,build-your-own-claude-code是为了项目开发专门新建立的一个目录
 
 2. **本项目 build-your-own-claude-code**：基于上述理解，设计的教学项目。已完成项目初始化、MkDocs 文档站点搭建、初版 Lab 页面。
 
@@ -251,7 +251,7 @@ CCB 的 learn/phase-2-conversation-loop.md 有 query.ts 每一段的详细标注
 
 ### P0（必须做，决定项目成败）
 
-1. **PoC 验证**：在 claude-code-diy 中写一个简化版 query-lab.ts，替换 query.ts，验证 TUI 是否正常运行。这决定了整个"挖空"方案是否可行。
+1. **PoC 验证**：在 build-your-own-claude-code 中写一个简化版 query-lab.ts，替换 query.ts，验证 TUI 是否正常运行。这决定了整个"挖空"方案是否可行。
 
 2. **Lab 3 完整实现**：skeleton 代码 + Mock LLM 测试 + 文档 + hints。这是核心 Lab。
 
@@ -289,7 +289,56 @@ CCB 的 learn/phase-2-conversation-loop.md 有 query.ts 每一段的详细标注
 
 ---
 
-## 七、给新 AI 会话的注意事项
+## 七、文档网站（已部署）
+
+本项目维护了一个 Material for MkDocs 文档站点，已通过 GitHub Actions 自动部署到 GitHub Pages。
+
+### 基本信息
+
+| 项 | 内容 |
+|---|---|
+| **线上地址** | https://cookiesheep.github.io/build-your-own-claude-code |
+| **源文件目录** | `docs/`（Markdown 文件） |
+| **配置文件** | `mkdocs.yml`（导航、主题、插件） |
+| **CI 文件** | `.github/workflows/docs.yml` |
+| **本地预览** | `mkdocs serve` → http://127.0.0.1:8000 |
+| **本地构建** | `mkdocs build` → 输出到 `site/`（已 gitignore） |
+
+### 文档结构
+
+```
+docs/
+├── index.md              # 首页
+├── about/
+│   ├── background.md     # 项目背景
+│   └── faq.md            # 常见问题
+├── labs/
+│   ├── index.md          # 实验总览
+│   ├── lab-00/           # Lab 0：环境与体验
+│   ├── lab-01/           # Lab 1：让 Agent 会说话
+│   ├── lab-02/           # Lab 2：给 Agent 一双手
+│   ├── lab-03/           # Lab 3：Agent Loop（核心）
+│   ├── lab-04/           # Lab 4：规划与子 Agent（新）
+│   └── lab-05/           # Lab 5：上下文压缩（新）
+└── guide/
+    ├── index.md
+    ├── typescript.md
+    ├── messages-api.md
+    ├── tool-calling.md
+    ├── agent-loop.md
+    └── claude-code-architecture.md
+```
+
+### 注意事项
+
+1. **每次修改 docs/ 或 mkdocs.yml 并 push 到 main，GitHub Actions 会自动重新部署**
+2. Lab 页面目前是"内容占位符"级别（结构完整，细节待完善），后续开发 Lab 时需要同步更新
+3. `mkdocs build` 之前必须先 `pip install mkdocs-material`
+4. Lab 0-3 的文档内容较为完整；Lab 4-5 是本次新增，框架已搭好
+
+---
+
+## 八、给新 AI 会话的注意事项
 
 1. **先读 CLAUDE.md 和 HANDOFF.md**。
 2. **PoC 是第一优先级**——在做任何其他事情之前，先验证"替换 query.ts 后 TUI 还能跑"。
