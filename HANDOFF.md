@@ -247,33 +247,97 @@ CCB 的 learn/phase-2-conversation-loop.md 有 query.ts 每一段的详细标注
 
 ---
 
-## 五、待完成事项（按优先级）
+## 五、PoC 验证结果（2026-04-05 已通过）
+
+### 验证方法
+
+在 claude-code-diy（`D:\test-claude-code\claude-code`）中：
+1. 新建 `src/query-lab.ts`（~190 行简化版 query，只保留核心循环）
+2. 修改 `build.mjs` 末尾加 Step 7：`--lab` 参数时编译 query-lab.ts 并覆盖 dist/query.js
+3. `node build.mjs --lab` → 构建成功
+4. `node cli.js` → TUI 正常启动，显示完整界面（Logo、状态栏、输入框）
+5. 发送消息 → 成功走到 API 调用（403 是第三方代理端的限制，非代码问题）
+
+### 验证结论
+
+| 验证项 | 结果 |
+|--------|------|
+| query-lab.ts 编译 | ✅ |
+| build.mjs --lab 注入 | ✅ |
+| 416K 行依赖链加载 | ✅ 无 import 错误 |
+| --print 模式走到 API | ✅ |
+| TUI 交互模式启动 | ✅ 持续运行无崩溃 |
+| 原版构建不受影响 | ✅ 不带 --lab 时正常 |
+
+**结论：「挖空 query.ts 替换为简化版」方案可行。**
+
+### PoC 修改的文件
+
+| 文件 | 改动 | 位置 |
+|------|------|------|
+| `src/query-lab.ts` | **新建**，~190 行简化版 | claude-code-diy 目录 |
+| `build.mjs` | 末尾加 Step 7（~45 行），`--lab` 时注入 | claude-code-diy 目录 |
+| `src/utils/theme.ts:628` | 修了一个多余的 `-` 字符（原有 bug） | claude-code-diy 目录 |
+
+### 已发现的待解决问题：第三方 API 认证
+
+**问题**：Claude Code 原版只支持官方 Anthropic API。第三方代理（packyapi.com 等）报 403。
+
+**根因分析**（已深度调研）：
+1. `src/utils/auth.ts:299-309`：ANTHROPIC_API_KEY 必须在 `getGlobalConfig().customApiKeyResponses.approved` 列表中才被使用。已修复（直接返回 env 变量）。
+2. `src/services/api/client.ts:105`：请求头 `x-app: 'cli'` + `User-Agent` 标识官方客户端。部分代理（如 packyapi）服务端校验这些头，拒绝非官方客户端。
+3. `ANTHROPIC_API_KEY` 走 `x-api-key` 头；`ANTHROPIC_AUTH_TOKEN` 走 `Authorization: Bearer` 头。有些代理只接受后者。
+
+**CCB 的解决方案**（已读源码确认）：
+- 文件：`src/components/ConsoleOAuthFlow.tsx`
+- 在 `/login` 界面加了「Anthropic Compatible」选项（`state: 'custom_platform'`）
+- 用户填入 Base URL + API Key + 各模型 ID
+- 保存到 `~/.claude/settings.json` 的 `env` 字段
+- 运行时注入为 `process.env.ANTHROPIC_AUTH_TOKEN`（不是 API_KEY）
+- 还加了「OpenAI Chat API」选项支持 DeepSeek 等非 Anthropic 模型
+
+**我们已做的修改**：
+- `src/utils/auth.ts:299`：去掉 approved 列表检查，环境变量有 ANTHROPIC_API_KEY 就直接用
+
+**建议的后续方案（分两步）**：
+
+快速方案（临时）：告诉学习者用 `ANTHROPIC_AUTH_TOKEN`（Bearer 头）而不是 `ANTHROPIC_API_KEY`（x-api-key 头）：
+```powershell
+$env:ANTHROPIC_AUTH_TOKEN = "你的key"
+$env:ANTHROPIC_BASE_URL = "https://你的代理地址"
+```
+
+完整方案（P1）：从 CCB 移植 `/login` 的 `custom_platform` 功能到我们的代码中。涉及修改 `src/components/ConsoleOAuthFlow.tsx`，工作量约 1-2 天。
+
+---
+
+## 六、待完成事项（按优先级）
 
 ### P0（必须做，决定项目成败）
 
-1. **PoC 验证**：在 build-your-own-claude-code 中写一个简化版 query-lab.ts，替换 query.ts，验证 TUI 是否正常运行。这决定了整个"挖空"方案是否可行。
+1. ~~**PoC 验证**~~ ✅ 已通过（2026-04-05）
 
-2. **Lab 3 完整实现**：skeleton 代码 + Mock LLM 测试 + 文档 + hints。这是核心 Lab。
+2. **第三方 API 认证修复**：让学习者能用第三方代理 API。参考 CCB 的 /login 或直接修改认证逻辑。
 
-3. **参考实现**：完整的 ~800 行独立 agent 作为 solution（不面向学习者，但团队需要先写出来才能拆成 Lab）。
+3. **Lab 3 完整实现**：skeleton 代码 + Mock LLM 测试 + 文档 + hints。这是核心 Lab。
+
+4. **参考实现**：完整的 ~800 行独立 agent 作为 solution。
 
 ### P1（重要，但 P0 完成后再做）
 
-4. **Lab 1-2 实现**：skeleton + tests + docs（这两个 Lab 相对简单）。
+5. **Lab 1-2 实现**：skeleton + tests + docs。
 
-5. **Web 编辑器 MVP**：Monaco + 浏览器内测试运行器。
+6. **Web 编辑器 MVP**：Monaco + 浏览器内测试运行器。
 
-6. **build.mjs --lab 模式**：构建系统支持注入不同 Lab 版本的 query。
+7. **渐进式 query-lab 版本**：lab-01/query-lab.ts 到 lab-05/query-lab.ts，每个版本在前一个基础上叠加能力。
 
 ### P2（有时间再做）
 
-7. **Lab 4-5 实现**：规划/子 Agent/上下文压缩。
+8. **Lab 4-5 实现**：规划/子 Agent/上下文压缩。
 
-8. **GitHub Codespaces devcontainer**：一键云端环境。
+9. **GitHub Codespaces devcontainer**：一键云端环境。
 
-9. **Beta 测试**：找 2-3 个非团队成员试做。
-
-10. **文档更新**：MkDocs Lab 页面更新为最新 6-Lab 设计。
+10. **Beta 测试**：找 2-3 个非团队成员试做。
 
 ---
 
