@@ -66,17 +66,37 @@
 
 ```
 Sprint 1（参考实现）：
-  ralph: 实现完整 ~800 行 coding agent（见上方任务描述）
+  Claude 设计架构 + 接口
+  → omx / /oh-my-claudecode:ask codex 实现具体文件（成本低）
+  → Claude 验证和代码审查
 
 Sprint 2（Lab skeleton）：
-  ralplan: 设计 Lab 3 Agent Loop 的 TODO 挖空方案
-  →（共识后）ralph: 实现 Lab 3 skeleton + Mock LLM 测试 + hints
+  ralplan: 设计 Lab 3 Agent Loop 的 TODO 挖空方案（Claude，需要教学判断）
+  →（共识后）/oh-my-claudecode:ask codex "生成 Lab 3 骨架代码和 Mock 测试用例"
+  → Claude 审查教学质量
 
 Sprint 2 并行（多 Lab 同时）：
   /oh-my-claudecode:team 3:executor "实现 Lab 1/2/3 skeleton 和测试用例"
 
-架构决策时（如 Web 编辑器方案）：
+架构决策时（交叉验证）：
   /oh-my-claudecode:ask codex "review this in-browser test runner design"
   /oh-my-claudecode:ccg
+```
+
+### Claude vs Codex 分工原则
+
+| 给 Claude 的任务 | 给 Codex (omx) 的任务 |
+|----------------|---------------------|
+| 架构设计、教学路径设计 | 具体文件实现（TypeScript 代码） |
+| 方案评审、教学质量审查 | 批量生成骨架代码和测试 |
+| 复杂推理、跨文件理解 | 重复性文档、测试用例生成 |
+
+**调用 omx 的示例 prompt（在终端运行）：**
+```bash
+omx "在 D:\test-claude-code\claude-code\labs\lab-03\src 目录下，
+  实现 agent-loop.ts 的完整版本（solution），
+  参考 CCB 的 learn/phase-2-conversation-loop.md，
+  要求：TypeScript strict，包含完整 JSDoc，
+  完成后确认 npx tsc --noEmit 无错误"
 ```
 ```
