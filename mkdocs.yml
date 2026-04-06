@@ -66,6 +66,7 @@ nav:
           - 实验任务: labs/lab-05/tasks.md
   - 参考资料:
       - guide/index.md
+      - 配置第三方 API（必读）: guide/api-setup.md
       - TypeScript 基础: guide/typescript.md
       - Anthropic Messages API: guide/messages-api.md
       - Tool Calling 原理: guide/tool-calling.md
