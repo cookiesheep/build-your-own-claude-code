@@ -279,45 +279,13 @@ CCB 的 learn/phase-2-conversation-loop.md 有 query.ts 每一段的详细标注
 | `build.mjs` | 末尾加 Step 7（~45 行），`--lab` 时注入 | claude-code-diy 目录 |
 | `src/utils/theme.ts:628` | 修了一个多余的 `-` 字符（原有 bug） | claude-code-diy 目录 |
 
-### 已发现的待解决问题：第三方 API 认证
+### 已发现的待解决问题
 
-**问题**：packyapi.com 的 CC 分组令牌对我们的修改版报 403。
+**第三方 API 认证问题**：Claude Code 原版只支持官方 Anthropic API 认证。用第三方代理（如 packyapi.com）时会报 403。CCB 项目通过修改认证流程解决了这个问题，加了 `/login` 界面支持「Anthropic Compatible」模式填入 Base URL + API Key。我们后续也需要解决此问题，让学习者能用第三方 API——因为官方 API 很贵。
 
-**最终结论（经大量测试确认）**：这是 packyapi 服务端限制，与代码无关。
-- 用纯 Anthropic SDK + packyapi key 直接请求也是 403
-- 用 curl 带任何 header 组合也是 403
-- packyapi CC 分组令牌只允许通过 cc-switch 本地代理或官方二进制访问
-- CCB (claude-code-best) 的 client.ts 和原版完全一样，没有特殊的第三方 API 处理
-- Owner 之前能用是因为 cc-switch 在后台运行做了代理转发
-
-**对教学项目的影响**：学习者需要使用不限制客户端的 API 代理（如 OpenRouter、其他 Anthropic 兼容代理）或 Anthropic 官方 API Key。packyapi 的 CC 令牌不适用。
-
-**已做的代码修改（保留，对其他代理有用）**：
-1. `src/utils/auth.ts:299`：去掉 approved 列表检查，环境变量有 ANTHROPIC_API_KEY 就直接用
-2. `src/services/api/client.ts`：第三方 BASE_URL 时跳过 OAuth 检查，直接用 AUTH_TOKEN
-2. `src/services/api/client.ts:105`：请求头 `x-app: 'cli'` + `User-Agent` 标识官方客户端。部分代理（如 packyapi）服务端校验这些头，拒绝非官方客户端。
-3. `ANTHROPIC_API_KEY` 走 `x-api-key` 头；`ANTHROPIC_AUTH_TOKEN` 走 `Authorization: Bearer` 头。有些代理只接受后者。
-
-**CCB 的解决方案**（已读源码确认）：
-- 文件：`src/components/ConsoleOAuthFlow.tsx`
-- 在 `/login` 界面加了「Anthropic Compatible」选项（`state: 'custom_platform'`）
-- 用户填入 Base URL + API Key + 各模型 ID
-- 保存到 `~/.claude/settings.json` 的 `env` 字段
-- 运行时注入为 `process.env.ANTHROPIC_AUTH_TOKEN`（不是 API_KEY）
-- 还加了「OpenAI Chat API」选项支持 DeepSeek 等非 Anthropic 模型
-
-**我们已做的修改**：
-- `src/utils/auth.ts:299`：去掉 approved 列表检查，环境变量有 ANTHROPIC_API_KEY 就直接用
-
-**建议的后续方案（分两步）**：
-
-快速方案（临时）：告诉学习者用 `ANTHROPIC_AUTH_TOKEN`（Bearer 头）而不是 `ANTHROPIC_API_KEY`（x-api-key 头）：
-```powershell
-$env:ANTHROPIC_AUTH_TOKEN = "你的key"
-$env:ANTHROPIC_BASE_URL = "https://你的代理地址"
-```
-
-完整方案（P1）：从 CCB 移植 `/login` 的 `custom_platform` 功能到我们的代码中。涉及修改 `src/components/ConsoleOAuthFlow.tsx`，工作量约 1-2 天。
+可能的方案：
+- 参考 CCB 的认证修改，加入 Anthropic Compatible 登录选项
+- 或更简单地：修改认证逻辑，直接读取环境变量的 ANTHROPIC_API_KEY + ANTHROPIC_BASE_URL，跳过官方认证检查
 
 ---
 
@@ -348,6 +316,49 @@ $env:ANTHROPIC_BASE_URL = "https://你的代理地址"
 9. **GitHub Codespaces devcontainer**：一键云端环境。
 
 10. **Beta 测试**：找 2-3 个非团队成员试做。
+
+---
+
+## 九、两个仓库的关系与当前状态（2026-04-06）
+
+### 仓库关系
+
+```
+claude-code-diy（D:\test-claude-code\claude-code）
+  ↑ 是
+  Claude Code 完整可运行源码（416,500 行）
+  已修改：--lab 构建模式 + 第三方 API 认证简化
+  学习者需要 clone 这个来运行 Lab
+
+build-your-own-claude-code（D:\code\build-your-own-claude-code）
+  ↑ 是
+  教学项目仓库（文档 + Lab 代码框架）
+  不含 Claude Code 源码，只含 docs/ + labs/ 目录结构
+  学习者 clone 这个来做 Lab
+```
+
+### claude-code-diy 的关键修改（相对原版 Claude Code）
+
+| 文件 | 修改内容 | 目的 |
+|------|---------|------|
+| `src/query-lab.ts` | **新增**，~190 行简化版 query | PoC + Lab 教学用替换版本 |
+| `build.mjs` | 新增 Step 7（`--lab` 参数） | 注入学习者的 query 实现 |
+| `src/utils/auth.ts` | 简化 API Key 检查 | 支持第三方 API 无需 /login |
+| `src/utils/theme.ts` | 修复第 628 行多余的 `-` | 原有 bug 修复 |
+| `src/components/LogoV2/Clawd.tsx` | 自定义像素羊 Logo | 个性化 |
+| `src/utils/theme.ts` | 新增 dark-cyan 主题 | 个性化 |
+
+### 已验证可用的第三方 API
+
+- **DeepSeek**：`ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic` + `ANTHROPIC_AUTH_TOKEN=sk-xxx`
+- **Packy API 代理**：`ANTHROPIC_BASE_URL=https://www.packyapi.com`（需要账号，限制官方 CLI 特有端点）
+
+### 下一步：开启新会话后的第一件事
+
+1. **在 `D:\code\build-your-own-claude-code` 目录开启 Claude Code 会话**
+2. 读 `CLAUDE.md` 和 `HANDOFF.md`
+3. 双重验证设计方案（新 AI 以批判眼光审视）
+4. 开始 Sprint 1：在 claude-code-diy 中写参考实现（参考 CCB 的 `learn/` 文档），然后拆解为 Lab skeleton
 
 ---
 
