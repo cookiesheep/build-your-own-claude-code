@@ -279,43 +279,61 @@ CCB 的 learn/phase-2-conversation-loop.md 有 query.ts 每一段的详细标注
 | `build.mjs` | 末尾加 Step 7（~45 行），`--lab` 时注入 | claude-code-diy 目录 |
 | `src/utils/theme.ts:628` | 修了一个多余的 `-` 字符（原有 bug） | claude-code-diy 目录 |
 
-### 已发现的待解决问题
-
-**第三方 API 认证问题**：Claude Code 原版只支持官方 Anthropic API 认证。用第三方代理（如 packyapi.com）时会报 403。CCB 项目通过修改认证流程解决了这个问题，加了 `/login` 界面支持「Anthropic Compatible」模式填入 Base URL + API Key。我们后续也需要解决此问题，让学习者能用第三方 API——因为官方 API 很贵。
-
-可能的方案：
-- 参考 CCB 的认证修改，加入 Anthropic Compatible 登录选项
-- 或更简单地：修改认证逻辑，直接读取环境变量的 ANTHROPIC_API_KEY + ANTHROPIC_BASE_URL，跳过官方认证检查
+- 
 
 ---
 
 ## 六、待完成事项（按优先级）
 
-### P0（必须做，决定项目成败）
+> **重要**：进度追踪在 `internal/TEAM_PROGRESS.md`。新 AI 会话必须同时读那份文档。
 
-1. ~~**PoC 验证**~~ ✅ 已通过（2026-04-05）
+### P0（必须在一切开发前完成）
 
-2. **第三方 API 认证修复**：让学习者能用第三方代理 API。参考 CCB 的 /login 或直接修改认证逻辑。
+**P0-1：确认教学平台形式** 🔴
+- 决策：采用 Web Terminal + Docker 方案（pwn.college 模式）
+- 详细设计见 `internal/PLATFORM_DESIGN.md`
+- 核心逻辑：学习者在浏览器终端运行真实 `node cli.js`，看到真实 TUI 反馈
+- 旧方案（Monaco + 浏览器 eval）被否决：只能展示模拟动画，无法看到真实 TUI
+- **需要新会话 AI 审视此决策，如有更好方案直说**
 
-3. **Lab 3 完整实现**：skeleton 代码 + Mock LLM 测试 + 文档 + hints。这是核心 Lab。
+**P0-2：确认团队分工与项目规划** 🔴
+- 见 `internal/TEAM_PROGRESS.md` 分工表
+- 5 人分工：Leader（架构+内容）/ 后端 / 前端 / Lab内容 / 基础设施
+- Sprint 0 结束前必须确认到人
 
-4. **参考实现**：完整的 ~800 行独立 agent 作为 solution。
+**P0-3：基础设施 PoC** 🔴
+- ~~query-lab.ts 替换方案~~ ✅ 已验证
+- 新 PoC：Docker 容器内 `node cli.js` 正常运行 + ttyd 能通过 WebSocket 暴露 shell
+- 验证方式：浏览器打开 ttyd 页面，运行 `node cli.js`，看到 Claude Code TUI
 
-### P1（重要，但 P0 完成后再做）
+### P1（平台 MVP + 核心 Lab 内容）
 
-5. **Lab 1-2 实现**：skeleton + tests + docs。
+**P1-1：平台后端 MVP**
+- 容器生命周期 API（create/submit/reset）
+- 代码注入 → 触发构建流程
+- WebSocket 代理到容器 ttyd
 
-6. **Web 编辑器 MVP**：Monaco + 浏览器内测试运行器。
+**P1-2：平台前端 MVP**
+- Lab 页面布局（左：文档，右：编辑器+终端）
+- xterm.js 终端 + Monaco 编辑器
+- 提交按钮联通后端
 
-7. **渐进式 query-lab 版本**：lab-01/query-lab.ts 到 lab-05/query-lab.ts，每个版本在前一个基础上叠加能力。
+**P1-3：参考实现**
+- ~800 行独立 coding agent（messages.ts + llm-client.ts + tools/ + agent-loop.ts + cli.ts）
+- 完整跑通后拆解为 Lab skeleton
+
+**P1-4：Lab 3 完整实现**（核心 Lab）
+- query-lab-03.ts skeleton + TODO 注释
+- Mock LLM 测试用例（5-8 个）
+- Lab 文档 + hints
 
 ### P2（有时间再做）
 
-8. **Lab 4-5 实现**：规划/子 Agent/上下文压缩。
-
-9. **GitHub Codespaces devcontainer**：一键云端环境。
-
-10. **Beta 测试**：找 2-3 个非团队成员试做。
+- Lab 1-2 skeleton + tests
+- Lab 4-5 内容（规划 + 上下文压缩）
+- 渐进式 query-lab 版本（lab-01 到 lab-05）
+- 容器资源限制 + 用户隔离
+- Beta 测试（2-3 个外部用户）
 
 ---
 
@@ -355,10 +373,14 @@ build-your-own-claude-code（D:\code\build-your-own-claude-code）
 
 ### 下一步：开启新会话后的第一件事
 
-1. **在 `D:\code\build-your-own-claude-code` 目录开启 Claude Code 会话**
-2. 读 `CLAUDE.md` 和 `HANDOFF.md`
-3. 双重验证设计方案（新 AI 以批判眼光审视）
-4. 开始 Sprint 1：在 claude-code-diy 中写参考实现（参考 CCB 的 `learn/` 文档），然后拆解为 Lab skeleton
+1. 读 `CLAUDE.md` + `HANDOFF.md` + **`internal/PLATFORM_DESIGN.md`** + **`internal/TEAM_PROGRESS.md`**
+2. 运行 `/oh-my-claudecode:deepinit` 建立项目认知
+3. 双重验证两个关键决策：
+   - 「挖空 query.ts 插入学习者代码」方案（PoC 已通过）
+   - 「Web Terminal + Docker」教学平台方案（新决策，需审视）
+4. P0 第一件事：确认平台 PoC（Docker + ttyd 能在浏览器终端跑 node cli.js）
+   - `ralph: 验证 Docker 容器内 ttyd + node cli.js 方案可行性`
+5. P0 第二件事：输出团队分工建议，更新 `internal/TEAM_PROGRESS.md`
 
 ---
 
@@ -426,7 +448,6 @@ docs/
 ## 八、给新 AI 会话的注意事项
 
 1. **先读 CLAUDE.md 和 HANDOFF.md**。
-2. **PoC 是第一优先级**——在做任何其他事情之前，先验证"替换 query.ts 后 TUI 还能跑"。
 3. **不要推翻"挖空"方案**——除非 PoC 失败。Owner 已经明确否决了从零写和封装方案。
 4. **Lab 3 是核心**——如果精力有限，只做好 Lab 3 一个也比 6 个都半成品强。
 5. **Owner 重视反馈设计**——每个 Lab 必须产生可视的变化。

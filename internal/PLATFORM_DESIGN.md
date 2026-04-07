@@ -1,0 +1,257 @@
+# 教学平台设计文档
+
+> 本文档记录了教学平台形式的决策过程、技术方案和实现路线。
+> 状态：P0，新会话 AI 必须读此文档后才能开始任何开发。
+
+---
+
+## 一、问题与决策
+
+### 旧方案的根本缺陷
+
+之前规划的 Monaco Editor + 浏览器内 eval 方案：
+
+```
+学习者写代码 → 浏览器 eval → 测试 pass/fail → 模拟动画
+```
+
+**根本问题**：学习者看到的是"模拟出来的 agent 行为动画"，而不是真实的 Claude Code TUI 在响应。
+
+本项目最核心的价值主张是：**"完成 Lab 3 后，你能看到真实的 Claude Code TUI 由你写的代码驱动"**。Monaco + 浏览器 eval 无法实现这个承诺。
+
+### 新方案：Web Terminal + Docker（pwn.college 模式）
+
+```
+学习者在 Monaco 写代码
+    → 点「提交」
+    → 后端注入代码到容器
+    → 触发 node build.mjs --lab 3
+    → 学习者在浏览器终端输入 node cli.js
+    → 看到真实 Claude Code TUI 启动！
+    → 和它对话，看到 Agent 多轮调用工具
+```
+
+这是唯一能实现"真实反馈"的方案。
+
+### 为什么这也满足课程要求
+
+软件工程课程大作业需要的完整工程实践：
+
+| 层次 | 内容 |
+|------|------|
+| 前端 | Next.js / React，Lab 页面 + Monaco 编辑器 + xterm.js 终端 |
+| 后端 API | Node.js Express，容器生命周期管理 + 代码注入 + 进度追踪 |
+| 数据库 | SQLite / PostgreSQL，用户进度、会话状态 |
+| 基础设施 | Docker 容器隔离，每个学习者一个独立环境 |
+| 安全 | 签名 URL 路由、容器网络隔离、资源限制 |
+
+这是一个完整的全栈 + 基础设施项目，不是静态网页。
+
+---
+
+## 二、参考：pwn.college 的实现方式
+
+（来自 GPT 对 pwn.college dojo 开源仓库的调研，2026-04）
+
+### 核心架构五层
+
+```
+第 1 层：课程平台
+  CTFd + dojo 插件 → 题目/挑战/计分/用户系统
+
+第 2 层：学习者隔离环境
+  每个用户一个独立 Docker 容器
+  home 目录持久化
+
+第 3 层：容器内服务
+  Terminal: ttyd（端口 7681）
+  Editor:   code-server（端口 8080）
+  Desktop:  TigerVNC + noVNC（端口 6080）
+
+第 4 层：反向代理与权限
+  nginx 按签名 URL 路由到对应容器端口
+  WebSocket upgrade 支持
+
+第 5 层：浏览器端 UI
+  Terminal 标签 → 连接容器内 ttyd
+  Code 标签     → 连接容器内 code-server
+  Desktop 标签  → 连接容器内 noVNC
+```
+
+### 关键源码位置
+
+```
+workspace/services/terminal.nix       # ttyd 启动配置
+workspace/services/code.nix           # code-server 配置
+nginx-workspace/templates/workspace.conf.template  # 代理路由
+```
+
+### 核心技术组件
+
+| 组件 | 用途 | 项目地址 |
+|------|------|---------|
+| ttyd | 把 shell 暴露为 WebSocket 服务 | github.com/tsl0922/ttyd |
+| xterm.js | 浏览器端终端 UI 组件 | github.com/xtermjs/xterm.js |
+| code-server | VS Code in browser | github.com/coder/code-server |
+| dockerode | Node.js Docker 管理 | npm dockerode |
+
+---
+
+## 三、我们的实现方案（适配课程团队规模）
+
+pwn.college 是全球教育平台，我们是 5 人课程项目。我们不需要 1000 并发用户，只需要：
+- 课程答辩演示（3-5 人同时使用）
+- 团队开发测试
+- 可选的少量外部体验者
+
+### 目标架构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      浏览器（学习者端）                           │
+│                                                                  │
+│  ┌──────────────────────┐  ┌────────────────────────────────┐  │
+│  │   左侧：Lab 内容区    │  │      右侧：工作区              │  │
+│  │                      │  │                                │  │
+│  │  📖 知识讲解          │  │  ┌─ 代码编辑器 ─────────────┐ │  │
+│  │  📝 骨架代码展示      │  │  │  Monaco Editor            │ │  │
+│  │  ✅ 完成状态追踪      │  │  │  显示当前 lab skeleton     │ │  │
+│  │  💡 Hints            │  │  │  学习者在这里补全 TODO      │ │  │
+│  │                      │  │  └───────────────────────────┘ │  │
+│  │  [提交代码] 按钮      │  │                                │  │
+│  │                      │  │  ┌─ 终端 ──────────────────┐  │  │
+│  │                      │  │  │  xterm.js               │  │  │
+│  │                      │  │  │  ← WebSocket →          │  │  │
+│  │                      │  │  │  容器内 ttyd/shell       │  │  │
+│  │                      │  │  │                         │  │  │
+│  │                      │  │  │ $ node build.mjs --lab  │  │  │
+│  │                      │  │  │ $ node cli.js ← TUI!    │  │  │
+│  │                      │  │  └─────────────────────────┘  │  │
+│  └──────────────────────┘  └────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+              ↕ HTTP/WebSocket
+┌─────────────────────────────────────────────────────────────────┐
+│                     后端服务器                                    │
+│                                                                  │
+│  ┌─────────────────┐  ┌──────────────────┐  ┌───────────────┐  │
+│  │  Next.js / API  │  │  Docker 管理      │  │   SQLite DB   │  │
+│  │                 │  │                  │  │               │  │
+│  │ /api/submit     │  │  创建容器         │  │  用户进度      │  │
+│  │ /api/session    │  │  注入代码文件     │  │  会话状态      │  │
+│  │ /api/reset      │  │  触发构建         │  │  完成记录      │  │
+│  │ /api/progress   │  │  WebSocket 代理   │  │               │  │
+│  └─────────────────┘  └──────────────────┘  └───────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+              ↕ Docker API
+┌─────────────────────────────────────────────────────────────────┐
+│                  Docker 容器（每个学习者一个）                     │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Base Image: node:18 + claude-code-diy（预克隆）         │   │
+│  │                                                          │   │
+│  │  /workspace/                                            │   │
+│  │    ├── src/query-lab.ts  ← 学习者代码注入到这里          │   │
+│  │    ├── build.mjs         ← 触发构建                      │   │
+│  │    └── cli.js            ← 运行 Claude Code             │   │
+│  │                                                          │   │
+│  │  ttyd 运行在 :7681 → WebSocket → 浏览器终端              │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 学习者完整体验流程
+
+```
+1. 打开 Lab 3 页面
+   → 后端自动为该会话分配一个 Docker 容器
+   → 容器内预装 claude-code-diy + Lab 3 骨架代码
+
+2. 阅读左侧知识讲解
+
+3. 在 Monaco 编辑器中看到 query-lab-03.ts 的骨架
+   → 补全 TODO（实现 while(true) 循环）
+
+4. 点击「提交代码」
+   → 后端接收代码
+   → 注入到容器的 src/query-lab.ts
+   → 触发 node build.mjs --lab 3（在容器内）
+
+5. 在右侧终端运行：
+   $ node cli.js
+
+6. 看到真实 Claude Code TUI 启动！
+   → 发送消息：「帮我创建 hello.js」
+   → Agent 自主决定调用 write_file
+   → 看到工具执行 → 继续循环 → 完成任务
+   
+   ★★ 这就是 chatbot → agent 的分界线，学习者亲眼看到了！
+
+7. 左侧完成状态自动标记 Lab 3 ✓
+```
+
+---
+
+## 四、MVP 实现范围（课程 12 周可交付）
+
+### Must Have（答辩必须有）
+
+```
+□ Docker 容器启动/停止/重置
+□ 学习者代码提交 → 注入容器文件 → 触发构建
+□ 浏览器内终端（xterm.js + ttyd）能运行 node cli.js
+□ 至少 3 个 Lab 的页面和代码骨架（Lab 0-3）
+□ 用户进度记录（完成哪些 Lab）
+□ Lab 3 完整体验（教学核心）
+```
+
+### Nice to Have
+
+```
+□ 多用户会话隔离
+□ 容器资源限制（CPU/内存）
+□ 代码编辑器高亮和 TypeScript 智能提示
+□ 容器自动超时回收
+□ Lab 4-5 内容
+□ 移动端适配
+```
+
+### 明确不做
+
+```
+✗ 千人并发
+✗ VS Code in browser（code-server，太重）
+✗ 完整 CTFd 平台（太复杂）
+✗ 用户注册/登录系统（MVP 可用 session ID 替代）
+```
+
+---
+
+## 五、技术选型
+
+| 层次 | 选型 | 理由 |
+|------|------|------|
+| 前端框架 | Next.js 14 | 前后端同构，团队熟悉 React |
+| 终端前端 | xterm.js | 业界标准，文档完善 |
+| 代码编辑器 | Monaco Editor | VS Code 同款，TypeScript 支持好 |
+| 终端后端 | ttyd | 最简单，二进制，一行命令启动 |
+| 容器管理 | dockerode (npm) | Node.js 原生 Docker SDK |
+| 数据库 | SQLite (better-sqlite3) | 零配置，够用，易备份 |
+| 样式 | Tailwind CSS | 快速开发 |
+| 部署 | 单台 VPS 或团队成员服务器 | 答辩时本地也可以跑 |
+
+---
+
+## 六、GPT 调研结论摘要
+
+来自 GPT 对 pwn.college 的详细分析：
+
+- pwn.college 没有自己写 terminal emulator，而是用 ttyd 这个成熟项目
+- 核心是：Docker 容器 + ttyd + nginx WebSocket 反代 三层
+- 浏览器里的 Terminal 标签就是连到 ttyd 的 WebSocket 连接
+- 最快复现路线：ttyd + Docker + nginx（不用自己搞 xterm.js）
+- 真正的价值不是"有个 terminal"，而是：题目 + 环境 + 隔离 + 可重置
+
+推荐最优复现顺序：
+1. ttyd + Docker + 基础反代 → 有可用终端
+2. 接上题目系统和代码注入 → 有教学逻辑
+3. 如需更多交互 → 换 xterm.js + 自己的 WebSocket
