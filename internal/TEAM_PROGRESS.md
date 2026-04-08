@@ -5,6 +5,59 @@
 
 ---
 
+## 留痕规范
+
+- `internal/TEAM_PROGRESS.md` 是项目的唯一权威工作日志
+- 根目录的 `WORK_LOG.md` 是入口说明，不单独维护第二套正式日志
+- 每次完成实质性工作后，都必须追加一条带日期的记录
+- 每条记录至少包含：
+  - 完成项
+  - 进行中
+  - 阻塞项
+  - 下一步建议
+  - 关键验证方式
+- 如果本次工作改变了项目整体认知或默认接手方式，还应同步更新：
+  - `internal/PROJECT_BRIEFING.md`
+  - `SESSION_STARTER.md`
+  - `HANDOFF.md`（仅重大变更）
+
+### 标准记录模板
+
+后续所有 agent / 团队成员，优先按下面的固定格式追加记录：
+
+```md
+### YYYY-MM-DD（会话 N / 方向名）
+
+**完成项**：
+- ✅ 做了什么
+- ✅ 改了哪些关键文件 / 模块
+
+**进行中**：
+- 🔄 还在推进什么
+
+**阻塞项**：
+- ⚠️ 被什么卡住
+- ⚠️ 缺少什么前置条件 / 外部依赖
+
+**验证**：
+- `命令或验证方式`
+- `命令或验证方式`
+
+**下一步**：
+- 继续做什么
+- 建议下一个 agent 优先处理什么
+```
+
+要求：
+
+- 日期必须写
+- `完成项 / 进行中 / 阻塞项 / 验证` 这四个字段默认必须有
+- 没有阻塞项时写 `- 无`
+- 没有进行中时写 `- 无`
+- 验证不能省略；如果没跑测试，要明确写“未运行测试”及原因
+
+---
+
 ## 团队分工
 
 | 人 | 方向 | 主要职责 | 指南文档 | Sprint 1 具体产出 |
@@ -199,6 +252,38 @@
 
 **阻塞项**：
 - ⚠️ 后端 API 与容器终端尚未联通，当前终端区仍是占位模式
+
+### 2026-04-08（会话 5）
+
+**完成项**：
+- ✅ 完成后端专项接手阅读与代码现实核对：
+  - 已按顺序阅读 `internal/PROJECT_BRIEFING.md`、`internal/TEAM_PROGRESS.md`、`internal/PLATFORM_DESIGN.md`
+  - 已补读 `CLAUDE.md`、`HANDOFF.md`、`internal/work-a-backend/*`、`internal/ARCHITECTURE.md`、`internal/MVP_SCOPE.md`、`internal/PRD.md`
+  - 已核对 sister repo `D:\test-claude-code\claude-code`，确认 `build.mjs --lab` 与 `src/query-lab.ts` 仍真实存在，PoC 路线没有失效
+- ✅ 确认当前仓库后端现状：
+  - `server/` 目录已存在，`src/index.ts`、`routes/*`、`services/*`、`db/database.ts` 已搭好骨架
+  - `platform/src/lib/api.ts` 仍为 `MOCK_MODE = true`，前端尚未接入真实后端
+- ✅ 完成后端最小闭环判断：
+  - 当前最有价值的首个实现切片不是泛化架构扩展，而是打通 `POST /api/session` → `POST /api/submit` → WebSocket terminal proxy 的单会话 happy path
+  - SQLite 适合作为 MVP 的 session/progress 存储，但容器运行态不能只信数据库，必须以 Docker inspect 为准
+- ✅ 识别文档漂移：
+  - `internal/PLATFORM_DESIGN.md` 与 `internal/work-a-backend/*` 已代表新平台方向
+  - `internal/ARCHITECTURE.md`、`internal/MVP_SCOPE.md`、`internal/PRD.md` 仍保留较多旧版“7 task / toy agent / 无 WebUI”叙事，后续需要统一
+
+**进行中**：
+- 🔄 形成“后端接手报告 + 工程化实施顺序”，准备在收到 Leader 的下一步后端想法后切入实现
+- 🔄 设计后端 API contract 与当前前端 `platform/` 的最小接线方案，尽量先替换 mock，不重做前端结构
+
+**阻塞项**：
+- ⚠️ 当前平台尚未完成真实 Docker 容器 → ttyd → WebSocket → xterm.js 端到端验证
+- ⚠️ 文档对“当前产品形态”仍有旧叙事残留，容易让新会话误判优先级或错误地回退到 tutorial-only 路线
+- ⚠️ 具体首个实现切片还需结合 Leader 的后端优先级想法最终收敛，避免先做错抽象层
+
+**下一步建议**：
+- 1. 先实现并验证 `POST /api/session`、`POST /api/submit`、`WS /api/terminal/:sessionId` 三条链路，确保前端可以从 mock 切到真实最小闭环
+- 2. 容器层优先做“单 session 单容器”的可重建 happy path，不要一开始做过度泛化的池化/调度
+- 3. `reset` 先采用“删容器并重建”的明确策略，等基础链路稳定后再讨论 workspace snapshot / volume 优化
+- 4. 完成首轮联通后，再补 `progress`、错误分类、构建日志结构化、Cloudflare Tunnel 暴露策略
 
 ---
 
