@@ -1,0 +1,65 @@
+{
+  "pid": 51488,
+  "parent_pid": 18740,
+  "started_at": "2026-04-08T09:07:26.143Z",
+  "cwd": "D:\\code\\build-your-own-claude-code",
+  "notify_script": "D:\\Scoop\\persist\\nodejs\\bin\\node_modules\\oh-my-codex\\dist\\scripts\\notify-hook.js",
+  "authority_only": false,
+  "poll_ms": 250,
+  "pid_file": "D:\\code\\build-your-own-claude-code\\.omx\\state\\notify-fallback.pid",
+  "max_lifetime_ms": 21600000,
+  "tracked_files": 0,
+  "seen_turns": 0,
+  "dispatch_drain": {
+    "enabled": true,
+    "max_per_tick": 5,
+    "run_count": 3323,
+    "leader_only": true,
+    "last_tick_at": "2026-04-08T09:23:26.055Z",
+    "last_result": {
+      "processed": 0,
+      "skipped": 0,
+      "failed": 0
+    },
+    "last_error": null
+  },
+  "leader_nudge": {
+    "enabled": true,
+    "leader_only": true,
+    "stale_threshold_ms": 180000,
+    "precomputed_leader_stale": true,
+    "last_tick_at": "2026-04-08T09:23:26.057Z",
+    "last_error": null,
+    "run_count": 3323
+  },
+  "ralph_continue_steer": {
+    "enabled": true,
+    "cadence_ms": 60000,
+    "message": "Ralph loop active continue",
+    "active": false,
+    "last_state_check_at": "2026-04-08T09:23:26.069Z",
+    "last_sent_at": "",
+    "cooldown_anchor_at": "",
+    "last_reason": "blocked_by_current_session",
+    "last_error": null,
+    "state_path": "",
+    "pane_id": "",
+    "pane_current_command": "",
+    "current_phase": "",
+    "shared_timestamp_path": "D:\\code\\build-your-own-claude-code\\.omx\\state\\ralph-last-steer-at",
+    "shared_last_sent_at": "",
+    "singleton_lock_path": "D:\\code\\build-your-own-claude-code\\.omx\\state\\ralph-continue-steer.lock"
+  },
+  "fallback_auto_nudge": {
+    "enabled": true,
+    "stall_ms": 5000,
+    "last_tick_at": "2026-04-08T09:23:26.066Z",
+    "last_turn_at": "2026-04-08T09:07:25.589Z",
+    "last_turn_count": 0,
+    "last_message": "",
+    "last_reason": "hud_state_incomplete",
+    "last_error": null,
+    "last_nudged_signature": "",
+    "last_nudged_at": ""
+  }
+}

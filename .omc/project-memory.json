@@ -361,6 +361,72 @@
       "accessCount": 1,
       "lastAccessed": 1775637204888,
       "type": "file"
+    },
+    {
+      "path": "server\\package.json",
+      "accessCount": 1,
+      "lastAccessed": 1775638291237,
+      "type": "file"
+    },
+    {
+      "path": "server\\tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1775638293988,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775638308733,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\services\\container-manager.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775638329284,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\routes\\session.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775638342054,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\routes\\submit.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775638350716,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\routes\\progress.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775638353079,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\routes\\reset.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775638355599,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\services\\ws-proxy.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775638374434,
+      "type": "file"
+    },
+    {
+      "path": "server\\src\\db\\database.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775638380567,
+      "type": "file"
+    },
+    {
+      "path": "internal\\work-b-frontend\\AGENT_CONTEXT.md",
+      "accessCount": 1,
+      "lastAccessed": 1775638485380,
+      "type": "file"
     }
   ],
   "userDirectives": []
