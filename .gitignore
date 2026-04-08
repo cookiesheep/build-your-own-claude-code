@@ -10,6 +10,11 @@ Thumbs.db
 coverage/
 *.tsbuildinfo
 
+# Agent runtime state / local AI tooling artifacts
+.omx/
+.omc/
+.claude/
+
 # MkDocs build output
 site/
 

@@ -9,11 +9,16 @@
 
 这是一个基于真实 Claude Code 源码（416,500 行）的渐进式教学平台——学习者在浏览器内完成代码，看到真实 Claude Code TUI 由自己的代码驱动。同时这也是一个软件工程课程大作业，需要完整的全栈平台（前端+后端+数据库+Docker基础设施）。
 
-第一步：阅读以下四个文件建立完整上下文：
-1. CLAUDE.md — 项目概览、技术架构、Codex 分工原则
-2. HANDOFF.md — 完整调研记录、PoC 结果、设计决策、优先级
+第一步：先快速接手，再进入完整上下文。
+
+先读这 3 个文件（5-10 分钟快速接手）：
+1. internal/PROJECT_BRIEFING.md — 当前项目快读 briefing，适合新 agent 迅速接手
+2. internal/TEAM_PROGRESS.md — 团队分工和当前进度
 3. internal/PLATFORM_DESIGN.md — 教学平台架构设计（关键！Web Terminal + Docker 方案）
-4. internal/TEAM_PROGRESS.md — 团队分工和当前进度
+
+再读这 2 个文件（建立完整上下文）：
+4. CLAUDE.md — 项目概览、技术架构、Codex 分工原则
+5. HANDOFF.md — 完整调研记录、PoC 结果、设计决策、优先级
 
 第二步：运行 OMC 项目初始化：
 /oh-my-claudecode:deepinit

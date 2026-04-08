@@ -1,26 +1,212 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-page: #0a0a0a;
+  --bg-panel: #111111;
+  --bg-card: #161616;
+  --surface-hover: #1c1c1c;
+  --border: #262626;
+  --border-hover: #333333;
+  --text-primary: #e5e5e5;
+  --text-secondary: #888888;
+  --text-muted: #666666;
+  --text-disabled: #444444;
+  --accent: #22d3ee;
+  --accent-dark: #0891b2;
+  --accent-button-bg: #164e63;
+  --accent-button-text: #22d3ee;
+  --status-success: #10b981;
+  --status-warning: #f59e0b;
+  --status-error: #ef4444;
+  --status-progress: #3b82f6;
+  --background: var(--bg-page);
+  --foreground: var(--text-primary);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
+  min-height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.2);
+}
+
+.grid-pattern {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at top, rgba(34, 211, 238, 0.12), transparent 28%);
+  background-position: center;
+  background-size: 36px 36px, 36px 36px, 100% 100%;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.markdown-body {
+  line-height: 1.7;
+}
+
+.markdown-body h1 {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f5f5f5;
+}
+
+.markdown-body h2 {
+  margin: 1.25rem 0 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.markdown-body h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.markdown-body p {
+  margin: 0.5rem 0;
+  color: #a3a3a3;
+}
+
+.markdown-body code {
+  border-radius: 4px;
+  background: var(--surface-hover);
+  padding: 0.1em 0.4em;
+  font-family: var(--font-jetbrains-mono), "Fira Code", monospace;
+  font-size: 0.85em;
+  color: var(--accent);
+}
+
+.markdown-body pre {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  padding: 1rem;
+}
+
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+  color: var(--text-primary);
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5rem;
+  color: #a3a3a3;
+}
+
+.markdown-body li {
+  margin: 0.2rem 0;
+}
+
+.markdown-body table {
+  margin: 0.75rem 0;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.markdown-body th {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.markdown-body td {
+  border: 1px solid var(--surface-hover);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #a3a3a3;
+}
+
+.markdown-body blockquote {
+  margin: 0.75rem 0;
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.markdown-body strong {
+  color: var(--text-primary);
+}
+
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.admonition {
+  margin: 0.75rem 0;
+  border-left: 4px solid;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+
+.admonition.danger {
+  border-color: var(--status-error);
+  background: #1a0505;
+}
+
+.admonition.warning {
+  border-color: var(--status-warning);
+  background: #1a1205;
+}
+
+.admonition.note {
+  border-color: var(--accent);
+  background: #051a1a;
+}
+
+.admonition.success {
+  border-color: var(--status-success);
+  background: #051a0d;
 }

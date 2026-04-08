@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd \\\"D:/code/build-your-own-claude-code/infrastructure\\\" && docker compose -f docker-compose.poc.yml up --build -d 2>&1\",\"timeout\":600000,\"description\":\"Rebuild Docker PoC with fixed ttyd ...",
-  "error": "Exit code 17\n#0 building with \"desktop-linux\" instance using docker driver\n\n#1 [lab-terminal internal] load build definition from Dockerfile.lab\n#1 transferring dockerfile: 1.22kB 0.0s done\n#1 DONE 0.1s\n\n#2 [lab-terminal internal] load metadata for docker.io/library/node:18-bookworm-slim\n#2 ...\n\n#3 [lab-terminal auth] library/node:pull token for registry-1.docker.io\n#3 DONE 0.0s\n\n#2 [lab-terminal internal] load metadata for docker.io/library/node:18-bookworm-slim\n#2 DONE 7.3s\n\n#4 [lab-terminal i...",
-  "timestamp": "2026-04-07T15:08:17.010Z",
-  "retry_count": 1
-}

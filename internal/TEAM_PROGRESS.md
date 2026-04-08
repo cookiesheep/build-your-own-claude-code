@@ -162,12 +162,51 @@
 **下一步**：
 - Sprint 1 启动：参考实现 (~800 行) → Lab 3 skeleton → Lab 3 测试用例
 
+### 2026-04-08（会话 3）
+
+**完成项**：
+- ✅ 新增 `internal/PROJECT_BRIEFING.md`，作为新会话 / 新 agent 的快速接手文档
+- ✅ 更新 `SESSION_STARTER.md`，将新会话推荐阅读顺序改为先读 briefing，再读进度与平台设计
+- ✅ 再次核对当前项目现状，确认关键结论未变：
+  - 主路线仍是 `query.ts` 挖空 + 注入学习者实现
+  - 平台路线仍是 Web Terminal + Docker
+  - 当前仓库现实仍是“文档成熟，代码实现早期”
+
+**进行中**：
+- 🔄 统一新版项目叙事，减少 `README.md` / `package.json` / `labs/` 结构与 `internal/` 设计稿之间的漂移
+
+**阻塞项**：
+- ⚠️ Lab 总数与命名仍存在版本漂移：部分文档为 6 Labs，`internal/LAB_DESIGN.md` 已倾向 7 Labs，后续需统一
+
+### 2026-04-08（会话 4）
+
+**完成项**：
+- ✅ 前端 MVP 初始化完成（`platform/`）：
+  - 首页已替换为 BYOCC 深色品牌首页
+  - 顶部 Navbar 已实现，支持 Lab 0-5 导航与核心 Lab 高亮
+  - `/lab/[id]` 动态页面已实现，形成「左文档 + 右编辑器/终端」工作台布局
+  - 已接入 Markdown 渲染、Monaco Editor、xterm.js 终端占位、Mock API
+  - Lab 3 默认骨架代码已内置到编辑器
+- ✅ 设计风格已统一为深色专业界面（Cursor / Linear / Vercel Dashboard 风格）
+- ✅ 验证通过：
+  - `cd platform && npm run lint`
+  - `cd platform && npm run build`
+  - `next dev -p 3010` 下首页与 `/lab/3` 均返回 200
+
+**进行中**：
+- 🔄 后续仍需把 Mock API 替换成真实后端接口，并接入真实 ttyd WebSocket
+- 🔄 Lab 文档与骨架代码目前仍部分依赖硬编码 / 文件读取混合方案，后续可统一
+
+**阻塞项**：
+- ⚠️ 后端 API 与容器终端尚未联通，当前终端区仍是占位模式
+
 ---
 
 ## 关键资源
 
 | 资源 | 位置 |
 |------|------|
+| 快速接手 briefing | `internal/PROJECT_BRIEFING.md` |
 | 课程文档网站 | https://cookiesheep.github.io/build-your-own-claude-code |
 | 文档源码 | `docs/` 目录（MkDocs） |
 | Claude Code 可运行源码 | `D:\test-claude-code\claude-code`（claude-code-diy） |
