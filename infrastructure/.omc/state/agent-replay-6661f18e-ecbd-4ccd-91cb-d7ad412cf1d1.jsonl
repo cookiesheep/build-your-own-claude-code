@@ -1,0 +1,8 @@
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"oh-my-claudecode:ralplan"}
+{"t":0,"agent":"a69f635","agent_type":"Explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a810d54","agent_type":"Explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a810d54","agent_type":"Explore","event":"agent_stop","success":true,"duration_ms":54999}
+{"t":0,"agent":"a69f635","agent_type":"Explore","event":"agent_stop","success":true,"duration_ms":225318}
+{"t":0,"agent":"aafc030","agent_type":"architect","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"aada2b1","agent_type":"architect","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"aada2b1","agent_type":"architect","event":"agent_stop","success":true,"duration_ms":123610}

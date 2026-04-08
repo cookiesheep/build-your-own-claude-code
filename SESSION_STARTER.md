@@ -18,7 +18,7 @@
 第二步：运行 OMC 项目初始化：
 /oh-my-claudecode:deepinit
 
-第三步：双重验证两个核心决策（不要迎合，有问题直说）：
+第三步：双重验证三个核心决策（不要迎合，有问题直说）：
 
 决策 A（已验证）：「挖空 query.ts，插入学习者实现」方案
   → PoC 已通过，构建和 TUI 均正常，见 HANDOFF.md 第五节
@@ -27,6 +27,8 @@
   → 学习者在浏览器终端运行 node cli.js，看到真实 TUI
   → 详见 internal/PLATFORM_DESIGN.md
   → 旧方案（Monaco + 浏览器 eval）被否决，原因：只能展示模拟动画，无法看到真实 TUI
+  
+决策C :目前的lab设计是否合理,是否真得能让学习者渐进式了解学习与掌握harness以及agent,这个重点参考learn-claude-code这个项目,这是github里star很多的harness教学项目,在交接文档中有介绍,我还需要你验证这种lab式的教学目前设计的测试用例和反馈是否真的合理,是否能让学习者完成lab时收获非常多的反馈,看到属于自己的claude code的ui或者功能或者运行方式发生变化,在变化中更加理解原理
 
 第四步：确认后按优先级推进：
 

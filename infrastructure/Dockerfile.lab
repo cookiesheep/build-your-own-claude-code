@@ -1,0 +1,33 @@
+# Build Your Own Claude Code - Lab Container
+# PoC: verify ttyd WebSocket works in browser
+
+FROM node:18-bookworm-slim
+
+# Use Chinese mirror for Debian repos (bypass GFW issues)
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null; \
+    sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list 2>/dev/null; \
+    true
+
+# Install basic tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download ttyd binary from GitHub releases
+# (ttyd is NOT in Debian bookworm apt repos)
+RUN curl -sL https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 -o /usr/local/bin/ttyd \
+    && chmod +x /usr/local/bin/ttyd
+
+# Create workspace
+WORKDIR /workspace
+
+# PoC welcome script
+RUN printf '#!/bin/bash\necho "Build Your Own Claude Code - Lab Container"\necho "Node.js version: $(node --version)"\necho "ttyd version: $(ttyd --version 2>&1 | head -1)"\necho ""\necho "PoC verified! In the real setup you would run:"\necho "  node build.mjs --lab 3"\necho "  node cli.js"\necho ""\nexec bash\n' > /workspace/welcome.sh && chmod +x /workspace/welcome.sh
+
+# Expose ttyd port
+EXPOSE 7681
+
+# Start ttyd with bash shell
+CMD ["ttyd", "--writable", "--port", "7681", "bash", "--rcfile", "/workspace/welcome.sh"]

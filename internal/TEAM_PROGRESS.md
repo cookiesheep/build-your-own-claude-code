@@ -7,15 +7,18 @@
 
 ## 团队分工
 
-| 人 | 角色 | 主要职责 |
-|----|------|---------|
-| **cookiesheep（Leader）** | 架构师 + 产品 | 系统设计、Lab 内容设计、Claude Code 集成、整体把控 |
-| **成员 B** | 平台后端 | Node.js API + Docker 容器管理 + WebSocket + 数据库 |
-| **成员 C** | 平台前端 | Next.js + Lab 页面 + Monaco Editor + xterm.js 终端 |
-| **成员 D** | Lab 内容 | 参考实现 + Lab skeleton 代码 + Mock 测试用例 |
-| **成员 E** | 基础设施 | Docker 镜像 + 部署 + CI/CD + 容器环境配置 |
+| 人 | 方向 | 主要职责 | 指南文档 | Sprint 1 具体产出 |
+|----|------|---------|---------|------------------|
+| **cookiesheep（Leader）** | A. 后端+部署 | Express API + dockerode + 部署 + 架构把控 | `internal/work-a-backend/` | API 跑通 + 容器管理 + 部署 |
+| **成员 B** | B. 前端页面 | Next.js + Monaco + xterm.js + Lab 页面 | `internal/work-b-frontend/` | Lab 页面原型（可 Mock 运行） |
+| **成员 C** | C. Lab 核心 ★ | Lab 3 skeleton + tests + demo（最重要） | `internal/work-c-lab-core/` | Lab 3 全部文件 + 12 个测试通过 |
+| **成员 D** | D. Lab 扩展 | Lab 1-2 skeleton + tests + demo | `internal/work-d-lab-extend/` | Lab 1 + Lab 2 全部文件 |
+| **成员 E** | E. 文档+CI | 文档站完善 + Mock 基础设施 + GitHub Actions | `internal/work-e-docs/` | Lab 3 文档完善 + CI 绿色 |
 
-> 注：成员 B/C/D/E 为占位符，待 Leader 确认实际分工后更新。
+> 注：成员 B/C/D/E 为占位符，待 Leader 确认实际分工后更新姓名。
+> 每个成员在自己的 `internal/work-X-xxx/` 文件夹的 README.md 中记录进度。
+> **台式机限制**：只有 Leader 能访问台式机，后端部署由 Leader 负责。其他方向可在任何电脑上开发。
+> **部署方案**：Leader 闲置台式机（Intel Core Ultra 5, 10核, 16GB RAM, Win11）+ Cloudflare Tunnel 免费穿透。
 
 ---
 
@@ -35,10 +38,11 @@
 
 ### 1. 教学平台形式确认 🔴
 
-- [ ] 团队确认采用 Web Terminal + Docker 方案（见 `internal/PLATFORM_DESIGN.md`）
-- [ ] 确认部署环境（谁的服务器/VPS？或 Docker Desktop 本地？）
-- [ ] 技术栈最终确认（Next.js + xterm.js + ttyd + dockerode + SQLite）
-- [ ] Docker 基础镜像确认（node:18 + claude-code-diy 预克隆）
+- [x] 团队确认采用 Web Terminal + Docker 方案（见 `internal/PLATFORM_DESIGN.md`）✅ 2026-04-07
+- [x] 确认部署环境：Leader 闲置台式机 + Cloudflare Tunnel ✅ 2026-04-07
+- [x] 技术栈最终确认：Next.js + xterm.js + ttyd + dockerode + SQLite ✅ 2026-04-07
+- [x] Docker 基础镜像确认：node:18-bookworm-slim + ttyd ✅ 2026-04-07
+- [x] Docker + ttyd PoC 验证 ✅ 2026-04-07（node:18 + ttyd 1.7.7，阿里云镜像源，localhost:7681 返回 200）
 
 **负责人**：全员对齐，Leader 拍板
 **截止**：Sprint 0 结束
@@ -123,11 +127,40 @@
 - ✅ 第三方 API 教程（DeepSeek + cc-switch）
 
 **进行中**：
-- 🔄 教学平台方案确认（Web Terminal + Docker，待团队对齐）
-- 🔄 团队正式分工（待 Leader 确认）
+- 🔄 Docker + ttyd PoC 验证（Dockerfile 已创建，待 Docker Desktop 启动后测试）
+- 🔄 Lab 1-2 TUI 反馈方案细化
 
 **阻塞项**：
-- ⚠️ 平台方案未最终确认前，不应开始平台代码开发
+- ⚠️ Docker Desktop 需要启动才能验证 PoC
+
+### 2026-04-07（会话 2）
+
+**完成项**：
+- ✅ 项目认知底座建立（deepinit，5 个 AGENTS.md 生成）
+- ✅ 三个核心决策验证：
+  - 决策 A（挖空 query.ts）：✅ 通过，PoC 已验证
+  - 决策 B（Web Terminal + Docker）：✅ 确认自建轻量平台方案
+  - 决策 C（Lab 设计）：⚠️ 三处修正建议（见下方）
+- ✅ 平台架构方案确认（GPT 交叉验证通过）：
+  - Next.js + dockerode + ttyd + Cloudflare Tunnel
+  - 部署在 Leader 闲置台式机（10核/16GB/Win11）
+  - 支持 20-30 并发用户
+  - ~2500 行自定义代码
+- ✅ 否决 pwn.college 源码魔改方案（太复杂，技术栈不匹配）
+- ✅ 团队分工建议更新（含 Sprint 1 具体产出）
+- ✅ Docker PoC 文件创建（infrastructure/Dockerfile.lab + docker-compose.poc.yml）
+- ✅ learn-claude-code 对比分析完成
+
+**Lab 设计修正建议**（待 Leader 确认）：
+1. Lab 1-2 需预置 query-lab-01/02.ts 提供 TUI 反馈（或只用 vitest 反馈）
+2. 每个 Lab 需增加 demo.ts（Mock 模式可运行 demo，获得感 > 测试通过）
+3. Lab 4 建议只保留 TodoWrite，Subagent 作为 Bonus
+
+**进行中**：
+- 🔄 Lab 3 参考实现 + skeleton 设计（Sprint 1 核心交付）
+
+**下一步**：
+- Sprint 1 启动：参考实现 (~800 行) → Lab 3 skeleton → Lab 3 测试用例
 
 ---
 
