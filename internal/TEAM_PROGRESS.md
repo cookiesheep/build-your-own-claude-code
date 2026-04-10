@@ -322,6 +322,84 @@
 - 2. 完成 Docker 层之后，再把 `session.ts` 从“仅发 sessionId”升级为“分配真实容器”
 - 3. 之后再推进 `submit -> build -> terminal proxy`，保持每一步都能独立验证
 
+### 2026-04-10（会话 7）
+
+**完成项**：
+- ✅ 进入后端第二步：实现最小容器管理切片（不碰 submit/build/ws-proxy）
+- ✅ 完成 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts) 的三个核心能力：
+  - `createContainer(sessionId)`：按固定容器命名规则创建并启动 `byocc-lab` 容器
+  - `getTtydPort(sessionId)`：读取容器 `7681/tcp` 对应的宿主机随机端口
+  - `removeContainer(sessionId)`：停止并删除容器
+- ✅ 为容器层加入几个关键保护设计：
+  - 固定容器命名 `lab-<sessionId>`，便于后续 session 绑定真实容器
+  - `sessionId -> containerId` 仅作为进程内缓存，真实状态仍以 Docker inspect 为准
+  - 创建前检查 `byocc-lab` 镜像是否存在，给出明确错误提示
+  - 若同一 session 已有容器，则优先复用，避免重复创建导致名称冲突
+- ✅ 更新 [.gitignore](D:/code/build-your-own-claude-code/.gitignore)，忽略 `server/*.sqlite*` 本地运行产物，减少误提交
+- ✅ 代码级验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+- ✅ 运行时 smoke test 通过：
+  - 启动 Docker Desktop 并构建 `byocc-lab` 镜像
+  - 通过 `container-manager.ts` 直接调用完成：
+    - `createContainer("smoke-step2")`
+    - `getTtydPort("smoke-step2")`
+    - `removeContainer("smoke-step2")`
+  - 验证结果：
+    - 容器成功创建
+    - ttyd 映射端口成功返回（示例端口：`32768`）
+    - 容器成功删除，`docker ps -a` 中不再存在 `lab-smoke-step2`
+
+**进行中**：
+- 🔄 容器层代码已具备，但尚未接入 route 层
+- 🔄 准备在下一步把 `session.ts` 从“只发 sessionId”升级成“创建/复用真实容器”
+
+**阻塞项**：
+- ⚠️ `infrastructure/Dockerfile.lab` 仍只是 `ttyd + bash` PoC，未升级到 `claude-code-diy` 运行镜像
+
+**下一步建议**：
+- 1. 推进 `session.ts` 接真实容器分配，把当前“只发 sessionId”升级成“分配/复用真实容器”
+- 2. 在接 route 时明确 session 复用语义：恢复旧容器、重启旧容器，还是替换旧容器
+- 3. 之后再进入 `submit/buildInContainer`，继续保持“一步只跨一个系统边界”
+
+### 2026-04-10（会话 8）
+
+**完成项**：
+- ✅ 完成后端第三步：将 [server/src/routes/session.ts](D:/code/build-your-own-claude-code/server/src/routes/session.ts) 接入真实容器分配
+- ✅ 补全 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts) 中的 `getContainerStatus(sessionId)`
+- ✅ `POST /api/session` 现在具备真实语义：
+  - 新 session：创建真实容器，返回 `status: "creating"`
+  - 已存在且容器运行中：复用容器，返回 `status: "running"`
+  - 已存在但容器停止或不存在：重新走创建/恢复路径，返回 `status: "creating"`
+- ✅ route 层与 service 层现在第一次真正连通：
+  - route 负责接收 `sessionId`
+  - service 负责创建 / 复用 / 判断容器状态
+  - database 负责记录 `sessionId -> container_id`
+- ✅ 验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+  - 启动 server 后：
+    - 第一次 `POST /api/session` → 返回真实 UUID + `status: "creating"`
+    - 第二次同 `sessionId` 再请求 → 返回同一 `sessionId` + `status: "running"`
+    - `docker ps` 可见对应容器正在运行
+    - 调用清理后，`docker ps -a` 中不再存在该测试容器
+
+**进行中**：
+- 🔄 真实 session 分配已接通，但 submit/build/terminal 主链尚未接入
+- 🔄 当前容器复用策略可用于现阶段开发，但还不是最终产品语义
+
+**阻塞项**：
+- ⚠️ `session.ts` 当前对“同一 sessionId 的最终产品语义”仍需后续明确：
+  - 是始终恢复旧容器
+  - 还是停止后重启
+  - 还是重建替换
+- ⚠️ `infrastructure/Dockerfile.lab` 仍是 `ttyd + bash` PoC 镜像，不是最终 `claude-code-diy` 运行镜像
+
+**下一步建议**：
+- 1. 进入第四步：实现 `submit.ts -> injectCode/buildInContainer`，让代码提交第一次接入真实容器
+- 2. 在做 submit 前，先明确容器内目标路径、注入方式和构建命令约定
+- 3. submit 打通后，再进入 `ws-proxy.ts` 与前端终端接线
+
 ### 2026-04-09（会话 6）
 
 **完成项**：

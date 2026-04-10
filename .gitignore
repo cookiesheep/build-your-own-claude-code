@@ -20,3 +20,8 @@ site/
 
 # Solution files can be optionally gitignored for "no-spoiler" mode
 # labs/**/solution/
+
+# Local SQLite runtime files
+server/*.sqlite
+server/*.sqlite-shm
+server/*.sqlite-wal
