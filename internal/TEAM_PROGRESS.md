@@ -285,6 +285,75 @@
 - 3. `reset` 先采用“删容器并重建”的明确策略，等基础链路稳定后再讨论 workspace snapshot / volume 优化
 - 4. 完成首轮联通后，再补 `progress`、错误分类、构建日志结构化、Cloudflare Tunnel 暴露策略
 
+### 2026-04-09（会话 6）
+
+**完成项**：
+- ✅ 完成后端第一步“诚实启动（truthful bring-up）”：
+  - 实现 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - 采用 `better-sqlite3` 初始化 `sessions` / `progress` 最小 schema
+  - 明确未将 `ttyd_port` 写入数据库，保持数据库只存稳定元数据
+- ✅ 调整占位路由为“契约安全”状态：
+  - [server/src/routes/session.ts](D:/code/build-your-own-claude-code/server/src/routes/session.ts) 返回真实 `sessionId` 与 `status: "creating"`
+  - [server/src/routes/submit.ts](D:/code/build-your-own-claude-code/server/src/routes/submit.ts) 增加参数校验，并明确返回 `success: false`
+  - [server/src/routes/progress.ts](D:/code/build-your-own-claude-code/server/src/routes/progress.ts) 改为读取数据库真实进度
+  - [server/src/routes/reset.ts](D:/code/build-your-own-claude-code/server/src/routes/reset.ts) 返回未实现但不误导的占位结果
+- ✅ 保持 [server/src/services/ws-proxy.ts](D:/code/build-your-own-claude-code/server/src/services/ws-proxy.ts) 与 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts) 暂不实现，避免假成功
+- ✅ 验证通过：
+  - `cd server && npm install`
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+  - `GET /api/health` → 200
+  - `POST /api/session` → 返回真实 UUID + `status: "creating"`
+  - `POST /api/submit` → 返回 `success: false` + 明确未实现说明
+  - `GET /api/progress?sessionId=test` → 返回数据库数据（当前为空数组）
+  - `POST /api/reset` → 返回 `success: false`
+- ✅ 完成一次独立架构复核，未发现需要回退的设计问题
+
+**进行中**：
+- 🔄 后端仍处于“诚实骨架”阶段，尚未接入真实 Docker 容器生命周期
+- 🔄 下一阶段准备实现 `container-manager` 的最小能力：创建容器 / 查询 ttyd 端口 / 删除容器
+
+**阻塞项**：
+- ⚠️ `infrastructure/Dockerfile.lab` 目前仍只是 `ttyd + bash` PoC，尚未验证真实 `claude-code-diy + build.mjs --lab` 容器闭环
+- ⚠️ Windows 下 `tsx watch` 会残留子进程，验证时需注意清理 3001 端口占用
+
+**下一步建议**：
+- 1. 实现 `container-manager.ts` 的最小容器能力，不要一次做完整 submit/build/proxy 链
+- 2. 完成 Docker 层之后，再把 `session.ts` 从“仅发 sessionId”升级为“分配真实容器”
+- 3. 之后再推进 `submit -> build -> terminal proxy`，保持每一步都能独立验证
+
+### 2026-04-09（会话 6）
+
+**完成项**：
+- ✅ 完成后端第一步“truthful bring-up”：
+  - `server/src/db/database.ts` 已用 `better-sqlite3` 实现最小 SQLite 存储
+  - 只建立 `sessions(id, container_id, created_at, last_active)` 与 `progress(session_id, lab_number, completed, completed_at)` 两张表
+  - 明确未把 `ttyd_port` 存进数据库，避免把运行时端口误当成持久化真相来源
+- ✅ 让后端以“契约安全”的方式启动：
+  - `POST /api/session` 现在生成真实 `sessionId`，返回 `{ sessionId, status: "creating" }`
+  - `POST /api/submit` 现在做参数校验，并明确返回 `{ success: false, buildLog: "submit/build chain not implemented yet" }`
+  - `GET /api/progress` 现在从数据库读取真实数据
+  - `POST /api/reset` 现在返回 `{ success: false }` 级别的诚实占位响应
+- ✅ 验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+  - `GET /api/health` 返回 200
+  - `POST /api/session` 返回结构与前端契约一致
+  - `POST /api/submit` 明确未实现，不再 fake success
+
+**进行中**：
+- 🔄 后端仍处于“诚实启动”阶段，容器管理、代码注入、真实构建触发、终端代理还未接入
+
+**阻塞项**：
+- ⚠️ `infrastructure/Dockerfile.lab` 当前只验证了 `ttyd + bash`，还没有把 `claude-code-diy` 真正装进容器并验证 `node build.mjs --lab`
+- ⚠️ 真实 `/api/session -> container-manager -> ttyd/ws-proxy` 链路还未实现，因此前端仍不能切出 mock 模式
+
+**下一步建议**：
+- 1. 先做容器镜像现实校验：确认镜像里真的能承载 `claude-code-diy` 与 `node build.mjs --lab`
+- 2. 然后实现 `container-manager.ts` 的最小能力：创建容器、查端口、删除容器
+- 3. 再把 `POST /api/session` 从“诚实占位”升级成“真实分配容器”
+- 4. 最后进入 `POST /api/submit` 与 `WS /api/terminal/:sessionId` 的真实联通
+
 ---
 
 ## 关键资源
