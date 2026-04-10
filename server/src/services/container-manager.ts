@@ -151,6 +151,10 @@ function sanitizeExecOutput(output: string): string {
     cleaned = cleaned.slice(8);
   }
 
+  // 再统一清理不可见控制字符，保留换行、回车、制表符和 ANSI ESC。
+  // 这样日志仍能保留颜色，但不会混入奇怪的乱码字节。
+  cleaned = cleaned.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001A]/g, '');
+
   return cleaned.trim();
 }
 

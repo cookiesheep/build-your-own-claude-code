@@ -1,7 +1,19 @@
 # Build Your Own Claude Code - Lab Container
-# PoC: verify ttyd WebSocket works in browser
+#
+# 这一版不再只是 ttyd + bash 的 PoC。
+# 它会把 claude-code-diy 的运行底座放进镜像里，让容器真正具备：
+#   1. 接收 query-lab.ts 注入
+#   2. 执行 node build.mjs --lab N
+#   3. 后续在终端里运行 node cli.js
+#
+# 注意：
+# - 这个 Dockerfile 预期的 build context 里有一个 runtime/ 目录
+# - runtime/ 的内容由 build-lab-image.ps1 从 sister repo 组装而来
+# - 这样我们就不用把 416K 行运行底座直接塞进当前教学仓库
 
-FROM node:18-bookworm-slim
+# sister repo 的依赖里已经有不少包要求 Node 20+，
+# 所以这里直接把基础镜像升级到 Node 22，避免后面不断撞 engine warning。
+FROM node:22-bookworm-slim
 
 # Use Chinese mirror for Debian repos (bypass GFW issues)
 RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null; \
@@ -23,11 +35,43 @@ RUN curl -sL https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64
 # Create workspace
 WORKDIR /workspace
 
-# PoC welcome script
-RUN printf '#!/bin/bash\necho "Build Your Own Claude Code - Lab Container"\necho "Node.js version: $(node --version)"\necho "ttyd version: $(ttyd --version 2>&1 | head -1)"\necho ""\necho "PoC verified! In the real setup you would run:"\necho "  node build.mjs --lab 3"\necho "  node cli.js"\necho ""\nexec bash\n' > /workspace/welcome.sh && chmod +x /workspace/welcome.sh
+# 先只复制 package 清单，尽量利用 Docker layer cache。
+# 以后 sister repo 代码变了，但依赖没变时，这一层可以直接复用。
+COPY runtime/package.json ./package.json
+COPY runtime/package-lock.json ./package-lock.json
+COPY runtime/node-esm-hooks.mjs ./node-esm-hooks.mjs
+
+# 安装运行时需要的 Node.js 依赖。
+# 这里保留 devDependencies，因为 build.mjs 依赖 esbuild / typescript 等开发工具。
+# 同时补一点网络稳健性设置，尽量减少容器内拉包时的 ECONNRESET。
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-factor 2 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-retry-maxtimeout 120000
+
+RUN npm ci \
+    && npm cache clean --force
+
+# 再复制完整运行底座源码。
+COPY runtime/ ./
+
+# 提供一个轻量的 shell 启动脚本，让学习者进终端后就知道下一步怎么做。
+RUN printf '#!/bin/bash\n'\
+'echo "Build Your Own Claude Code - Lab Container"\n'\
+'echo "Node.js version: $(node --version)"\n'\
+'echo "ttyd version: $(ttyd --version 2>&1 | head -1)"\n'\
+'echo ""\n'\
+'echo "Ready for Lab workflow:"\n'\
+'echo "  1. POST /api/submit will inject src/query-lab.ts"\n'\
+'echo "  2. node build.mjs --lab 3   # or another lab number"\n'\
+'echo "  3. node cli.js"\n'\
+'echo ""\n'\
+'exec bash\n' > /usr/local/bin/start-lab-shell \
+    && chmod +x /usr/local/bin/start-lab-shell
 
 # Expose ttyd port
 EXPOSE 7681
 
-# Start ttyd with bash shell
-CMD ["ttyd", "--writable", "--port", "7681", "bash", "--rcfile", "/workspace/welcome.sh"]
+# Start ttyd with an interactive shell that prints lab instructions.
+CMD ["ttyd", "--writable", "--port", "7681", "/usr/local/bin/start-lab-shell"]

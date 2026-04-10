@@ -439,6 +439,42 @@
 - 2. 更推荐先升级镜像，因为没有真实运行底座，终端接线后也无法体现真正的 Claude Code 体验
 - 3. 镜像升级完成后，再回到 submit 路由重测真实构建成功路径
 
+### 2026-04-10（会话 10）
+
+**完成项**：
+- ✅ 完成后端第五步：升级 [infrastructure/Dockerfile.lab](D:/code/build-your-own-claude-code/infrastructure/Dockerfile.lab)，让 `byocc-lab` 从 `ttyd + bash` PoC 镜像升级为真实运行底座镜像
+- ✅ 新增 [build-lab-image.ps1](D:/code/build-your-own-claude-code/infrastructure/build-lab-image.ps1)：
+  - 从 sister repo `D:\test-claude-code\claude-code` 组装临时 Docker build context
+  - 排除 `node_modules` / `dist` / 图片等大目录
+  - 使用当前仓库的 Dockerfile 构建 `byocc-lab`
+- ✅ Dockerfile 关键升级：
+  - 基础镜像升级到 `node:22-bookworm-slim`
+  - 在容器内执行 `npm ci`
+  - 将 `claude-code-diy` 运行底座复制到 `/workspace`
+  - 保留 ttyd，并提供更贴近 Lab 工作流的 shell 提示
+  - 为 npm 增加更稳健的 registry / retry 配置，解决第一次构建时遇到的 `ECONNRESET`
+- ✅ 更新 [.gitignore](D:/code/build-your-own-claude-code/.gitignore)，忽略 `.tmp/` Docker 临时 build context
+- ✅ 第五步运行时验证通过：
+  - 成功执行 `pwsh -NoProfile -ExecutionPolicy Bypass -File infrastructure/build-lab-image.ps1`
+  - 镜像构建成功，`byocc-lab` 已升级
+  - 重测 `POST /api/session` + `POST /api/submit`
+  - 使用 sister repo 中已验证可编译的 `src/query-lab.ts` 作为提交内容时：
+    - `submit.success === true`
+    - `progress` 中 `lab 3` 被标记为 `completed: true`
+
+**进行中**：
+- 🔄 运行镜像已具备真实构建能力，但浏览器终端尚未接入 WebSocket 代理
+- 🔄 `buildLog` 已能反映真实构建过程，但日志里仍夹杂较多构建 warnings，后续可再做可读性优化
+
+**阻塞项**：
+- ⚠️ 尚未实现 [server/src/services/ws-proxy.ts](D:/code/build-your-own-claude-code/server/src/services/ws-proxy.ts)，前端终端还无法连到容器 ttyd
+- ⚠️ 当前 `sessionId` 复用策略仍是开发阶段语义，正式产品语义还需再明确
+
+**下一步建议**：
+- 1. 进入第六步：实现 `ws-proxy.ts`，把浏览器终端接到容器 ttyd
+- 2. 接通 WebSocket 后，让前端从 mock terminal URL 进入真实容器终端
+- 3. 第六步完成后，再做一次端到端闭环验证：页面创建 session → submit 构建成功 → 浏览器终端运行 `node cli.js`
+
 ### 2026-04-09（会话 6）
 
 **完成项**：
