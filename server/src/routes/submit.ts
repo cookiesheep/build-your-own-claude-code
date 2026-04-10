@@ -9,8 +9,8 @@
  */
 
 import { Router } from 'express';
-// import { injectCode, buildInContainer } from '../services/container-manager.js';
-// import { updateProgress } from '../db/database.js';
+import { getSession, updateProgress } from '../db/database.js';
+import { buildInContainer, injectCode } from '../services/container-manager.js';
 
 export const submitRouter = Router();
 
@@ -41,8 +41,38 @@ submitRouter.post('/api/submit', async (req, res) => {
     return;
   }
 
-  res.json({
-    success: false,
-    buildLog: 'submit/build chain not implemented yet',
-  });
+  // 提交代码之前，先确认这个 session 至少在数据库里存在。
+  // 否则用户很可能是绕过了 /api/session，直接打 submit。
+  const session = getSession(sessionId);
+  if (!session) {
+    res.status(400).json({
+      success: false,
+      buildLog: 'Session not found. Please create a session before submitting code.',
+    });
+    return;
+  }
+
+  try {
+    await injectCode(sessionId, code, labNumber);
+    const buildResult = await buildInContainer(sessionId, labNumber);
+
+    if (buildResult.success) {
+      updateProgress(sessionId, labNumber, true);
+    }
+
+    res.json({
+      success: buildResult.success,
+      buildLog: buildResult.log,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Unknown error while submitting code.';
+
+    const statusCode = message.includes('No container found for session') ? 400 : 500;
+
+    res.status(statusCode).json({
+      success: false,
+      buildLog: message,
+    });
+  }
 });

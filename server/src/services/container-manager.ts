@@ -9,16 +9,18 @@
  *
  * 当前阶段已实现：
  *   - createContainer
- *   - getTtydPort
- *   - removeContainer
- *
- * 后续阶段待实现：
  *   - injectCode
  *   - buildInContainer
+ *   - getTtydPort
+ *   - removeContainer
  *   - getContainerStatus
+ *
+ * 后续阶段待实现：
+ *   - 更完整的构建镜像（claude-code-diy 运行底座）
  */
 
 import Docker from 'dockerode';
+import type { Readable } from 'node:stream';
 
 // 自动连接到本地 Docker（Docker Desktop 必须在运行）
 const docker = new Docker();
@@ -38,6 +40,11 @@ const sessionContainers = new Map<string, string>();
 type ResolvedContainer = {
   container: Docker.Container;
   info: Docker.ContainerInspectInfo;
+};
+
+type ExecResult = {
+  exitCode: number | null;
+  output: string;
 };
 
 function getContainerName(sessionId: string): string {
@@ -104,6 +111,70 @@ async function ensureLabImageExists(): Promise<void> {
       `Docker image "${LAB_IMAGE}" was not found. Build it first with: docker build -t ${LAB_IMAGE} -f infrastructure/Dockerfile.lab infrastructure`
     );
   }
+}
+
+function readStreamToString(stream: Readable): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let output = '';
+
+    stream.setEncoding('utf8');
+    stream.on('data', (chunk) => {
+      output += chunk;
+    });
+    stream.on('error', reject);
+    stream.on('end', () => resolve(output));
+    stream.on('close', () => resolve(output));
+  });
+}
+
+async function getContainerOrThrow(sessionId: string): Promise<ResolvedContainer> {
+  const resolvedContainer = await resolveContainer(sessionId);
+  if (!resolvedContainer) {
+    throw new Error(`No container found for session "${sessionId}"`);
+  }
+
+  return resolvedContainer;
+}
+
+function sanitizeExecOutput(output: string): string {
+  let cleaned = output;
+
+  // 某些 Docker exec 输出前面会混入 8 字节的流复用头。
+  // 当前阶段先做一个保守清理：如果开头看起来像这种头，就先裁掉。
+  while (
+    cleaned.length >= 8 &&
+    (cleaned.charCodeAt(0) === 1 || cleaned.charCodeAt(0) === 2) &&
+    cleaned.charCodeAt(1) === 0 &&
+    cleaned.charCodeAt(2) === 0 &&
+    cleaned.charCodeAt(3) === 0
+  ) {
+    cleaned = cleaned.slice(8);
+  }
+
+  return cleaned.trim();
+}
+
+async function runExecCommand(
+  container: Docker.Container,
+  command: string[]
+): Promise<ExecResult> {
+  const exec = await container.exec({
+    Cmd: command,
+    AttachStdout: true,
+    AttachStderr: true,
+    // 当前阶段优先保证执行稳定。
+    // 这里直接把 stdout/stderr 合成一条流来读取，后面再按需要做更细的拆分。
+    Tty: true,
+  });
+
+  const stream = (await exec.start({})) as Readable;
+  const output = sanitizeExecOutput(await readStreamToString(stream));
+  const execInfo = await exec.inspect();
+
+  return {
+    exitCode: execInfo.ExitCode,
+    output,
+  };
 }
 
 /**
@@ -175,8 +246,31 @@ export async function injectCode(
   code: string,
   labNumber: number
 ): Promise<void> {
-  // TODO: 实现代码注入逻辑
-  throw new Error('TODO: 实现 injectCode');
+  const { container } = await getContainerOrThrow(sessionId);
+
+  // 当前阶段先统一写到 query-lab.ts。
+  // 以后如果要按 lab 拆成不同入口，再从这里扩展目标路径策略。
+  const targetFile = '/workspace/src/query-lab.ts';
+  const encodedCode = Buffer.from(code, 'utf8').toString('base64');
+
+  const { exitCode, output } = await runExecCommand(container, [
+    'bash',
+    '-lc',
+    [
+      'mkdir -p /workspace/src',
+      `printf '%s' '${encodedCode}' | base64 -d > ${targetFile}`,
+      `echo 'Injected Lab ${labNumber} code into ${targetFile}'`,
+    ].join(' && '),
+  ]);
+
+  if (exitCode !== 0) {
+    throw new Error(
+      [
+        `Failed to inject code into container for session "${sessionId}".`,
+        output || 'No container output was captured.',
+      ].join('\n')
+    );
+  }
 }
 
 /**
@@ -195,8 +289,22 @@ export async function buildInContainer(
   sessionId: string,
   labNumber: number
 ): Promise<{ success: boolean; log: string }> {
-  // TODO: 实现容器内构建逻辑
-  throw new Error('TODO: 实现 buildInContainer');
+  const { container } = await getContainerOrThrow(sessionId);
+
+  const { exitCode, output } = await runExecCommand(container, [
+    'bash',
+    '-lc',
+    [
+      'cd /workspace',
+      `if [ ! -f build.mjs ]; then echo 'build.mjs not found in container image. Current image is still the ttyd+bash PoC and not the full claude-code-diy runtime.'; exit 2; fi`,
+      `node build.mjs --lab ${labNumber}`,
+    ].join(' && '),
+  ]);
+
+  return {
+    success: exitCode === 0,
+    log: output || 'Build command finished without output.',
+  };
 }
 
 /**

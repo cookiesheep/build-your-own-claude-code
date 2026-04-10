@@ -400,6 +400,45 @@
 - 2. 在做 submit 前，先明确容器内目标路径、注入方式和构建命令约定
 - 3. submit 打通后，再进入 `ws-proxy.ts` 与前端终端接线
 
+### 2026-04-10（会话 9）
+
+**完成项**：
+- ✅ 完成后端第四步：让 `submit.ts` 第一次接入真实容器链路
+- ✅ 完成 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts) 中的：
+  - `injectCode(sessionId, code, labNumber)`
+  - `buildInContainer(sessionId, labNumber)`
+- ✅ 完成 [server/src/routes/submit.ts](D:/code/build-your-own-claude-code/server/src/routes/submit.ts) 的真实提交流程：
+  - 校验参数
+  - 校验 session 是否存在
+  - 调用 `injectCode`
+  - 调用 `buildInContainer`
+  - 构建成功时更新 `progress`
+  - 缺失容器时返回 400，其余提交错误返回 500
+- ✅ 注入链路已验证为真实行为：
+  - 通过 `POST /api/session` 创建真实容器
+  - 通过 `POST /api/submit` 将示例代码写入 `/workspace/src/query-lab.ts`
+  - 通过 `docker exec cat /workspace/src/query-lab.ts` 验证注入内容正确
+- ✅ 构建链路当前为“诚实失败”：
+  - 由于当前镜像仍是 `ttyd + bash` PoC，没有 `build.mjs`
+  - `buildInContainer` 会返回清晰的失败日志，而不是假装构建成功
+  - 返回示例：`build.mjs not found in container image...`
+- ✅ 代码级验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+
+**进行中**：
+- 🔄 submit 路由已经接入真实容器，但当前镜像仍不具备真实 `claude-code-diy` 构建能力
+- 🔄 距离前端真正“提交代码 -> 构建 -> 终端可运行”还差镜像升级与终端代理接线
+
+**阻塞项**：
+- ⚠️ `infrastructure/Dockerfile.lab` 仍是 `ttyd + bash` PoC，尚未包含 `claude-code-diy + build.mjs --lab`
+- ⚠️ 因为运行镜像未升级，当前 `submit` 虽然完成真实注入，但构建阶段只能诚实失败
+
+**下一步建议**：
+- 1. 决定第五步是先升级 `Dockerfile.lab` 到可运行 `claude-code-diy` 的镜像，还是先做 `ws-proxy.ts`
+- 2. 更推荐先升级镜像，因为没有真实运行底座，终端接线后也无法体现真正的 Claude Code 体验
+- 3. 镜像升级完成后，再回到 submit 路由重测真实构建成功路径
+
 ### 2026-04-09（会话 6）
 
 **完成项**：
