@@ -1,5 +1,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-const MOCK_MODE = true;
+// 进入后端联调阶段后，默认应该优先走真实后端。
+// 如果你只是单独调前端，也可以手动设置 NEXT_PUBLIC_MOCK_MODE=true 切回 mock。
+const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
 
 export type SessionResponse = {
   sessionId: string;

@@ -475,6 +475,43 @@
 - 2. 接通 WebSocket 后，让前端从 mock terminal URL 进入真实容器终端
 - 3. 第六步完成后，再做一次端到端闭环验证：页面创建 session → submit 构建成功 → 浏览器终端运行 `node cli.js`
 
+### 2026-04-10（会话 11）
+
+**完成项**：
+- ✅ 完成后端第六步：实现 [server/src/services/ws-proxy.ts](D:/code/build-your-own-claude-code/server/src/services/ws-proxy.ts)
+- ✅ WebSocket 代理现在会：
+  - 监听 HTTP server 的 `upgrade` 事件
+  - 只处理 `/api/terminal/:sessionId`
+  - 根据 `sessionId` 调用 `getTtydPort()`
+  - 将请求路径改写为 ttyd 的 websocket 入口 `/ws`
+  - 把浏览器 WebSocket 转发到对应容器 ttyd
+- ✅ 错误处理已接通：
+  - 不存在的 session → 返回 `404 Not Found`
+  - 代理错误 → 返回 `502 Bad Gateway`
+- ✅ 前端接线前置准备完成：
+  - [platform/src/lib/api.ts](D:/code/build-your-own-claude-code/platform/src/lib/api.ts) 的 mock 开关改为环境变量控制
+  - 默认优先走真实后端，仍可通过 `NEXT_PUBLIC_MOCK_MODE=true` 切回 mock
+- ✅ 验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+  - `cd platform && npm run build`
+  - 原始 websocket 握手验证：
+    - 有效 session → `HTTP/1.1 101 Switching Protocols`
+    - 无效 session → `HTTP/1.1 404 Not Found`
+
+**进行中**：
+- 🔄 后端核心链路已基本齐备：session / submit / image / ws-proxy
+- 🔄 还差浏览器层的端到端闭环验证：前端页面实际连入真实终端并运行 `node cli.js`
+
+**阻塞项**：
+- ⚠️ 尚未完成“浏览器页面 + 真实后端 + 真实 ttyd”的完整人工联调截图/录像级验证
+- ⚠️ `reset.ts` 仍是占位实现，影响完整产品体验，但不阻塞当前终端联调
+
+**下一步建议**：
+- 1. 做一次真实前端联调：关闭 mock，进入 `/lab/3`，提交代码后观察终端连接
+- 2. 在终端里手动运行 `node cli.js`，确认真实 Claude Code TUI 能出来
+- 3. 之后再补 `reset.ts` 与端到端体验打磨
+
 ### 2026-04-09（会话 6）
 
 **完成项**：
