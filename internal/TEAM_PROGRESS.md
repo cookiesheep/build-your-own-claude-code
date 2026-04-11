@@ -544,6 +544,64 @@
 - 3. 再把 `POST /api/session` 从“诚实占位”升级成“真实分配容器”
 - 4. 最后进入 `POST /api/submit` 与 `WS /api/terminal/:sessionId` 的真实联通
 
+### 2026-04-11（会话 12 / 前端终端修复）
+
+**完成项**：
+- ✅ 新建并切换到 `codex/fix-terminal-xterm-proxy` 分支
+- ✅ 修复 [platform/src/components/Terminal.tsx](D:/code/build-your-own-claude-code/platform/src/components/Terminal.tsx) 中的 xterm 生命周期问题：
+  - xterm 初始化只执行一次，不再随 `buildLog` 变化 dispose/recreate
+  - `buildLog` 改为追加写入现有终端
+  - 未拿到真实 `wsUrl` 前不再挂载 xterm，避免等待阶段触发 xterm dimensions 竞态
+  - 已连接阶段去掉 `FitAddon`，改为 `ResizeObserver + terminal.resize()` 的保守尺寸策略
+- ✅ 增加终端等待反馈设计：
+  - 等待阶段显示“已等待时间 / 预计连接时间”
+  - 显示分阶段提示（等待构建、准备容器终端、连接时间较长）
+  - 显示进度条和超过 60 秒时的排查提示
+- ✅ 修复前端 session / terminal 状态机问题：
+  - [platform/src/components/LabWorkspace.tsx](D:/code/build-your-own-claude-code/platform/src/components/LabWorkspace.tsx) 现在用 `localStorage` 复用 `sessionId`
+  - 避免刷新页面 / 切换 Lab 时反复创建新 Docker 容器
+  - 终端连接从“等待 build success”改为“拿到 sessionId 后即可连接 ttyd”
+  - 构建日志继续作为终端附加输出，不再阻塞终端连接
+- ✅ 移除前端终端对 raw `xterm-addon-attach` 的使用，改为适配 ttyd websocket 协议：
+  - websocket 使用 `tty` 子协议
+  - 前端输入使用 ttyd input 命令前缀发送
+  - terminal resize 使用 ttyd resize 命令发送
+  - 服务端 output / title / preferences 命令在前端解析处理
+- ✅ 保持后端 Docker / container-manager / submit / ws-proxy 架构不变
+
+**进行中**：
+- 🔄 仍需在真实浏览器里完成“点击提交代码 -> build 成功 -> 终端输入 `node cli.js` -> TUI 启动”的人工交互验证
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `cd platform && npm run lint`
+- `cd platform && npm run build`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `GET http://localhost:3000/` 返回 200
+- `GET http://localhost:3000/lab/3` 返回 200
+- 后端 `GET http://localhost:3001/api/health` 返回 200
+- Node websocket smoke：`POST /api/session` 创建临时 session，连接 `ws://127.0.0.1:3001/api/terminal/<sessionId>`，按 ttyd 协议发送 `pwd`，收到 `/workspace` 输出
+- 已清理临时测试容器 `lab-frontend-terminal-smoke-1775899300945`
+- 二次修复后重新运行 `cd platform && npm run lint`
+- 二次修复后重新运行 `cd platform && npm run build`
+- 三次修复后重新运行 `cd platform && npm run lint`
+- 三次修复后重新运行 `cd platform && npm run build`
+- 三次修复后重新运行 `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- 三次修复后 `GET http://localhost:3000/lab/3` 返回 200
+- 四次修复：为 ConnectedTerminal 增加可取消延迟初始化，规避 React dev/StrictMode 下 xterm open/dispose 后仍有 viewport refresh 回调导致的 `dimensions` 报错
+- 四次修复后重新运行 `cd platform && npm run lint`
+- 四次修复后重新运行 `cd platform && npm run build`
+- 四次修复后重新运行 `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- 四次修复后 `GET http://localhost:3000/lab/3` 返回 200
+
+**下一步**：
+- 在真实浏览器打开 `http://localhost:3000/lab/3`，点击提交后测试终端交互
+- 在终端中运行 `pwd`、`ls`、`node cli.js`，确认真实 Claude Code TUI 能在浏览器终端启动
+- 如果浏览器仍有 xterm console error，再优先检查 React dev server/HMR 是否残留旧 bundle，再检查 ttyd 输出解析
+- 对开发环境中的旧 `lab-*` 容器做一次手动清理，避免历史测试容器继续堆积
+
 ---
 
 ## 关键资源
