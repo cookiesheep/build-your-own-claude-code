@@ -5,12 +5,13 @@
  *
  * 浏览器 xterm.js ←→ WebSocket ←→ 本服务 ←→ 容器 ttyd:7681
  *
- * TODO: 实现 WebSocket 代理逻辑
  */
 
 import type { Server } from 'http';
-// import httpProxy from 'http-proxy';
-// import { getTtydPort } from './container-manager.js';
+import httpProxy from 'http-proxy';
+import { getTtydPort } from './container-manager.js';
+
+const TERMINAL_PATH_PREFIX = '/api/terminal/';
 
 /**
  * 设置 WebSocket 代理
@@ -24,28 +25,63 @@ import type { Server } from 'http';
  *   4. 用 http-proxy 将 WebSocket 连接代理到 http://localhost:{ttydPort}
  */
 export function setupWebSocketProxy(server: Server): void {
-  // TODO: 实现 WebSocket 代理
-  //
-  // 示例代码：
-  //
-  // const proxy = httpProxy.createProxyServer({ ws: true });
-  //
-  // server.on('upgrade', async (req, socket, head) => {
-  //   // 从 URL 中提取 sessionId
-  //   // 例如 /api/terminal/user-abc123 → sessionId = 'user-abc123'
-  //   const match = req.url?.match(/\/api\/terminal\/(.+)/);
-  //   if (!match) {
-  //     socket.destroy();
-  //     return;
-  //   }
-  //
-  //   const sessionId = match[1];
-  //   const ttydPort = await getTtydPort(sessionId);
-  //
-  //   proxy.ws(req, socket, head, {
-  //     target: `http://localhost:${ttydPort}`,
-  //   });
-  // });
+  const proxy = httpProxy.createProxyServer({
+    ws: true,
+    changeOrigin: true,
+  });
 
-  console.log('📡 WebSocket proxy: TODO — 待实现');
+  proxy.on('error', (error, _req, socket) => {
+    console.error('WebSocket proxy error:', error);
+
+    // WebSocket upgrade 失败时，没有现成的 Express 错误处理中间件可用，
+    // 所以这里直接往底层 socket 写一个最小的 502 响应，然后主动断开。
+    if (socket && 'writable' in socket && socket.writable) {
+      socket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
+    }
+    socket.destroy();
+  });
+
+  server.on('upgrade', async (req, socket, head) => {
+    const requestUrl = req.url ?? '';
+
+    // 只拦截我们自己的 terminal 通道。
+    // 其他升级请求不处理，避免把整个 server 的 upgrade 流量都吞掉。
+    if (!requestUrl.startsWith(TERMINAL_PATH_PREFIX)) {
+      return;
+    }
+
+    const rawSessionId = requestUrl.slice(TERMINAL_PATH_PREFIX.length);
+    const sessionId = decodeURIComponent(rawSessionId).trim();
+
+    if (sessionId === '') {
+      socket.write('HTTP/1.1 400 Bad Request\r\n\r\nMissing sessionId');
+      socket.destroy();
+      return;
+    }
+
+    try {
+      const ttydPort = await getTtydPort(sessionId);
+
+      // 到这里为止，后端真正做的事情是：
+      // 1. 根据 sessionId 找到对应容器
+      // 2. 读取这个容器 ttyd 暴露到宿主机的随机端口
+      // 3. 把当前 WebSocket 流量转发给那个端口
+      //
+      // 注意：浏览器连的是 /api/terminal/:sessionId，但 ttyd 自己并不认识这个路径。
+      // 所以在真正代理前，我们要把请求路径改写成 ttyd 的 websocket 入口。
+      req.url = '/ws';
+      proxy.ws(req, socket, head, {
+        target: `http://127.0.0.1:${ttydPort}`,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown terminal proxy error';
+
+      console.error(`Failed to proxy terminal for session "${sessionId}":`, message);
+      socket.write(`HTTP/1.1 404 Not Found\r\n\r\n${message}`);
+      socket.destroy();
+    }
+  });
+
+  console.log('📡 WebSocket proxy: ready for /api/terminal/:sessionId');
 }

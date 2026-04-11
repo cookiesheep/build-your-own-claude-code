@@ -285,6 +285,323 @@
 - 3. `reset` 先采用“删容器并重建”的明确策略，等基础链路稳定后再讨论 workspace snapshot / volume 优化
 - 4. 完成首轮联通后，再补 `progress`、错误分类、构建日志结构化、Cloudflare Tunnel 暴露策略
 
+### 2026-04-09（会话 6）
+
+**完成项**：
+- ✅ 完成后端第一步“诚实启动（truthful bring-up）”：
+  - 实现 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - 采用 `better-sqlite3` 初始化 `sessions` / `progress` 最小 schema
+  - 明确未将 `ttyd_port` 写入数据库，保持数据库只存稳定元数据
+- ✅ 调整占位路由为“契约安全”状态：
+  - [server/src/routes/session.ts](D:/code/build-your-own-claude-code/server/src/routes/session.ts) 返回真实 `sessionId` 与 `status: "creating"`
+  - [server/src/routes/submit.ts](D:/code/build-your-own-claude-code/server/src/routes/submit.ts) 增加参数校验，并明确返回 `success: false`
+  - [server/src/routes/progress.ts](D:/code/build-your-own-claude-code/server/src/routes/progress.ts) 改为读取数据库真实进度
+  - [server/src/routes/reset.ts](D:/code/build-your-own-claude-code/server/src/routes/reset.ts) 返回未实现但不误导的占位结果
+- ✅ 保持 [server/src/services/ws-proxy.ts](D:/code/build-your-own-claude-code/server/src/services/ws-proxy.ts) 与 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts) 暂不实现，避免假成功
+- ✅ 验证通过：
+  - `cd server && npm install`
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+  - `GET /api/health` → 200
+  - `POST /api/session` → 返回真实 UUID + `status: "creating"`
+  - `POST /api/submit` → 返回 `success: false` + 明确未实现说明
+  - `GET /api/progress?sessionId=test` → 返回数据库数据（当前为空数组）
+  - `POST /api/reset` → 返回 `success: false`
+- ✅ 完成一次独立架构复核，未发现需要回退的设计问题
+
+**进行中**：
+- 🔄 后端仍处于“诚实骨架”阶段，尚未接入真实 Docker 容器生命周期
+- 🔄 下一阶段准备实现 `container-manager` 的最小能力：创建容器 / 查询 ttyd 端口 / 删除容器
+
+**阻塞项**：
+- ⚠️ `infrastructure/Dockerfile.lab` 目前仍只是 `ttyd + bash` PoC，尚未验证真实 `claude-code-diy + build.mjs --lab` 容器闭环
+- ⚠️ Windows 下 `tsx watch` 会残留子进程，验证时需注意清理 3001 端口占用
+
+**下一步建议**：
+- 1. 实现 `container-manager.ts` 的最小容器能力，不要一次做完整 submit/build/proxy 链
+- 2. 完成 Docker 层之后，再把 `session.ts` 从“仅发 sessionId”升级为“分配真实容器”
+- 3. 之后再推进 `submit -> build -> terminal proxy`，保持每一步都能独立验证
+
+### 2026-04-10（会话 7）
+
+**完成项**：
+- ✅ 进入后端第二步：实现最小容器管理切片（不碰 submit/build/ws-proxy）
+- ✅ 完成 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts) 的三个核心能力：
+  - `createContainer(sessionId)`：按固定容器命名规则创建并启动 `byocc-lab` 容器
+  - `getTtydPort(sessionId)`：读取容器 `7681/tcp` 对应的宿主机随机端口
+  - `removeContainer(sessionId)`：停止并删除容器
+- ✅ 为容器层加入几个关键保护设计：
+  - 固定容器命名 `lab-<sessionId>`，便于后续 session 绑定真实容器
+  - `sessionId -> containerId` 仅作为进程内缓存，真实状态仍以 Docker inspect 为准
+  - 创建前检查 `byocc-lab` 镜像是否存在，给出明确错误提示
+  - 若同一 session 已有容器，则优先复用，避免重复创建导致名称冲突
+- ✅ 更新 [.gitignore](D:/code/build-your-own-claude-code/.gitignore)，忽略 `server/*.sqlite*` 本地运行产物，减少误提交
+- ✅ 代码级验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+- ✅ 运行时 smoke test 通过：
+  - 启动 Docker Desktop 并构建 `byocc-lab` 镜像
+  - 通过 `container-manager.ts` 直接调用完成：
+    - `createContainer("smoke-step2")`
+    - `getTtydPort("smoke-step2")`
+    - `removeContainer("smoke-step2")`
+  - 验证结果：
+    - 容器成功创建
+    - ttyd 映射端口成功返回（示例端口：`32768`）
+    - 容器成功删除，`docker ps -a` 中不再存在 `lab-smoke-step2`
+
+**进行中**：
+- 🔄 容器层代码已具备，但尚未接入 route 层
+- 🔄 准备在下一步把 `session.ts` 从“只发 sessionId”升级成“创建/复用真实容器”
+
+**阻塞项**：
+- ⚠️ `infrastructure/Dockerfile.lab` 仍只是 `ttyd + bash` PoC，未升级到 `claude-code-diy` 运行镜像
+
+**下一步建议**：
+- 1. 推进 `session.ts` 接真实容器分配，把当前“只发 sessionId”升级成“分配/复用真实容器”
+- 2. 在接 route 时明确 session 复用语义：恢复旧容器、重启旧容器，还是替换旧容器
+- 3. 之后再进入 `submit/buildInContainer`，继续保持“一步只跨一个系统边界”
+
+### 2026-04-10（会话 8）
+
+**完成项**：
+- ✅ 完成后端第三步：将 [server/src/routes/session.ts](D:/code/build-your-own-claude-code/server/src/routes/session.ts) 接入真实容器分配
+- ✅ 补全 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts) 中的 `getContainerStatus(sessionId)`
+- ✅ `POST /api/session` 现在具备真实语义：
+  - 新 session：创建真实容器，返回 `status: "creating"`
+  - 已存在且容器运行中：复用容器，返回 `status: "running"`
+  - 已存在但容器停止或不存在：重新走创建/恢复路径，返回 `status: "creating"`
+- ✅ route 层与 service 层现在第一次真正连通：
+  - route 负责接收 `sessionId`
+  - service 负责创建 / 复用 / 判断容器状态
+  - database 负责记录 `sessionId -> container_id`
+- ✅ 验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+  - 启动 server 后：
+    - 第一次 `POST /api/session` → 返回真实 UUID + `status: "creating"`
+    - 第二次同 `sessionId` 再请求 → 返回同一 `sessionId` + `status: "running"`
+    - `docker ps` 可见对应容器正在运行
+    - 调用清理后，`docker ps -a` 中不再存在该测试容器
+
+**进行中**：
+- 🔄 真实 session 分配已接通，但 submit/build/terminal 主链尚未接入
+- 🔄 当前容器复用策略可用于现阶段开发，但还不是最终产品语义
+
+**阻塞项**：
+- ⚠️ `session.ts` 当前对“同一 sessionId 的最终产品语义”仍需后续明确：
+  - 是始终恢复旧容器
+  - 还是停止后重启
+  - 还是重建替换
+- ⚠️ `infrastructure/Dockerfile.lab` 仍是 `ttyd + bash` PoC 镜像，不是最终 `claude-code-diy` 运行镜像
+
+**下一步建议**：
+- 1. 进入第四步：实现 `submit.ts -> injectCode/buildInContainer`，让代码提交第一次接入真实容器
+- 2. 在做 submit 前，先明确容器内目标路径、注入方式和构建命令约定
+- 3. submit 打通后，再进入 `ws-proxy.ts` 与前端终端接线
+
+### 2026-04-10（会话 9）
+
+**完成项**：
+- ✅ 完成后端第四步：让 `submit.ts` 第一次接入真实容器链路
+- ✅ 完成 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts) 中的：
+  - `injectCode(sessionId, code, labNumber)`
+  - `buildInContainer(sessionId, labNumber)`
+- ✅ 完成 [server/src/routes/submit.ts](D:/code/build-your-own-claude-code/server/src/routes/submit.ts) 的真实提交流程：
+  - 校验参数
+  - 校验 session 是否存在
+  - 调用 `injectCode`
+  - 调用 `buildInContainer`
+  - 构建成功时更新 `progress`
+  - 缺失容器时返回 400，其余提交错误返回 500
+- ✅ 注入链路已验证为真实行为：
+  - 通过 `POST /api/session` 创建真实容器
+  - 通过 `POST /api/submit` 将示例代码写入 `/workspace/src/query-lab.ts`
+  - 通过 `docker exec cat /workspace/src/query-lab.ts` 验证注入内容正确
+- ✅ 构建链路当前为“诚实失败”：
+  - 由于当前镜像仍是 `ttyd + bash` PoC，没有 `build.mjs`
+  - `buildInContainer` 会返回清晰的失败日志，而不是假装构建成功
+  - 返回示例：`build.mjs not found in container image...`
+- ✅ 代码级验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+
+**进行中**：
+- 🔄 submit 路由已经接入真实容器，但当前镜像仍不具备真实 `claude-code-diy` 构建能力
+- 🔄 距离前端真正“提交代码 -> 构建 -> 终端可运行”还差镜像升级与终端代理接线
+
+**阻塞项**：
+- ⚠️ `infrastructure/Dockerfile.lab` 仍是 `ttyd + bash` PoC，尚未包含 `claude-code-diy + build.mjs --lab`
+- ⚠️ 因为运行镜像未升级，当前 `submit` 虽然完成真实注入，但构建阶段只能诚实失败
+
+**下一步建议**：
+- 1. 决定第五步是先升级 `Dockerfile.lab` 到可运行 `claude-code-diy` 的镜像，还是先做 `ws-proxy.ts`
+- 2. 更推荐先升级镜像，因为没有真实运行底座，终端接线后也无法体现真正的 Claude Code 体验
+- 3. 镜像升级完成后，再回到 submit 路由重测真实构建成功路径
+
+### 2026-04-10（会话 10）
+
+**完成项**：
+- ✅ 完成后端第五步：升级 [infrastructure/Dockerfile.lab](D:/code/build-your-own-claude-code/infrastructure/Dockerfile.lab)，让 `byocc-lab` 从 `ttyd + bash` PoC 镜像升级为真实运行底座镜像
+- ✅ 新增 [build-lab-image.ps1](D:/code/build-your-own-claude-code/infrastructure/build-lab-image.ps1)：
+  - 从 sister repo `D:\test-claude-code\claude-code` 组装临时 Docker build context
+  - 排除 `node_modules` / `dist` / 图片等大目录
+  - 使用当前仓库的 Dockerfile 构建 `byocc-lab`
+- ✅ Dockerfile 关键升级：
+  - 基础镜像升级到 `node:22-bookworm-slim`
+  - 在容器内执行 `npm ci`
+  - 将 `claude-code-diy` 运行底座复制到 `/workspace`
+  - 保留 ttyd，并提供更贴近 Lab 工作流的 shell 提示
+  - 为 npm 增加更稳健的 registry / retry 配置，解决第一次构建时遇到的 `ECONNRESET`
+- ✅ 更新 [.gitignore](D:/code/build-your-own-claude-code/.gitignore)，忽略 `.tmp/` Docker 临时 build context
+- ✅ 第五步运行时验证通过：
+  - 成功执行 `pwsh -NoProfile -ExecutionPolicy Bypass -File infrastructure/build-lab-image.ps1`
+  - 镜像构建成功，`byocc-lab` 已升级
+  - 重测 `POST /api/session` + `POST /api/submit`
+  - 使用 sister repo 中已验证可编译的 `src/query-lab.ts` 作为提交内容时：
+    - `submit.success === true`
+    - `progress` 中 `lab 3` 被标记为 `completed: true`
+
+**进行中**：
+- 🔄 运行镜像已具备真实构建能力，但浏览器终端尚未接入 WebSocket 代理
+- 🔄 `buildLog` 已能反映真实构建过程，但日志里仍夹杂较多构建 warnings，后续可再做可读性优化
+
+**阻塞项**：
+- ⚠️ 尚未实现 [server/src/services/ws-proxy.ts](D:/code/build-your-own-claude-code/server/src/services/ws-proxy.ts)，前端终端还无法连到容器 ttyd
+- ⚠️ 当前 `sessionId` 复用策略仍是开发阶段语义，正式产品语义还需再明确
+
+**下一步建议**：
+- 1. 进入第六步：实现 `ws-proxy.ts`，把浏览器终端接到容器 ttyd
+- 2. 接通 WebSocket 后，让前端从 mock terminal URL 进入真实容器终端
+- 3. 第六步完成后，再做一次端到端闭环验证：页面创建 session → submit 构建成功 → 浏览器终端运行 `node cli.js`
+
+### 2026-04-10（会话 11）
+
+**完成项**：
+- ✅ 完成后端第六步：实现 [server/src/services/ws-proxy.ts](D:/code/build-your-own-claude-code/server/src/services/ws-proxy.ts)
+- ✅ WebSocket 代理现在会：
+  - 监听 HTTP server 的 `upgrade` 事件
+  - 只处理 `/api/terminal/:sessionId`
+  - 根据 `sessionId` 调用 `getTtydPort()`
+  - 将请求路径改写为 ttyd 的 websocket 入口 `/ws`
+  - 把浏览器 WebSocket 转发到对应容器 ttyd
+- ✅ 错误处理已接通：
+  - 不存在的 session → 返回 `404 Not Found`
+  - 代理错误 → 返回 `502 Bad Gateway`
+- ✅ 前端接线前置准备完成：
+  - [platform/src/lib/api.ts](D:/code/build-your-own-claude-code/platform/src/lib/api.ts) 的 mock 开关改为环境变量控制
+  - 默认优先走真实后端，仍可通过 `NEXT_PUBLIC_MOCK_MODE=true` 切回 mock
+- ✅ 验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+  - `cd platform && npm run build`
+  - 原始 websocket 握手验证：
+    - 有效 session → `HTTP/1.1 101 Switching Protocols`
+    - 无效 session → `HTTP/1.1 404 Not Found`
+
+**进行中**：
+- 🔄 后端核心链路已基本齐备：session / submit / image / ws-proxy
+- 🔄 还差浏览器层的端到端闭环验证：前端页面实际连入真实终端并运行 `node cli.js`
+
+**阻塞项**：
+- ⚠️ 尚未完成“浏览器页面 + 真实后端 + 真实 ttyd”的完整人工联调截图/录像级验证
+- ⚠️ `reset.ts` 仍是占位实现，影响完整产品体验，但不阻塞当前终端联调
+
+**下一步建议**：
+- 1. 做一次真实前端联调：关闭 mock，进入 `/lab/3`，提交代码后观察终端连接
+- 2. 在终端里手动运行 `node cli.js`，确认真实 Claude Code TUI 能出来
+- 3. 之后再补 `reset.ts` 与端到端体验打磨
+
+### 2026-04-09（会话 6）
+
+**完成项**：
+- ✅ 完成后端第一步“truthful bring-up”：
+  - `server/src/db/database.ts` 已用 `better-sqlite3` 实现最小 SQLite 存储
+  - 只建立 `sessions(id, container_id, created_at, last_active)` 与 `progress(session_id, lab_number, completed, completed_at)` 两张表
+  - 明确未把 `ttyd_port` 存进数据库，避免把运行时端口误当成持久化真相来源
+- ✅ 让后端以“契约安全”的方式启动：
+  - `POST /api/session` 现在生成真实 `sessionId`，返回 `{ sessionId, status: "creating" }`
+  - `POST /api/submit` 现在做参数校验，并明确返回 `{ success: false, buildLog: "submit/build chain not implemented yet" }`
+  - `GET /api/progress` 现在从数据库读取真实数据
+  - `POST /api/reset` 现在返回 `{ success: false }` 级别的诚实占位响应
+- ✅ 验证通过：
+  - `cd server && npm run build`
+  - `npx tsc --noEmit --project server/tsconfig.json`
+  - `GET /api/health` 返回 200
+  - `POST /api/session` 返回结构与前端契约一致
+  - `POST /api/submit` 明确未实现，不再 fake success
+
+**进行中**：
+- 🔄 后端仍处于“诚实启动”阶段，容器管理、代码注入、真实构建触发、终端代理还未接入
+
+**阻塞项**：
+- ⚠️ `infrastructure/Dockerfile.lab` 当前只验证了 `ttyd + bash`，还没有把 `claude-code-diy` 真正装进容器并验证 `node build.mjs --lab`
+- ⚠️ 真实 `/api/session -> container-manager -> ttyd/ws-proxy` 链路还未实现，因此前端仍不能切出 mock 模式
+
+**下一步建议**：
+- 1. 先做容器镜像现实校验：确认镜像里真的能承载 `claude-code-diy` 与 `node build.mjs --lab`
+- 2. 然后实现 `container-manager.ts` 的最小能力：创建容器、查端口、删除容器
+- 3. 再把 `POST /api/session` 从“诚实占位”升级成“真实分配容器”
+- 4. 最后进入 `POST /api/submit` 与 `WS /api/terminal/:sessionId` 的真实联通
+
+### 2026-04-11（会话 12 / 前端终端修复）
+
+**完成项**：
+- ✅ 新建并切换到 `codex/fix-terminal-xterm-proxy` 分支
+- ✅ 修复 [platform/src/components/Terminal.tsx](D:/code/build-your-own-claude-code/platform/src/components/Terminal.tsx) 中的 xterm 生命周期问题：
+  - xterm 初始化只执行一次，不再随 `buildLog` 变化 dispose/recreate
+  - `buildLog` 改为追加写入现有终端
+  - 未拿到真实 `wsUrl` 前不再挂载 xterm，避免等待阶段触发 xterm dimensions 竞态
+  - 已连接阶段去掉 `FitAddon`，改为 `ResizeObserver + terminal.resize()` 的保守尺寸策略
+- ✅ 增加终端等待反馈设计：
+  - 等待阶段显示“已等待时间 / 预计连接时间”
+  - 显示分阶段提示（等待构建、准备容器终端、连接时间较长）
+  - 显示进度条和超过 60 秒时的排查提示
+- ✅ 修复前端 session / terminal 状态机问题：
+  - [platform/src/components/LabWorkspace.tsx](D:/code/build-your-own-claude-code/platform/src/components/LabWorkspace.tsx) 现在用 `localStorage` 复用 `sessionId`
+  - 避免刷新页面 / 切换 Lab 时反复创建新 Docker 容器
+  - 终端连接从“等待 build success”改为“拿到 sessionId 后即可连接 ttyd”
+  - 构建日志继续作为终端附加输出，不再阻塞终端连接
+- ✅ 移除前端终端对 raw `xterm-addon-attach` 的使用，改为适配 ttyd websocket 协议：
+  - websocket 使用 `tty` 子协议
+  - 前端输入使用 ttyd input 命令前缀发送
+  - terminal resize 使用 ttyd resize 命令发送
+  - 服务端 output / title / preferences 命令在前端解析处理
+- ✅ 保持后端 Docker / container-manager / submit / ws-proxy 架构不变
+
+**进行中**：
+- 🔄 仍需在真实浏览器里完成“点击提交代码 -> build 成功 -> 终端输入 `node cli.js` -> TUI 启动”的人工交互验证
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `cd platform && npm run lint`
+- `cd platform && npm run build`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `GET http://localhost:3000/` 返回 200
+- `GET http://localhost:3000/lab/3` 返回 200
+- 后端 `GET http://localhost:3001/api/health` 返回 200
+- Node websocket smoke：`POST /api/session` 创建临时 session，连接 `ws://127.0.0.1:3001/api/terminal/<sessionId>`，按 ttyd 协议发送 `pwd`，收到 `/workspace` 输出
+- 已清理临时测试容器 `lab-frontend-terminal-smoke-1775899300945`
+- 二次修复后重新运行 `cd platform && npm run lint`
+- 二次修复后重新运行 `cd platform && npm run build`
+- 三次修复后重新运行 `cd platform && npm run lint`
+- 三次修复后重新运行 `cd platform && npm run build`
+- 三次修复后重新运行 `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- 三次修复后 `GET http://localhost:3000/lab/3` 返回 200
+- 四次修复：为 ConnectedTerminal 增加可取消延迟初始化，规避 React dev/StrictMode 下 xterm open/dispose 后仍有 viewport refresh 回调导致的 `dimensions` 报错
+- 四次修复后重新运行 `cd platform && npm run lint`
+- 四次修复后重新运行 `cd platform && npm run build`
+- 四次修复后重新运行 `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- 四次修复后 `GET http://localhost:3000/lab/3` 返回 200
+
+**下一步**：
+- 在真实浏览器打开 `http://localhost:3000/lab/3`，点击提交后测试终端交互
+- 在终端中运行 `pwd`、`ls`、`node cli.js`，确认真实 Claude Code TUI 能在浏览器终端启动
+- 如果浏览器仍有 xterm console error，再优先检查 React dev server/HMR 是否残留旧 bundle，再检查 ttyd 输出解析
+- 对开发环境中的旧 `lab-*` 容器做一次手动清理，避免历史测试容器继续堆积
+
 ---
 
 ## 关键资源

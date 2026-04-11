@@ -31,6 +31,7 @@ type LabWorkspaceProps = {
 };
 
 type BuildState = "idle" | "building" | "success" | "error";
+const SESSION_STORAGE_KEY = "byocc-session-id";
 
 export default function LabWorkspace({ lab }: LabWorkspaceProps) {
   const [code, setCode] = useState<string>(LAB_SKELETONS[lab.id] ?? "");
@@ -42,8 +43,10 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
     let cancelled = false;
 
     async function bootstrap() {
-      const session = await createSession();
+      const existingSessionId = window.localStorage.getItem(SESSION_STORAGE_KEY) ?? undefined;
+      const session = await createSession(existingSessionId);
       if (!cancelled) {
+        window.localStorage.setItem(SESSION_STORAGE_KEY, session.sessionId);
         setSessionId(session.sessionId);
       }
     }
@@ -59,6 +62,7 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
     try {
       setBuildState("building");
       const activeSessionId = sessionId || (await createSession()).sessionId;
+      window.localStorage.setItem(SESSION_STORAGE_KEY, activeSessionId);
       setSessionId(activeSessionId);
       const result = await submitCode(activeSessionId, code, lab.id);
       setBuildLog(result.buildLog);
@@ -72,6 +76,7 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
 
   const handleReset = async () => {
     const activeSessionId = sessionId || (await createSession()).sessionId;
+    window.localStorage.setItem(SESSION_STORAGE_KEY, activeSessionId);
     setSessionId(activeSessionId);
     await resetSession(activeSessionId);
     setCode(LAB_SKELETONS[lab.id] ?? "");
@@ -121,7 +126,7 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
 
         <Terminal
           buildLog={buildLog}
-          wsUrl={buildState === "success" && sessionId ? getTerminalWebSocketUrl(sessionId) : undefined}
+          wsUrl={sessionId ? getTerminalWebSocketUrl(sessionId) : undefined}
         />
       </div>
     </section>

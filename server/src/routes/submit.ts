@@ -6,35 +6,73 @@
  * 这是平台最核心的 API：
  *   学习者写完代码 → 点提交 → 代码被注入 Docker 容器
  *   → 容器内运行 node build.mjs --lab N → 构建结果返回前端
- *
- * TODO: 实现代码提交和构建逻辑
  */
 
 import { Router } from 'express';
-// import { injectCode, buildInContainer } from '../services/container-manager.js';
-// import { updateProgress } from '../db/database.js';
+import { getSession, updateProgress } from '../db/database.js';
+import { buildInContainer, injectCode } from '../services/container-manager.js';
 
 export const submitRouter = Router();
 
 submitRouter.post('/api/submit', async (req, res) => {
-  // TODO: 实现代码提交逻辑
-  //
-  // 请求体：{ sessionId: string, code: string, labNumber: number }
-  //
-  // 逻辑：
-  // 1. 验证请求参数（sessionId、code、labNumber 都不能为空）
-  // 2. 调用 injectCode() 将代码注入容器
-  // 3. 调用 buildInContainer() 触发构建
-  // 4. 如果构建成功，更新数据库进度
-  // 5. 返回：{ success: boolean, buildLog: string }
-  //
-  // 错误处理：
-  // - 容器不存在 → 400 "Session not found, please create a new session"
-  // - 代码注入失败 → 500 "Failed to inject code"
-  // - 构建失败 → 200 但 success: false，附带构建错误日志
+  const { sessionId, code, labNumber } = req.body ?? {};
 
-  res.json({
-    message: 'TODO: 实现代码提交',
-    hint: '这是最核心的 API，学习者的代码通过这个接口进入 Docker 容器',
-  });
+  if (typeof sessionId !== 'string' || sessionId.trim() === '') {
+    res.status(400).json({
+      success: false,
+      buildLog: 'Invalid request: sessionId must be a non-empty string.',
+    });
+    return;
+  }
+
+  if (typeof code !== 'string') {
+    res.status(400).json({
+      success: false,
+      buildLog: 'Invalid request: code must be a string.',
+    });
+    return;
+  }
+
+  if (!Number.isInteger(labNumber) || labNumber < 0) {
+    res.status(400).json({
+      success: false,
+      buildLog: 'Invalid request: labNumber must be a non-negative integer.',
+    });
+    return;
+  }
+
+  // 提交代码之前，先确认这个 session 至少在数据库里存在。
+  // 否则用户很可能是绕过了 /api/session，直接打 submit。
+  const session = getSession(sessionId);
+  if (!session) {
+    res.status(400).json({
+      success: false,
+      buildLog: 'Session not found. Please create a session before submitting code.',
+    });
+    return;
+  }
+
+  try {
+    await injectCode(sessionId, code, labNumber);
+    const buildResult = await buildInContainer(sessionId, labNumber);
+
+    if (buildResult.success) {
+      updateProgress(sessionId, labNumber, true);
+    }
+
+    res.json({
+      success: buildResult.success,
+      buildLog: buildResult.log,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Unknown error while submitting code.';
+
+    const statusCode = message.includes('No container found for session') ? 400 : 500;
+
+    res.status(statusCode).json({
+      success: false,
+      buildLog: message,
+    });
+  }
 });
