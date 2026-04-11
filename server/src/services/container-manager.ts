@@ -31,6 +31,7 @@ const TTYD_PORT_KEY = '7681/tcp';
 const CONTAINER_MEMORY_LIMIT = 512 * 1024 * 1024;
 const CPU_PERIOD = 100000;
 const CPU_QUOTA = 50000;
+const BUILD_TIMEOUT_SECONDS = 180;
 
 // 存储 sessionId → containerId 的映射
 // 这只是“本进程内缓存”，不是长期真相。
@@ -301,13 +302,18 @@ export async function buildInContainer(
     [
       'cd /workspace',
       `if [ ! -f build.mjs ]; then echo 'build.mjs not found in container image. Current image is still the ttyd+bash PoC and not the full claude-code-diy runtime.'; exit 2; fi`,
-      `node build.mjs --lab ${labNumber}`,
+      // timeout 防止 build.mjs 卡死后把 /api/submit 请求和容器资源一直占住。
+      // 124 是 GNU timeout 的标准超时退出码，下面会把它翻译成更友好的日志。
+      `timeout ${BUILD_TIMEOUT_SECONDS}s node build.mjs --lab ${labNumber}`,
     ].join(' && '),
   ]);
 
   return {
     success: exitCode === 0,
-    log: output || 'Build command finished without output.',
+    log:
+      exitCode === 124
+        ? `Build timed out after ${BUILD_TIMEOUT_SECONDS} seconds. Please check for long-running or stuck build steps.`
+        : output || 'Build command finished without output.',
   };
 }
 
