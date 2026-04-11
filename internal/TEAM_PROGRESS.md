@@ -602,6 +602,54 @@
 - 如果浏览器仍有 xterm console error，再优先检查 React dev server/HMR 是否残留旧 bundle，再检查 ttyd 输出解析
 - 对开发环境中的旧 `lab-*` 容器做一次手动清理，避免历史测试容器继续堆积
 
+### 2026-04-11（会话 13 / 后端 hardening）
+
+**完成项**：
+- ✅ 新建并切换到 `codex/backend-container-hardening` 分支
+- ✅ 修复镜像构建上下文过宽问题：
+  - [infrastructure/build-lab-image.ps1](D:/code/build-your-own-claude-code/infrastructure/build-lab-image.ps1) 从“复制全部再排除”改为“白名单复制”
+  - 仅复制 `package.json`、`package-lock.json`、`build.mjs`、`cli.js`、`node-esm-hooks.mjs`、`tsconfig.json`、`src/`、`vendor/` 等必要运行底座
+  - 避免把 `conversation-*.txt`、`crash.log`、`debug.txt`、mock log 等本地会话/调试文件打进 Docker 镜像
+- ✅ 增加最小访问面收敛：
+  - [server/src/index.ts](D:/code/build-your-own-claude-code/server/src/index.ts) 默认绑定 `127.0.0.1`
+  - CORS 默认只允许 `http://localhost:3000` 与 `http://127.0.0.1:3000`
+  - 可通过 `HOST` 与 `CORS_ORIGINS` 环境变量扩展
+- ✅ 实现真实 reset：
+  - [server/src/routes/reset.ts](D:/code/build-your-own-claude-code/server/src/routes/reset.ts) 现在会删除旧容器、创建新容器，并更新 SQLite 中的 `container_id`
+- ✅ 增加构建超时保护：
+  - [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts) 中的 `buildInContainer()` 使用 `timeout 180s node build.mjs --lab <N>`
+  - 超时时返回 `success:false` 与可读 build log，避免 `/api/submit` 无限挂住
+
+**验证**：
+- `cd server && npm run build`
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File infrastructure/build-lab-image.ps1`
+- 检查 `.tmp/lab-image-context/runtime`：
+  - 不再包含 `conversation-*.txt`、`crash.log`、`debug.txt`、mock log
+  - 仅保留运行所需白名单文件/目录
+- CORS 验证：
+  - `Origin: http://localhost:3000` 返回 `Access-Control-Allow-Origin`
+  - `Origin: http://evil.example` 不返回 `Access-Control-Allow-Origin`，且不再 500
+- reset 验证：
+  - `POST /api/session` 创建容器
+  - `POST /api/reset` 后同一 session 的容器 ID 从旧值变为新值
+- submit 验证：
+  - 使用 sister repo 的 `src/query-lab.ts` 调 `POST /api/submit`
+  - `submit.success === true`
+  - `GET /api/progress` 返回 `lab 3 completed: true`
+
+**进行中**：
+- 🔄 还未实现自动 TTL 回收历史 `lab-*` 容器
+- 🔄 还未做公开部署下的正式鉴权方案
+
+**阻塞项**：
+- ⚠️ 当前最小访问控制适合本机开发；如果要通过 Cloudflare Tunnel 对外展示，还需要显式配置 `HOST` / `CORS_ORIGINS` 并考虑演示 token 或登录
+
+**下一步建议**：
+- 1. 清理本地历史测试容器，避免 Docker Desktop 资源继续被占用
+- 2. 做一次真实浏览器端到端联调：`/lab/3` → submit → terminal → `node cli.js`
+- 3. 端到端跑通后，再考虑 TTL cleanup 或演示 token
+
 ---
 
 ## 关键资源
