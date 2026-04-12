@@ -13,6 +13,7 @@
 
 import express from 'express';
 import cors from 'cors';
+import { authRouter } from './routes/auth.js';
 import { sessionRouter } from './routes/session.js';
 import { environmentRouter } from './routes/environment.js';
 import { submitRouter } from './routes/submit.js';
@@ -52,6 +53,7 @@ app.use(express.json({ limit: '1mb' })); // 代码提交可能较大
 initDatabase();
 
 // API 路由
+app.use(authRouter);
 app.use(sessionRouter);
 app.use(environmentRouter);
 app.use(submitRouter);
