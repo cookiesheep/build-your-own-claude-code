@@ -991,6 +991,45 @@
 - 4. 点击 submit，确认 submit 前草稿保存且构建仍成功
 - 5. 继续确认 session/environment split 流程没有回退：打开页面不创建容器，点击“启动实验环境”才创建容器
 
+### 2026-04-13（会话 22 / 前端旧 session 403 fallback）
+
+**完成项**：
+- ✅ 修复旧 `byocc-session-id` 与当前 `byocc-auth-token` 不匹配导致页面 bootstrap 失败的问题
+- ✅ 更新 [platform/src/lib/api.ts](D:/code/build-your-own-claude-code/platform/src/lib/api.ts)
+  - 新增并导出 `SESSION_STORAGE_KEY = "byocc-session-id"`
+  - `createSession(sessionId?)` 在收到 `403` 且传入了旧 `sessionId` 时：
+    - 删除 localStorage 中的 `byocc-session-id`
+    - 保留 `byocc-auth-token`
+    - 重新请求 `POST /api/session`，body 为 `{}`
+    - 返回新的 session
+  - 非 403 错误继续抛出，并保留 HTTP status / response body 便于排查
+- ✅ 更新 [platform/src/components/LabWorkspace.tsx](D:/code/build-your-own-claude-code/platform/src/components/LabWorkspace.tsx)
+  - 改用 `api.ts` 导出的 `SESSION_STORAGE_KEY`
+  - fallback 成功后仍会写回新的 sessionId，并继续执行 `getWorkspace(lab.id)`
+- ✅ 未修改 `server/` 后端文件
+
+**验证**：
+- `cd platform && npm run lint`
+- `cd platform && npm run build`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- 第一次 `npm run build` 因 Google Fonts 临时网络请求失败，重跑后通过
+- API smoke：
+  - token A 创建 session A
+  - token B 携带 session A 调 `POST /api/session`，后端返回 403
+  - token B 不携带 sessionId 调 `POST /api/session`，成功创建 session B 并返回 `userId`
+
+**进行中**：
+- 🔄 浏览器 DevTools 中的手动复现仍建议再做一次：
+  - 仅删除 `byocc-session-id` 后刷新，应恢复草稿
+  - 同时删除 `byocc-auth-token` 和 `byocc-session-id` 后刷新，应创建新匿名 user，页面不崩溃
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 在浏览器中用 DevTools 复现旧 session / 新 token 场景，确认页面不再停在“实验环境异常”
+- 2. 继续跑 Lab 3 草稿恢复、自动保存、submit 前保存的手动 E2E
+
 ---
 
 ## 关键资源

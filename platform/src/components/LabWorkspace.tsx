@@ -13,6 +13,7 @@ import {
   startEnvironment,
   submitCode,
   type EnvironmentStatus,
+  SESSION_STORAGE_KEY,
 } from "@/lib/api";
 import { LAB_FILE_NAMES, LAB_SKELETONS, STATUS_LABELS, type LabMeta } from "@/lib/labs";
 
@@ -42,7 +43,6 @@ type LabWorkspaceProps = {
 
 type BuildState = "idle" | "building" | "success" | "error";
 type SaveState = "idle" | "loading" | "dirty" | "saving" | "saved" | "error";
-const SESSION_STORAGE_KEY = "byocc-session-id";
 
 export default function LabWorkspace({ lab }: LabWorkspaceProps) {
   const [code, setCode] = useState<string>(LAB_SKELETONS[lab.id] ?? "");

@@ -3,6 +3,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 // 如果你只是单独调前端，也可以手动设置 NEXT_PUBLIC_MOCK_MODE=true 切回 mock。
 const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
 export const AUTH_TOKEN_STORAGE_KEY = "byocc-auth-token";
+export const SESSION_STORAGE_KEY = "byocc-session-id";
 
 export type User = {
   id: string;
@@ -85,6 +86,12 @@ function setStoredAuthToken(token: string): void {
 function clearStoredAuthToken(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+  }
+}
+
+function clearStoredSessionId(): void {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
   }
 }
 
@@ -225,16 +232,27 @@ export async function createSession(
     };
   }
 
-  const response = await authorizedFetch(`${API_BASE}/api/session`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(sessionId ? { sessionId } : {}),
-  });
+  const requestSession = async (nextSessionId?: string) =>
+    authorizedFetch(`${API_BASE}/api/session`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(nextSessionId ? { sessionId: nextSessionId } : {}),
+    });
+
+  let response = await requestSession(sessionId);
+
+  if (response.status === 403 && sessionId) {
+    clearStoredSessionId();
+    response = await requestSession();
+  }
 
   if (!response.ok) {
-    throw new Error("Failed to create session");
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to create session (${response.status})${body ? `: ${body}` : ""}`,
+    );
   }
 
   return (await response.json()) as SessionResponse;
