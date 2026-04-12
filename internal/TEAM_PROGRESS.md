@@ -650,6 +650,46 @@
 - 2. 做一次真实浏览器端到端联调：`/lab/3` → submit → terminal → `node cli.js`
 - 3. 端到端跑通后，再考虑 TTL cleanup 或演示 token
 
+### 2026-04-12（会话 14 / 容器清理与 Smoke 文档）
+
+**完成项**：
+- ✅ 新建并切换到 `codex/backend-container-cleanup` 分支
+- ✅ 新增 [server/src/services/container-cleanup.ts](D:/code/build-your-own-claude-code/server/src/services/container-cleanup.ts)
+  - 只扫描带 `byocc.managed=true` label 的 BYOCC 容器
+  - 支持 `maxAgeMinutes`
+  - 支持 `sessionPrefix`，便于只清理某类测试容器
+  - 支持 dry-run 与真实删除
+- ✅ 新增 [server/src/scripts/cleanup-containers.ts](D:/code/build-your-own-claude-code/server/src/scripts/cleanup-containers.ts)
+  - 默认 dry-run，避免误删
+  - 必须显式传 `--execute` 才会真正删除
+  - 推荐命令：`npx tsx src/scripts/cleanup-containers.ts --dry-run --max-age-minutes=120`
+- ✅ 更新 [server/package.json](D:/code/build-your-own-claude-code/server/package.json)
+  - 增加 `cleanup:containers` 脚本作为无参数入口
+  - 带参数时仍推荐直接使用 `npx tsx src/scripts/cleanup-containers.ts ...`
+- ✅ 新增 [internal/work-a-backend/E2E_SMOKE_TEST.md](D:/code/build-your-own-claude-code/internal/work-a-backend/E2E_SMOKE_TEST.md)
+  - 记录完整本地端到端验证流程
+  - 覆盖镜像构建、server 启动、platform 启动、浏览器验证、API 级验证、容器清理和常见问题
+
+**验证**：
+- `cd server && npm run build`
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `npx tsx src/scripts/cleanup-containers.ts --dry-run --max-age-minutes=0`
+- 创建 `cleanup-smoke-*` 测试容器
+- `npx tsx src/scripts/cleanup-containers.ts --dry-run --max-age-minutes=0 --session-prefix=cleanup-smoke-`
+- `npx tsx src/scripts/cleanup-containers.ts --execute --max-age-minutes=0 --session-prefix=cleanup-smoke-`
+- `docker ps -a --filter "name=lab-cleanup-smoke-"` 确认测试容器已删除
+
+**进行中**：
+- 🔄 自动定时 TTL 回收尚未接入后端 server，本轮只提供手动清理工具
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 团队成员按 `E2E_SMOKE_TEST.md` 做一次独立复现
+- 2. 如果复现顺利，再考虑是否把 cleanup 脚本接成定时任务或管理 API
+- 3. 公开演示前继续补演示 token / Cloudflare Tunnel 配置说明
+
 ---
 
 ## 关键资源
