@@ -690,6 +690,129 @@
 - 2. 如果复现顺利，再考虑是否把 cleanup 脚本接成定时任务或管理 API
 - 3. 公开演示前继续补演示 token / Cloudflare Tunnel 配置说明
 
+### 2026-04-12（会话 15 / 下一阶段身份与环境规划）
+
+**完成项**：
+- ✅ 复盘 Claude Code 关于“轻量身份 + 持久化学习状态”的架构建议
+- ✅ 明确判断：
+  - “完整用户系统”不应现在做
+  - “轻量身份 + 持久化 progress/code/customization”值得认真推进
+  - 下一步应先拆分 session 和 environment，而不是立即做 GitHub OAuth
+- ✅ 新增 [NEXT_PHASE_IDENTITY_ENVIRONMENT_PLAN.md](D:/code/build-your-own-claude-code/internal/work-a-backend/NEXT_PHASE_IDENTITY_ENVIRONMENT_PLAN.md)
+  - 记录当前结论
+  - 区分 User / Session / Environment / Workspace
+  - 给出 PR 拆分顺序
+  - 明确前后端协作策略
+  - 明确 GitHub OAuth 与匿名 user_id 的推荐顺序
+
+**进行中**：
+- 🔄 下一阶段尚未开始实现；当前仅完成规划沉淀
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 从最新 `main` 新建 `codex/session-environment-split`
+- 2. 同一 PR 内同步修改后端 API 与前端流程
+- 3. 目标：打开 Lab 页面不创建容器，用户点击“启动实验环境”后才创建容器
+
+### 2026-04-12（会话 16 / Session 与 Environment 后端拆分）
+
+**完成项**：
+- ✅ 在 `codex/session-environment-split` 分支完成后端 contract 第一版
+- ✅ 修改 [server/src/routes/session.ts](D:/code/build-your-own-claude-code/server/src/routes/session.ts)
+  - `POST /api/session` 现在只创建/恢复浏览器 session
+  - 不再自动创建 Docker 容器
+  - 返回 `environmentStatus`
+- ✅ 新增 [server/src/routes/environment.ts](D:/code/build-your-own-claude-code/server/src/routes/environment.ts)
+  - `POST /api/environment/start`
+  - `GET /api/environment/status`
+  - `POST /api/environment/reset`
+- ✅ 修改 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - sessions 表增加 `environment_status`
+  - 对已有 SQLite 数据库增加轻量迁移逻辑
+  - 新增 `updateSessionEnvironment`
+- ✅ 修改 [server/src/index.ts](D:/code/build-your-own-claude-code/server/src/index.ts)
+  - 注册 `environmentRouter`
+- ✅ 新增 [ENVIRONMENT_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md)
+  - 给前端线程同步最终后端 API contract
+- ✅ 更新 [E2E_SMOKE_TEST.md](D:/code/build-your-own-claude-code/internal/work-a-backend/E2E_SMOKE_TEST.md)
+  - 加入 `POST /api/environment/start` 步骤
+
+**验证**：
+- `cd server && npm run build`
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `POST /api/session`
+  - 返回 `status: "created"`
+  - 返回 `environmentStatus: "not_started"`
+  - 验证 Docker 中没有创建对应 `lab-*` 容器
+- `GET /api/environment/status`
+  - 未启动环境时返回 `environmentStatus: "not_started"`
+- `POST /api/environment/start`
+  - 创建真实 Docker 容器
+  - 返回 `environmentStatus: "running"`
+  - 返回 `terminalUrl`
+- `POST /api/environment/reset`
+  - 删除旧容器并创建新容器
+  - 返回新的 `containerId`
+
+**进行中**：
+- 🔄 前端线程需按 [ENVIRONMENT_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md) 接入新 API
+- 🔄 旧 `/api/reset` 仍保留兼容，后续前端应迁移到 `/api/environment/reset`
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 前端更新 `api.ts` 与 `LabWorkspace.tsx`，加入“启动实验环境”按钮
+- 2. 前后端合并后重新跑 `E2E_SMOKE_TEST.md`
+- 3. 确认新流程下打开 `/lab/3` 不再自动创建 Docker 容器
+
+### 2026-04-12（会话 17 / 前端 session-environment 接入）
+
+**完成项**：
+- ✅ 完成前端 session/environment split 第一版接入
+- ✅ 更新 [platform/src/lib/api.ts](D:/code/build-your-own-claude-code/platform/src/lib/api.ts)
+  - 新增 `SessionStatus`
+  - 新增 `EnvironmentStatus`
+  - 更新 `SessionResponse`，适配 `status: created | restored` 与 `environmentStatus`
+  - 新增 `startEnvironment(sessionId)`
+  - 新增 `getEnvironmentStatus(sessionId)`
+  - 新增 `resetEnvironment(sessionId)`
+  - 保留 `submitCode` / `getProgress` / `getTerminalWebSocketUrl` 兼容旧逻辑
+- ✅ 更新 [platform/src/components/LabWorkspace.tsx](D:/code/build-your-own-claude-code/platform/src/components/LabWorkspace.tsx)
+  - 页面 mount 时只创建/恢复 session，不再自动启动 Docker 容器
+  - 增加 `environmentStatus` / `terminalUrl` / `environmentMessage` / `isStartingEnvironment` 状态
+  - 增加“启动实验环境”按钮，点击后调用 `/api/environment/start`
+  - `terminalUrl` 有值后才连接终端
+  - submit 前检查 `environmentStatus === "running"`，否则提示用户先启动环境
+  - reset 改为调用 `/api/environment/reset`
+- ✅ 更新 [platform/src/components/Terminal.tsx](D:/code/build-your-own-claude-code/platform/src/components/Terminal.tsx)
+  - 未启动环境时显示“实验环境未启动”
+  - 启动中才显示等待进度条和已等待时间
+  - 终端等待文案从“submit 后连接”改为“启动实验环境后连接”
+- ✅ 保持现有 UI 风格，未重做页面视觉
+- ✅ 未修改 `server/` 后端文件
+
+**验证**：
+- `cd platform && npm run lint`
+- `cd platform && npm run build`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- 尝试 API smoke：`GET http://127.0.0.1:3001/api/health`，失败原因：目标计算机积极拒绝连接
+
+**进行中**：
+- 🔄 真实浏览器端到端联调仍需在后端 server 运行时执行
+
+**阻塞项**：
+- ⚠️ 本轮验证时 `http://127.0.0.1:3001/api/health` 连接失败，后端 server 未在当前 shell 可访问，因此未完成真实 API smoke
+
+**下一步建议**：
+- 1. 启动后端：`cd server && npm run dev`
+- 2. 启动前端：`cd platform && npm run dev`
+- 3. 打开 `/lab/3` 后确认不新增 `lab-*` 容器
+- 4. 点击“启动实验环境”后确认才新增 `lab-*` 容器
+- 5. 验证 terminal、submit、reset 三条前端路径
+
 ---
 
 ## 关键资源

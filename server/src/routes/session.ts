@@ -1,13 +1,17 @@
 /**
  * 会话管理路由
  *
- * POST /api/session — 创建或恢复用户会话
+ * POST /api/session — 创建或恢复浏览器会话
+ *
+ * 注意：
+ * - session 只是“这个浏览器是谁”的临时标识。
+ * - Docker 容器属于 environment，不在这里创建。
+ * - 这样用户只是浏览 Lab 文档时，不会浪费一个容器。
  */
 
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { createSession, getSession } from '../db/database.js';
-import { createContainer, getContainerStatus } from '../services/container-manager.js';
 
 export const sessionRouter = Router();
 
@@ -21,38 +25,28 @@ sessionRouter.post('/api/session', async (req, res) => {
     const sessionId = requestedSessionId ?? uuidv4();
     const existingSession = getSession(sessionId);
 
-    // 如果这个 session 已经对应一台正在运行的实验机，就直接复用。
     if (existingSession) {
-      const containerStatus = await getContainerStatus(existingSession.id);
-      if (containerStatus === 'running') {
-        // 这里重新走一次 createContainer，不是为了新建容器，
-        // 而是为了拿到当前真实容器的 id，并顺手把数据库记录补齐。
-        const containerId = await createContainer(existingSession.id);
-        createSession(existingSession.id, containerId);
-
-        res.json({
-          sessionId: existingSession.id,
-          status: 'running',
-        });
-        return;
-      }
+      res.json({
+        sessionId: existingSession.id,
+        status: 'restored',
+        environmentStatus: existingSession.environmentStatus,
+      });
+      return;
     }
 
-    // 新 session，或者旧 session 对应的容器已经不存在/已停止：
-    // 都走“创建或恢复容器”这条真实路径。
-    const containerId = await createContainer(sessionId);
-    createSession(sessionId, containerId);
+    createSession(sessionId, null, 'not_started');
 
     res.json({
       sessionId,
-      status: 'creating',
+      status: 'created',
+      environmentStatus: 'not_started',
     });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown error while creating session.';
 
     res.status(500).json({
-      message: 'Failed to create or resume session.',
+      message: 'Failed to create or restore session.',
       error: message,
     });
   }

@@ -8,9 +8,11 @@ import "xterm/css/xterm.css";
 type TerminalProps = {
   wsUrl?: string;
   buildLog?: string;
+  waitingMessage?: string;
+  showProgress?: boolean;
 };
 
-type ConnectionState = "connecting" | "connected" | "closed" | "error";
+type ConnectionState = "idle" | "connecting" | "connected" | "closed" | "error";
 
 const TTYD_COMMAND = {
   output: "0",
@@ -39,7 +41,11 @@ function useElapsedSeconds(): number {
   return elapsedSeconds;
 }
 
-function TerminalWaitingPanel({ buildLog }: { buildLog?: string }) {
+function TerminalWaitingPanel({
+  buildLog,
+  waitingMessage,
+  showProgress = false,
+}: Pick<TerminalProps, "buildLog" | "showProgress" | "waitingMessage">) {
   const elapsedSeconds = useElapsedSeconds();
   const progress = Math.min((elapsedSeconds / ESTIMATED_CONNECT_SECONDS) * 100, 96);
   const phase =
@@ -51,22 +57,30 @@ function TerminalWaitingPanel({ buildLog }: { buildLog?: string }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-b-2xl border border-[var(--border)] bg-[#0d1117] shadow-[0_-8px_30px_rgba(0,0,0,0.25)]">
-      <TerminalHeader state="connecting" />
+      <TerminalHeader state={showProgress ? "connecting" : "idle"} />
       <div className="flex min-h-0 flex-1 flex-col justify-between p-5">
         <div>
-          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
-            <span>{phase}</span>
-            <span>已等待 {elapsedSeconds}s / 预计 {ESTIMATED_CONNECT_SECONDS}s</span>
-          </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--surface-hover)]">
-            <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent-dark),var(--accent))] transition-[width] duration-500"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+          {showProgress ? (
+            <>
+              <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+                <span>{phase}</span>
+                <span>已等待 {elapsedSeconds}s / 预计 {ESTIMATED_CONNECT_SECONDS}s</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--surface-hover)]">
+                <div
+                  className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent-dark),var(--accent))] transition-[width] duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="text-xs text-[var(--text-secondary)]">
+              {waitingMessage ?? "实验环境未启动"}
+            </div>
+          )}
           <div className="mt-4 rounded-xl border border-[color:rgba(34,211,238,0.18)] bg-[color:rgba(34,211,238,0.06)] p-3 text-xs leading-6 text-[var(--text-secondary)]">
-            终端会在 `POST /api/submit` 构建成功后自动连接到真实 ttyd。
-            如果等待超过 60 秒，请检查后端 `http://localhost:3001` 和 Docker 容器状态。
+            点击“启动实验环境”后，平台会创建 Docker 容器并返回真实 ttyd 终端地址。
+            如果启动超过 60 秒，请检查后端 `http://localhost:3001` 和 Docker 容器状态。
           </div>
         </div>
 
@@ -76,7 +90,7 @@ function TerminalWaitingPanel({ buildLog }: { buildLog?: string }) {
           </pre>
         ) : (
           <div className="mt-4 font-mono text-xs text-[var(--text-muted)]">
-            $ 等待容器连接...
+            $ {waitingMessage ?? "等待启动实验环境..."}
           </div>
         )}
       </div>
@@ -86,6 +100,7 @@ function TerminalWaitingPanel({ buildLog }: { buildLog?: string }) {
 
 function TerminalHeader({ state }: { state: ConnectionState }) {
   const status = {
+    idle: { label: "未启动", color: "var(--text-disabled)" },
     connecting: { label: "连接中", color: "var(--status-warning)" },
     connected: { label: "已连接", color: "var(--status-success)" },
     closed: { label: "已关闭", color: "var(--text-disabled)" },
@@ -112,7 +127,10 @@ function estimateTerminalSize(host: HTMLDivElement) {
   return { cols, rows };
 }
 
-function ConnectedTerminal({ wsUrl, buildLog }: Required<TerminalProps>) {
+function ConnectedTerminal({
+  wsUrl,
+  buildLog,
+}: Required<Pick<TerminalProps, "buildLog" | "wsUrl">>) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<XTerm | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
@@ -319,9 +337,20 @@ function ConnectedTerminal({ wsUrl, buildLog }: Required<TerminalProps>) {
   );
 }
 
-export default function Terminal({ wsUrl, buildLog = "" }: TerminalProps) {
+export default function Terminal({
+  wsUrl,
+  buildLog = "",
+  waitingMessage,
+  showProgress = false,
+}: TerminalProps) {
   if (!wsUrl) {
-    return <TerminalWaitingPanel buildLog={buildLog} />;
+    return (
+      <TerminalWaitingPanel
+        buildLog={buildLog}
+        showProgress={showProgress}
+        waitingMessage={waitingMessage}
+      />
+    );
   }
 
   return <ConnectedTerminal wsUrl={wsUrl} buildLog={buildLog} />;

@@ -14,6 +14,7 @@
 import express from 'express';
 import cors from 'cors';
 import { sessionRouter } from './routes/session.js';
+import { environmentRouter } from './routes/environment.js';
 import { submitRouter } from './routes/submit.js';
 import { progressRouter } from './routes/progress.js';
 import { resetRouter } from './routes/reset.js';
@@ -52,6 +53,7 @@ initDatabase();
 
 // API 路由
 app.use(sessionRouter);
+app.use(environmentRouter);
 app.use(submitRouter);
 app.use(progressRouter);
 app.use(resetRouter);
