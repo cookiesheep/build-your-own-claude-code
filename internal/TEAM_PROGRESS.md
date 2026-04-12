@@ -768,6 +768,51 @@
 - 2. 前后端合并后重新跑 `E2E_SMOKE_TEST.md`
 - 3. 确认新流程下打开 `/lab/3` 不再自动创建 Docker 容器
 
+### 2026-04-12（会话 17 / 前端 session-environment 接入）
+
+**完成项**：
+- ✅ 完成前端 session/environment split 第一版接入
+- ✅ 更新 [platform/src/lib/api.ts](D:/code/build-your-own-claude-code/platform/src/lib/api.ts)
+  - 新增 `SessionStatus`
+  - 新增 `EnvironmentStatus`
+  - 更新 `SessionResponse`，适配 `status: created | restored` 与 `environmentStatus`
+  - 新增 `startEnvironment(sessionId)`
+  - 新增 `getEnvironmentStatus(sessionId)`
+  - 新增 `resetEnvironment(sessionId)`
+  - 保留 `submitCode` / `getProgress` / `getTerminalWebSocketUrl` 兼容旧逻辑
+- ✅ 更新 [platform/src/components/LabWorkspace.tsx](D:/code/build-your-own-claude-code/platform/src/components/LabWorkspace.tsx)
+  - 页面 mount 时只创建/恢复 session，不再自动启动 Docker 容器
+  - 增加 `environmentStatus` / `terminalUrl` / `environmentMessage` / `isStartingEnvironment` 状态
+  - 增加“启动实验环境”按钮，点击后调用 `/api/environment/start`
+  - `terminalUrl` 有值后才连接终端
+  - submit 前检查 `environmentStatus === "running"`，否则提示用户先启动环境
+  - reset 改为调用 `/api/environment/reset`
+- ✅ 更新 [platform/src/components/Terminal.tsx](D:/code/build-your-own-claude-code/platform/src/components/Terminal.tsx)
+  - 未启动环境时显示“实验环境未启动”
+  - 启动中才显示等待进度条和已等待时间
+  - 终端等待文案从“submit 后连接”改为“启动实验环境后连接”
+- ✅ 保持现有 UI 风格，未重做页面视觉
+- ✅ 未修改 `server/` 后端文件
+
+**验证**：
+- `cd platform && npm run lint`
+- `cd platform && npm run build`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- 尝试 API smoke：`GET http://127.0.0.1:3001/api/health`，失败原因：目标计算机积极拒绝连接
+
+**进行中**：
+- 🔄 真实浏览器端到端联调仍需在后端 server 运行时执行
+
+**阻塞项**：
+- ⚠️ 本轮验证时 `http://127.0.0.1:3001/api/health` 连接失败，后端 server 未在当前 shell 可访问，因此未完成真实 API smoke
+
+**下一步建议**：
+- 1. 启动后端：`cd server && npm run dev`
+- 2. 启动前端：`cd platform && npm run dev`
+- 3. 打开 `/lab/3` 后确认不新增 `lab-*` 容器
+- 4. 点击“启动实验环境”后确认才新增 `lab-*` 容器
+- 5. 验证 terminal、submit、reset 三条前端路径
+
 ---
 
 ## 关键资源

@@ -3,9 +3,29 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 // 如果你只是单独调前端，也可以手动设置 NEXT_PUBLIC_MOCK_MODE=true 切回 mock。
 const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
 
+export type SessionStatus = "created" | "restored";
+
+export type EnvironmentStatus =
+  | "not_started"
+  | "starting"
+  | "running"
+  | "stopped"
+  | "expired"
+  | "error";
+
 export type SessionResponse = {
   sessionId: string;
-  status: "running" | "creating";
+  status: SessionStatus;
+  environmentStatus: EnvironmentStatus;
+};
+
+export type EnvironmentResponse = {
+  success: boolean;
+  sessionId: string;
+  environmentStatus: EnvironmentStatus;
+  containerId?: string | null;
+  terminalUrl?: string;
+  message?: string;
 };
 
 export type SubmitResponse = {
@@ -30,7 +50,8 @@ export async function createSession(
     await delay(300);
     return {
       sessionId: sessionId ?? "mock-session-byocc",
-      status: "running",
+      status: sessionId ? "restored" : "created",
+      environmentStatus: "not_started",
     };
   }
 
@@ -47,6 +68,89 @@ export async function createSession(
   }
 
   return (await response.json()) as SessionResponse;
+}
+
+export async function startEnvironment(
+  sessionId: string,
+): Promise<EnvironmentResponse> {
+  if (MOCK_MODE) {
+    await delay(1200);
+    return {
+      success: true,
+      sessionId,
+      environmentStatus: "running",
+      containerId: "mock-container-byocc",
+      terminalUrl: getTerminalWebSocketUrl(sessionId),
+    };
+  }
+
+  const response = await fetch(`${API_BASE}/api/environment/start`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ sessionId }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to start environment");
+  }
+
+  return (await response.json()) as EnvironmentResponse;
+}
+
+export async function getEnvironmentStatus(
+  sessionId: string,
+): Promise<EnvironmentResponse> {
+  if (MOCK_MODE) {
+    await delay(250);
+    return {
+      success: true,
+      sessionId,
+      environmentStatus: "not_started",
+      containerId: null,
+    };
+  }
+
+  const response = await fetch(
+    `${API_BASE}/api/environment/status?sessionId=${encodeURIComponent(sessionId)}`,
+    { method: "GET" },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch environment status");
+  }
+
+  return (await response.json()) as EnvironmentResponse;
+}
+
+export async function resetEnvironment(
+  sessionId: string,
+): Promise<EnvironmentResponse> {
+  if (MOCK_MODE) {
+    await delay(1200);
+    return {
+      success: true,
+      sessionId,
+      environmentStatus: "running",
+      containerId: "mock-container-byocc-reset",
+      terminalUrl: getTerminalWebSocketUrl(sessionId),
+    };
+  }
+
+  const response = await fetch(`${API_BASE}/api/environment/reset`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ sessionId }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to reset environment");
+  }
+
+  return (await response.json()) as EnvironmentResponse;
 }
 
 export async function submitCode(
