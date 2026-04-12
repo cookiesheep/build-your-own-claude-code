@@ -56,6 +56,12 @@ export type ProgressResponse = {
   labs: Array<{ labNumber: number; completed: boolean }>;
 };
 
+export type WorkspaceResponse = {
+  labNumber: number;
+  code: string | null;
+  updatedAt: string | null;
+};
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -395,6 +401,55 @@ export async function getProgress(
   }
 
   return (await response.json()) as ProgressResponse;
+}
+
+export async function getWorkspace(labNumber: number): Promise<WorkspaceResponse> {
+  if (MOCK_MODE) {
+    await delay(250);
+    return {
+      labNumber,
+      code: null,
+      updatedAt: null,
+    };
+  }
+
+  const response = await authorizedFetch(`${API_BASE}/api/labs/${labNumber}/workspace`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch workspace");
+  }
+
+  return (await response.json()) as WorkspaceResponse;
+}
+
+export async function saveWorkspace(
+  labNumber: number,
+  code: string,
+): Promise<WorkspaceResponse> {
+  if (MOCK_MODE) {
+    await delay(350);
+    return {
+      labNumber,
+      code,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  const response = await authorizedFetch(`${API_BASE}/api/labs/${labNumber}/workspace`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ code }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save workspace");
+  }
+
+  return (await response.json()) as WorkspaceResponse;
 }
 
 export function getTerminalWebSocketUrl(sessionId: string): string {
