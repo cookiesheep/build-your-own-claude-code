@@ -1,16 +1,19 @@
 'use client';
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   createSession,
   ensureAnonymousUser,
   getEnvironmentStatus,
+  getWorkspace,
   resetEnvironment,
+  saveWorkspace,
   startEnvironment,
   submitCode,
   type EnvironmentStatus,
+  SESSION_STORAGE_KEY,
 } from "@/lib/api";
 import { LAB_FILE_NAMES, LAB_SKELETONS, STATUS_LABELS, type LabMeta } from "@/lib/labs";
 
@@ -39,7 +42,7 @@ type LabWorkspaceProps = {
 };
 
 type BuildState = "idle" | "building" | "success" | "error";
-const SESSION_STORAGE_KEY = "byocc-session-id";
+type SaveState = "idle" | "loading" | "dirty" | "saving" | "saved" | "error";
 
 export default function LabWorkspace({ lab }: LabWorkspaceProps) {
   const [code, setCode] = useState<string>(LAB_SKELETONS[lab.id] ?? "");
@@ -52,12 +55,17 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
   const [isStartingEnvironment, setIsStartingEnvironment] = useState(false);
   const [buildLog, setBuildLog] = useState<string>("");
   const [buildState, setBuildState] = useState<BuildState>("idle");
+  const [saveState, setSaveState] = useState<SaveState>("loading");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const saveRequestIdRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
 
     async function bootstrap() {
       try {
+        setSaveState("loading");
+        setCode(LAB_SKELETONS[lab.id] ?? "");
         await ensureAnonymousUser();
         const existingSessionId = window.localStorage.getItem(SESSION_STORAGE_KEY) ?? undefined;
         const session = await createSession(existingSessionId);
@@ -79,11 +87,23 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
             setEnvironmentMessage(environment.message ?? "");
           }
         }
+
+        const workspace = await getWorkspace(lab.id);
+        if (!cancelled) {
+          if (workspace.code !== null) {
+            setCode(workspace.code);
+          } else {
+            setCode(LAB_SKELETONS[lab.id] ?? "");
+          }
+          setLastSavedAt(workspace.updatedAt);
+          setSaveState(workspace.updatedAt ? "saved" : "idle");
+        }
       } catch (error) {
         if (!cancelled) {
           const message = error instanceof Error ? error.message : "Unknown session error";
           setEnvironmentStatus("error");
           setEnvironmentMessage(message);
+          setSaveState("error");
         }
       }
     }
@@ -93,7 +113,59 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lab.id]);
+
+  useEffect(() => {
+    if (saveState !== "dirty") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const requestId = saveRequestIdRef.current + 1;
+      saveRequestIdRef.current = requestId;
+      setSaveState("saving");
+      void saveWorkspace(lab.id, code)
+        .then((workspace) => {
+          if (saveRequestIdRef.current === requestId) {
+            setLastSavedAt(workspace.updatedAt);
+            setSaveState("saved");
+          }
+        })
+        .catch(() => {
+          if (saveRequestIdRef.current === requestId) {
+            setSaveState("error");
+          }
+        });
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [code, lab.id, saveState]);
+
+  const handleCodeChange = (value: string) => {
+    saveRequestIdRef.current += 1;
+    setCode(value);
+    setSaveState("dirty");
+  };
+
+  const saveCurrentWorkspace = async () => {
+    const requestId = saveRequestIdRef.current + 1;
+    saveRequestIdRef.current = requestId;
+    setSaveState("saving");
+    try {
+      const workspace = await saveWorkspace(lab.id, code);
+      if (saveRequestIdRef.current === requestId) {
+        setLastSavedAt(workspace.updatedAt);
+        setSaveState("saved");
+      }
+    } catch (error) {
+      if (saveRequestIdRef.current === requestId) {
+        setSaveState("error");
+      }
+      throw error;
+    }
+  };
 
   const handleStartEnvironment = async () => {
     if (!sessionId) {
@@ -129,6 +201,7 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
 
     try {
       setBuildState("building");
+      await saveCurrentWorkspace();
       const result = await submitCode(sessionId, code, lab.id);
       setBuildLog(result.buildLog);
       setBuildState(result.success ? "success" : "error");
@@ -154,8 +227,7 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
       setEnvironmentStatus(environment.success ? environment.environmentStatus : "error");
       setTerminalUrl(environment.success ? (environment.terminalUrl ?? "") : "");
       setEnvironmentMessage(environment.message ?? "");
-      setCode(LAB_SKELETONS[lab.id] ?? "");
-      setBuildLog("↺ 实验环境已重置，请重新提交代码。");
+      setBuildLog("↺ 实验环境已重置，当前草稿已保留，请重新提交代码。");
       setBuildState("idle");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown reset error";
@@ -196,7 +268,7 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
         <CodeEditor
           code={code}
           fileName={LAB_FILE_NAMES[lab.id] ?? "main.ts"}
-          onChange={setCode}
+          onChange={handleCodeChange}
         />
 
         <div className="flex h-12 items-center justify-between rounded-2xl border border-[var(--surface-hover)] bg-[color:rgba(10,10,10,0.92)] px-4">
@@ -232,6 +304,19 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
               {environmentStatusText}
             </span>
             <span className="text-[var(--text-secondary)]">{statusText}</span>
+            <span className="text-xs text-[var(--text-muted)]">
+              {saveState === "loading"
+                ? "草稿加载中"
+                : saveState === "dirty"
+                  ? "草稿未保存"
+                  : saveState === "saving"
+                    ? "保存中..."
+                    : saveState === "saved"
+                      ? `已保存${lastSavedAt ? ` ${lastSavedAt}` : ""}`
+                      : saveState === "error"
+                        ? "保存失败"
+                        : "尚无草稿"}
+            </span>
             <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1 text-xs text-[var(--text-muted)]">
               {sessionId || "session: pending"}
             </span>

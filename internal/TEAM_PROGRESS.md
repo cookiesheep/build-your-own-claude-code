@@ -905,6 +905,131 @@
 - 5. 验证 `POST /api/session` 返回 `userId`
 - 6. 继续验证 session/environment split：打开页面不创建容器，点击“启动实验环境”才创建容器
 
+### 2026-04-12（会话 20 / Lab Workspace 代码草稿后端）
+
+**完成项**：
+- ✅ 在 `codex/lab-code-snapshots` 分支完成后端代码草稿持久化基础
+- ✅ 修改 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - 新增 `code_snapshots` 表
+  - 新增 `upsertCodeSnapshot`
+  - 新增 `getCodeSnapshot`
+  - 草稿以 `user_id + lab_number` 为唯一键
+- ✅ 新增 [server/src/routes/workspace.ts](D:/code/build-your-own-claude-code/server/src/routes/workspace.ts)
+  - `GET /api/labs/:id/workspace`
+  - `PUT /api/labs/:id/workspace`
+  - workspace API 强制要求有效 `Authorization` token
+- ✅ 修改 [server/src/index.ts](D:/code/build-your-own-claude-code/server/src/index.ts)
+  - 注册 `workspaceRouter`
+- ✅ 修改 [server/src/routes/submit.ts](D:/code/build-your-own-claude-code/server/src/routes/submit.ts)
+  - 如果请求带有效 user token，submit 前会兜底保存 code snapshot
+- ✅ 新增 [WORKSPACE_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/WORKSPACE_API_CONTRACT.md)
+  - 给前端接入 Monaco 自动保存与恢复使用
+
+**验证**：
+- `cd server && npm run build`
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `PUT /api/labs/3/workspace`
+  - 带 token 保存 `draft one`
+- `GET /api/labs/3/workspace`
+  - 带 token 成功读取 `draft one`
+- `POST /api/submit`
+  - 带 token submit 成功
+  - submit 后 `GET /api/labs/3/workspace` 能读到最新提交代码
+
+**进行中**：
+- 🔄 前端尚未接入 workspace 自动保存与恢复
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 前端接入 [WORKSPACE_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/WORKSPACE_API_CONTRACT.md)
+- 2. 页面加载时恢复 code snapshot
+- 3. Monaco 编辑时 debounce 保存草稿
+- 4. submit 前保存一次草稿
+
+### 2026-04-12（会话 21 / 前端 Lab Workspace 草稿接入）
+
+**完成项**：
+- ✅ 完成前端 Lab workspace 草稿持久化第一版接入
+- ✅ 更新 [platform/src/lib/api.ts](D:/code/build-your-own-claude-code/platform/src/lib/api.ts)
+  - 新增 `WorkspaceResponse`
+  - 新增 `getWorkspace(labNumber)`
+  - 新增 `saveWorkspace(labNumber, code)`
+  - workspace API 统一复用 `authorizedFetch()`，自动携带 `Authorization: Bearer <byocc-auth-token>`
+  - mock 模式下提供合理的空草稿 / 保存成功返回
+- ✅ 更新 [platform/src/components/LabWorkspace.tsx](D:/code/build-your-own-claude-code/platform/src/components/LabWorkspace.tsx)
+  - 页面启动流程变为 `ensureAnonymousUser()` → `createSession(existingSessionId)` → `getWorkspace(lab.id)`
+  - 如果后端 workspace 返回 `code !== null`，编辑器使用后端草稿覆盖默认 skeleton
+  - 如果后端 workspace 返回 `code === null`，继续使用 `LAB_SKELETONS[lab.id]`
+  - Monaco `onChange` 后更新本地 state，并在 1.5 秒 debounce 后调用 `saveWorkspace`
+  - submit 前先强制 `saveWorkspace(lab.id, code)`，再调用 `submitCode`
+  - UI 增加轻量保存状态：草稿加载中 / 草稿未保存 / 保存中 / 已保存 / 保存失败
+  - reset 实验环境时保留当前编辑器草稿，不再回退 skeleton
+- ✅ 未修改 `server/` 后端文件
+- ✅ 未加入 GitHub OAuth / 代码历史版本 / user_customizations
+
+**验证**：
+- `cd platform && npm run lint`
+- `cd platform && npm run build`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `GET http://127.0.0.1:3001/api/health` 返回 `ok`
+- `POST http://127.0.0.1:3001/api/auth/anonymous` 返回 token
+- `PUT http://127.0.0.1:3001/api/labs/3/workspace` 保存 `draft from frontend smoke`
+- `GET http://127.0.0.1:3001/api/labs/3/workspace` 读回 `draft from frontend smoke`
+
+**进行中**：
+- 🔄 真实浏览器端刷新恢复草稿、编辑器 debounce 自动保存、submit 前保存仍需人工点击验证
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 启动后端与前端后打开 `/lab/3`
+- 2. 修改 Monaco 内容，等待 1.5 秒确认后端 workspace 被保存
+- 3. 刷新页面，确认编辑器恢复后端草稿
+- 4. 点击 submit，确认 submit 前草稿保存且构建仍成功
+- 5. 继续确认 session/environment split 流程没有回退：打开页面不创建容器，点击“启动实验环境”才创建容器
+
+### 2026-04-13（会话 22 / 前端旧 session 403 fallback）
+
+**完成项**：
+- ✅ 修复旧 `byocc-session-id` 与当前 `byocc-auth-token` 不匹配导致页面 bootstrap 失败的问题
+- ✅ 更新 [platform/src/lib/api.ts](D:/code/build-your-own-claude-code/platform/src/lib/api.ts)
+  - 新增并导出 `SESSION_STORAGE_KEY = "byocc-session-id"`
+  - `createSession(sessionId?)` 在收到 `403` 且传入了旧 `sessionId` 时：
+    - 删除 localStorage 中的 `byocc-session-id`
+    - 保留 `byocc-auth-token`
+    - 重新请求 `POST /api/session`，body 为 `{}`
+    - 返回新的 session
+  - 非 403 错误继续抛出，并保留 HTTP status / response body 便于排查
+- ✅ 更新 [platform/src/components/LabWorkspace.tsx](D:/code/build-your-own-claude-code/platform/src/components/LabWorkspace.tsx)
+  - 改用 `api.ts` 导出的 `SESSION_STORAGE_KEY`
+  - fallback 成功后仍会写回新的 sessionId，并继续执行 `getWorkspace(lab.id)`
+- ✅ 未修改 `server/` 后端文件
+
+**验证**：
+- `cd platform && npm run lint`
+- `cd platform && npm run build`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- 第一次 `npm run build` 因 Google Fonts 临时网络请求失败，重跑后通过
+- API smoke：
+  - token A 创建 session A
+  - token B 携带 session A 调 `POST /api/session`，后端返回 403
+  - token B 不携带 sessionId 调 `POST /api/session`，成功创建 session B 并返回 `userId`
+
+**进行中**：
+- 🔄 浏览器 DevTools 中的手动复现仍建议再做一次：
+  - 仅删除 `byocc-session-id` 后刷新，应恢复草稿
+  - 同时删除 `byocc-auth-token` 和 `byocc-session-id` 后刷新，应创建新匿名 user，页面不崩溃
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 在浏览器中用 DevTools 复现旧 session / 新 token 场景，确认页面不再停在“实验环境异常”
+- 2. 继续跑 Lab 3 草稿恢复、自动保存、submit 前保存的手动 E2E
+
 ---
 
 ## 关键资源
