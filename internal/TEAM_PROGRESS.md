@@ -716,6 +716,58 @@
 - 2. 同一 PR 内同步修改后端 API 与前端流程
 - 3. 目标：打开 Lab 页面不创建容器，用户点击“启动实验环境”后才创建容器
 
+### 2026-04-12（会话 16 / Session 与 Environment 后端拆分）
+
+**完成项**：
+- ✅ 在 `codex/session-environment-split` 分支完成后端 contract 第一版
+- ✅ 修改 [server/src/routes/session.ts](D:/code/build-your-own-claude-code/server/src/routes/session.ts)
+  - `POST /api/session` 现在只创建/恢复浏览器 session
+  - 不再自动创建 Docker 容器
+  - 返回 `environmentStatus`
+- ✅ 新增 [server/src/routes/environment.ts](D:/code/build-your-own-claude-code/server/src/routes/environment.ts)
+  - `POST /api/environment/start`
+  - `GET /api/environment/status`
+  - `POST /api/environment/reset`
+- ✅ 修改 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - sessions 表增加 `environment_status`
+  - 对已有 SQLite 数据库增加轻量迁移逻辑
+  - 新增 `updateSessionEnvironment`
+- ✅ 修改 [server/src/index.ts](D:/code/build-your-own-claude-code/server/src/index.ts)
+  - 注册 `environmentRouter`
+- ✅ 新增 [ENVIRONMENT_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md)
+  - 给前端线程同步最终后端 API contract
+- ✅ 更新 [E2E_SMOKE_TEST.md](D:/code/build-your-own-claude-code/internal/work-a-backend/E2E_SMOKE_TEST.md)
+  - 加入 `POST /api/environment/start` 步骤
+
+**验证**：
+- `cd server && npm run build`
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `POST /api/session`
+  - 返回 `status: "created"`
+  - 返回 `environmentStatus: "not_started"`
+  - 验证 Docker 中没有创建对应 `lab-*` 容器
+- `GET /api/environment/status`
+  - 未启动环境时返回 `environmentStatus: "not_started"`
+- `POST /api/environment/start`
+  - 创建真实 Docker 容器
+  - 返回 `environmentStatus: "running"`
+  - 返回 `terminalUrl`
+- `POST /api/environment/reset`
+  - 删除旧容器并创建新容器
+  - 返回新的 `containerId`
+
+**进行中**：
+- 🔄 前端线程需按 [ENVIRONMENT_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md) 接入新 API
+- 🔄 旧 `/api/reset` 仍保留兼容，后续前端应迁移到 `/api/environment/reset`
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 前端更新 `api.ts` 与 `LabWorkspace.tsx`，加入“启动实验环境”按钮
+- 2. 前后端合并后重新跑 `E2E_SMOKE_TEST.md`
+- 3. 确认新流程下打开 `/lab/3` 不再自动创建 Docker 容器
+
 ---
 
 ## 关键资源

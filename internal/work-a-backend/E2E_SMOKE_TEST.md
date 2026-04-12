@@ -7,6 +7,8 @@
 ```text
 浏览器 /lab/3
 → POST /api/session
+→ 不创建容器
+→ POST /api/environment/start
 → Docker 创建 lab-* 容器
 → POST /api/submit
 → 注入 /workspace/src/query-lab.ts
@@ -95,10 +97,11 @@ http://localhost:3000/lab/3
 在 `/lab/3` 页面执行：
 
 1. 确认页面右侧显示 session id。
-2. 点击“提交代码”。
-3. 等待构建完成。
-4. 观察终端是否连接。
-5. 在终端输入：
+2. 点击“启动实验环境”。
+3. 确认终端连接成功。
+4. 点击“提交代码”。
+5. 等待构建完成。
+6. 在终端输入：
 
 ```bash
 pwd
@@ -144,6 +147,10 @@ cookiesheep's claude-code v2.1.88
 
 ```powershell
 $session = Invoke-RestMethod 'http://127.0.0.1:3001/api/session' -Method Post -ContentType 'application/json' -Body '{}'
+
+# session 现在只创建会话，不创建 Docker 容器。
+$environmentBody = @{ sessionId = $session.sessionId } | ConvertTo-Json -Compress
+$environment = Invoke-RestMethod 'http://127.0.0.1:3001/api/environment/start' -Method Post -ContentType 'application/json' -Body $environmentBody
 
 $code = [System.IO.File]::ReadAllText('D:\test-claude-code\claude-code\src\query-lab.ts')
 
