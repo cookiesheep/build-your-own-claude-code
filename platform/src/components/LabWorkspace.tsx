@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import {
   createSession,
+  ensureAnonymousUser,
   getEnvironmentStatus,
   resetEnvironment,
   startEnvironment,
@@ -42,6 +43,7 @@ const SESSION_STORAGE_KEY = "byocc-session-id";
 
 export default function LabWorkspace({ lab }: LabWorkspaceProps) {
   const [code, setCode] = useState<string>(LAB_SKELETONS[lab.id] ?? "");
+  const [userId, setUserId] = useState<string>("");
   const [sessionId, setSessionId] = useState<string>("");
   const [environmentStatus, setEnvironmentStatus] =
     useState<EnvironmentStatus>("not_started");
@@ -56,6 +58,7 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
 
     async function bootstrap() {
       try {
+        await ensureAnonymousUser();
         const existingSessionId = window.localStorage.getItem(SESSION_STORAGE_KEY) ?? undefined;
         const session = await createSession(existingSessionId);
         if (cancelled) {
@@ -63,6 +66,7 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
         }
 
         window.localStorage.setItem(SESSION_STORAGE_KEY, session.sessionId);
+        setUserId(session.userId ?? "");
         setSessionId(session.sessionId);
         setEnvironmentStatus(session.environmentStatus);
         setEnvironmentMessage("");
@@ -230,6 +234,9 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
             <span className="text-[var(--text-secondary)]">{statusText}</span>
             <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1 text-xs text-[var(--text-muted)]">
               {sessionId || "session: pending"}
+            </span>
+            <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1 text-xs text-[var(--text-muted)]">
+              {userId ? `user: ${userId.slice(0, 8)}` : "user: pending"}
             </span>
           </div>
         </div>

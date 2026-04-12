@@ -2,6 +2,24 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 // 进入后端联调阶段后，默认应该优先走真实后端。
 // 如果你只是单独调前端，也可以手动设置 NEXT_PUBLIC_MOCK_MODE=true 切回 mock。
 const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
+export const AUTH_TOKEN_STORAGE_KEY = "byocc-auth-token";
+
+export type User = {
+  id: string;
+  kind: "anonymous";
+  githubId: string | null;
+  nickname: string | null;
+  avatarUrl: string | null;
+};
+
+export type AuthResponse = {
+  token: string;
+  user: User;
+};
+
+export type CurrentUserResponse = {
+  user: User;
+};
 
 export type SessionStatus = "created" | "restored";
 
@@ -17,6 +35,7 @@ export type SessionResponse = {
   sessionId: string;
   status: SessionStatus;
   environmentStatus: EnvironmentStatus;
+  userId?: string | null;
 };
 
 export type EnvironmentResponse = {
@@ -43,6 +62,150 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+function getStoredAuthToken(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+}
+
+function setStoredAuthToken(token: string): void {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+  }
+}
+
+function clearStoredAuthToken(): void {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+  }
+}
+
+function withAuthHeader(
+  headers: HeadersInit | undefined,
+  token: string,
+): Headers {
+  const nextHeaders = new Headers(headers);
+  nextHeaders.set("Authorization", `Bearer ${token}`);
+  return nextHeaders;
+}
+
+async function authorizedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const token = await ensureAnonymousUser();
+  const firstResponse = await fetch(input, {
+    ...init,
+    headers: withAuthHeader(init.headers, token),
+  });
+
+  if (firstResponse.status !== 401) {
+    return firstResponse;
+  }
+
+  clearStoredAuthToken();
+  const refreshedToken = await ensureAnonymousUser();
+  return fetch(input, {
+    ...init,
+    headers: withAuthHeader(init.headers, refreshedToken),
+  });
+}
+
+export async function createAnonymousUser(): Promise<AuthResponse> {
+  if (MOCK_MODE) {
+    await delay(200);
+    const token = "mock-anonymous-token";
+    setStoredAuthToken(token);
+    return {
+      token,
+      user: {
+        id: "mock-user-byocc",
+        kind: "anonymous",
+        githubId: null,
+        nickname: null,
+        avatarUrl: null,
+      },
+    };
+  }
+
+  const existingToken = getStoredAuthToken();
+  const response = await fetch(`${API_BASE}/api/auth/anonymous`, {
+    method: "POST",
+    headers: existingToken
+      ? {
+          Authorization: `Bearer ${existingToken}`,
+          "Content-Type": "application/json",
+        }
+      : { "Content-Type": "application/json" },
+    body: "{}",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create anonymous user");
+  }
+
+  const result = (await response.json()) as AuthResponse;
+  setStoredAuthToken(result.token);
+  return result;
+}
+
+export async function getCurrentUser(): Promise<CurrentUserResponse> {
+  if (MOCK_MODE) {
+    await delay(150);
+    return {
+      user: {
+        id: "mock-user-byocc",
+        kind: "anonymous",
+        githubId: null,
+        nickname: null,
+        avatarUrl: null,
+      },
+    };
+  }
+
+  const token = getStoredAuthToken();
+  if (!token) {
+    throw new Error("Missing auth token");
+  }
+
+  const response = await fetch(`${API_BASE}/api/me`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.status === 401) {
+    clearStoredAuthToken();
+    throw new Error("Invalid auth token");
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch current user");
+  }
+
+  return (await response.json()) as CurrentUserResponse;
+}
+
+export async function ensureAnonymousUser(): Promise<string> {
+  const existingToken = getStoredAuthToken();
+  if (!existingToken) {
+    const auth = await createAnonymousUser();
+    return auth.token;
+  }
+
+  try {
+    await getCurrentUser();
+    return existingToken;
+  } catch (error) {
+    if (error instanceof Error && error.message === "Invalid auth token") {
+      const auth = await createAnonymousUser();
+      return auth.token;
+    }
+
+    throw error;
+  }
+}
+
 export async function createSession(
   sessionId?: string,
 ): Promise<SessionResponse> {
@@ -52,10 +215,11 @@ export async function createSession(
       sessionId: sessionId ?? "mock-session-byocc",
       status: sessionId ? "restored" : "created",
       environmentStatus: "not_started",
+      userId: "mock-user-byocc",
     };
   }
 
-  const response = await fetch(`${API_BASE}/api/session`, {
+  const response = await authorizedFetch(`${API_BASE}/api/session`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -84,7 +248,7 @@ export async function startEnvironment(
     };
   }
 
-  const response = await fetch(`${API_BASE}/api/environment/start`, {
+  const response = await authorizedFetch(`${API_BASE}/api/environment/start`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -112,7 +276,7 @@ export async function getEnvironmentStatus(
     };
   }
 
-  const response = await fetch(
+  const response = await authorizedFetch(
     `${API_BASE}/api/environment/status?sessionId=${encodeURIComponent(sessionId)}`,
     { method: "GET" },
   );
@@ -138,7 +302,7 @@ export async function resetEnvironment(
     };
   }
 
-  const response = await fetch(`${API_BASE}/api/environment/reset`, {
+  const response = await authorizedFetch(`${API_BASE}/api/environment/reset`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -166,7 +330,7 @@ export async function submitCode(
     };
   }
 
-  const response = await fetch(`${API_BASE}/api/submit`, {
+  const response = await authorizedFetch(`${API_BASE}/api/submit`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -189,7 +353,7 @@ export async function resetSession(
     return { success: true };
   }
 
-  const response = await fetch(`${API_BASE}/api/reset`, {
+  const response = await authorizedFetch(`${API_BASE}/api/reset`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -221,7 +385,7 @@ export async function getProgress(
     };
   }
 
-  const response = await fetch(
+  const response = await authorizedFetch(
     `${API_BASE}/api/progress?sessionId=${encodeURIComponent(sessionId)}`,
     { method: "GET" },
   );

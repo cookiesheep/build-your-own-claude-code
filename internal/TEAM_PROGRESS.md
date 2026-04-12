@@ -865,6 +865,46 @@
 - 2. 页面启动时自动创建/恢复 anonymous user token
 - 3. 后续再做 `code_snapshots`，让代码草稿绑定 user_id
 
+### 2026-04-12（会话 19 / 前端匿名身份接入）
+
+**完成项**：
+- ✅ 完成前端匿名 user token 第一版接入
+- ✅ 更新 [platform/src/lib/api.ts](D:/code/build-your-own-claude-code/platform/src/lib/api.ts)
+  - 新增 `AUTH_TOKEN_STORAGE_KEY = "byocc-auth-token"`
+  - 新增 `User` / `AuthResponse` / `CurrentUserResponse` 类型
+  - 新增 `createAnonymousUser()`
+  - 新增 `getCurrentUser()`
+  - 新增 `ensureAnonymousUser()`
+  - 真实后端请求统一通过 `authorizedFetch()` 自动携带 `Authorization: Bearer <token>`
+  - 当真实请求遇到 401 时，会清理旧 token 并重新创建 anonymous user 后重试
+- ✅ 更新 [platform/src/components/LabWorkspace.tsx](D:/code/build-your-own-claude-code/platform/src/components/LabWorkspace.tsx)
+  - 页面启动时先 `ensureAnonymousUser()`
+  - 再调用 `createSession(existingSessionId)`
+  - 保存并显示后端返回的 `userId`
+  - 保持 session/environment split 流程不变：打开页面不创建容器，点击“启动实验环境”才创建容器
+- ✅ 未修改 `server/` 后端文件
+- ✅ 未加入 GitHub OAuth / 登录按钮 / code snapshots / user customizations
+
+**验证**：
+- `cd platform && npm run lint`
+- `cd platform && npm run build`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- 尝试 auth smoke：`GET http://127.0.0.1:3001/api/health`，失败原因：目标计算机积极拒绝连接
+
+**进行中**：
+- 🔄 真实浏览器端到端联调仍需在后端 server 运行时执行
+
+**阻塞项**：
+- ⚠️ 本轮验证时 `http://127.0.0.1:3001` 在当前 shell 不可访问，因此未验证 `/api/auth/anonymous`、`/api/me` 和 `/api/session userId`
+
+**下一步建议**：
+- 1. 启动后端：`cd server && npm run dev`
+- 2. 启动前端：`cd platform && npm run dev`
+- 3. 打开 `/lab/3` 后确认 localStorage 出现 `byocc-auth-token`
+- 4. 在浏览器/PowerShell 中验证 `GET /api/me` 返回 anonymous user
+- 5. 验证 `POST /api/session` 返回 `userId`
+- 6. 继续验证 session/environment split：打开页面不创建容器，点击“启动实验环境”才创建容器
+
 ---
 
 ## 关键资源
