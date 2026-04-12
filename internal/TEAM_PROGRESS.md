@@ -690,6 +690,32 @@
 - 2. 如果复现顺利，再考虑是否把 cleanup 脚本接成定时任务或管理 API
 - 3. 公开演示前继续补演示 token / Cloudflare Tunnel 配置说明
 
+### 2026-04-12（会话 15 / 下一阶段身份与环境规划）
+
+**完成项**：
+- ✅ 复盘 Claude Code 关于“轻量身份 + 持久化学习状态”的架构建议
+- ✅ 明确判断：
+  - “完整用户系统”不应现在做
+  - “轻量身份 + 持久化 progress/code/customization”值得认真推进
+  - 下一步应先拆分 session 和 environment，而不是立即做 GitHub OAuth
+- ✅ 新增 [NEXT_PHASE_IDENTITY_ENVIRONMENT_PLAN.md](D:/code/build-your-own-claude-code/internal/work-a-backend/NEXT_PHASE_IDENTITY_ENVIRONMENT_PLAN.md)
+  - 记录当前结论
+  - 区分 User / Session / Environment / Workspace
+  - 给出 PR 拆分顺序
+  - 明确前后端协作策略
+  - 明确 GitHub OAuth 与匿名 user_id 的推荐顺序
+
+**进行中**：
+- 🔄 下一阶段尚未开始实现；当前仅完成规划沉淀
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 从最新 `main` 新建 `codex/session-environment-split`
+- 2. 同一 PR 内同步修改后端 API 与前端流程
+- 3. 目标：打开 Lab 页面不创建容器，用户点击“启动实验环境”后才创建容器
+
 ---
 
 ## 关键资源
