@@ -10,7 +10,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "node --loader ts-node/esm dist/index.js",
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "cleanup:containers": "tsx src/scripts/cleanup-containers.ts"
   },
   "dependencies": {
     "express": "^4.18.0",
