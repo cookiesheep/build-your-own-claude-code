@@ -9,7 +9,8 @@
  */
 
 import { Router } from 'express';
-import { getSession, updateProgress } from '../db/database.js';
+import { getSession, updateProgress, upsertCodeSnapshot } from '../db/database.js';
+import { getOptionalAuthUser } from '../middleware/auth.js';
 import { buildInContainer, injectCode } from '../services/container-manager.js';
 
 export const submitRouter = Router();
@@ -52,7 +53,15 @@ submitRouter.post('/api/submit', async (req, res) => {
     return;
   }
 
+  const authUser = getOptionalAuthUser(req);
+
   try {
+    // submit 本身仍然以 session 为入口，保持旧链路兼容。
+    // 如果请求带了有效 user token，就顺手保存一份代码快照。
+    if (authUser) {
+      upsertCodeSnapshot(authUser.id, labNumber, code);
+    }
+
     await injectCode(sessionId, code, labNumber);
     const buildResult = await buildInContainer(sessionId, labNumber);
 

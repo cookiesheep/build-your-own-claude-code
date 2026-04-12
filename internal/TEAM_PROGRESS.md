@@ -905,6 +905,49 @@
 - 5. 验证 `POST /api/session` 返回 `userId`
 - 6. 继续验证 session/environment split：打开页面不创建容器，点击“启动实验环境”才创建容器
 
+### 2026-04-12（会话 20 / Lab Workspace 代码草稿后端）
+
+**完成项**：
+- ✅ 在 `codex/lab-code-snapshots` 分支完成后端代码草稿持久化基础
+- ✅ 修改 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - 新增 `code_snapshots` 表
+  - 新增 `upsertCodeSnapshot`
+  - 新增 `getCodeSnapshot`
+  - 草稿以 `user_id + lab_number` 为唯一键
+- ✅ 新增 [server/src/routes/workspace.ts](D:/code/build-your-own-claude-code/server/src/routes/workspace.ts)
+  - `GET /api/labs/:id/workspace`
+  - `PUT /api/labs/:id/workspace`
+  - workspace API 强制要求有效 `Authorization` token
+- ✅ 修改 [server/src/index.ts](D:/code/build-your-own-claude-code/server/src/index.ts)
+  - 注册 `workspaceRouter`
+- ✅ 修改 [server/src/routes/submit.ts](D:/code/build-your-own-claude-code/server/src/routes/submit.ts)
+  - 如果请求带有效 user token，submit 前会兜底保存 code snapshot
+- ✅ 新增 [WORKSPACE_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/WORKSPACE_API_CONTRACT.md)
+  - 给前端接入 Monaco 自动保存与恢复使用
+
+**验证**：
+- `cd server && npm run build`
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `PUT /api/labs/3/workspace`
+  - 带 token 保存 `draft one`
+- `GET /api/labs/3/workspace`
+  - 带 token 成功读取 `draft one`
+- `POST /api/submit`
+  - 带 token submit 成功
+  - submit 后 `GET /api/labs/3/workspace` 能读到最新提交代码
+
+**进行中**：
+- 🔄 前端尚未接入 workspace 自动保存与恢复
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 前端接入 [WORKSPACE_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/WORKSPACE_API_CONTRACT.md)
+- 2. 页面加载时恢复 code snapshot
+- 3. Monaco 编辑时 debounce 保存草稿
+- 4. submit 前保存一次草稿
+
 ---
 
 ## 关键资源

@@ -31,6 +31,13 @@ type ProgressRow = {
   completed: number;
 };
 
+type CodeSnapshotRow = {
+  user_id: string;
+  lab_number: number;
+  code: string;
+  updated_at: string;
+};
+
 const DB_PATH = join(process.cwd(), 'byocc.sqlite');
 let db: DatabaseHandle | undefined;
 
@@ -50,6 +57,13 @@ export type UserRecord = {
   githubId: string | null;
   nickname: string | null;
   avatarUrl: string | null;
+};
+
+export type CodeSnapshotRecord = {
+  userId: string;
+  labNumber: number;
+  code: string;
+  updatedAt: string;
 };
 
 function getDb(): DatabaseHandle {
@@ -100,6 +114,15 @@ export function initDatabase(): void {
       completed_at TEXT,
       PRIMARY KEY (session_id, lab_number)
     );
+
+    CREATE TABLE IF NOT EXISTS code_snapshots (
+      user_id TEXT NOT NULL,
+      lab_number INTEGER NOT NULL,
+      code TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, lab_number),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
   `);
 
   const sessionColumns = db
@@ -127,6 +150,15 @@ function mapUser(row: UserRow): UserRecord {
     githubId: row.github_id,
     nickname: row.nickname,
     avatarUrl: row.avatar_url,
+  };
+}
+
+function mapCodeSnapshot(row: CodeSnapshotRow): CodeSnapshotRecord {
+  return {
+    userId: row.user_id,
+    labNumber: row.lab_number,
+    code: row.code,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -302,4 +334,58 @@ export function getProgress(sessionId: string): Array<{ labNumber: number; compl
     labNumber: row.lab_number,
     completed: row.completed === 1,
   }));
+}
+
+/**
+ * 保存某个用户在某个 Lab 的最新代码草稿。
+ *
+ * 这是“代码不因容器销毁而丢失”的基础能力。
+ * 这里采用覆盖写：当前 MVP 只保留最新版，不做历史版本。
+ */
+export function upsertCodeSnapshot(
+  userId: string,
+  labNumber: number,
+  code: string
+): CodeSnapshotRecord {
+  const database = getDb();
+
+  database
+    .prepare(
+      `
+        INSERT INTO code_snapshots (user_id, lab_number, code, updated_at)
+        VALUES (?, ?, ?, datetime('now'))
+        ON CONFLICT(user_id, lab_number) DO UPDATE SET
+          code = excluded.code,
+          updated_at = datetime('now')
+      `
+    )
+    .run(userId, labNumber, code);
+
+  const snapshot = getCodeSnapshot(userId, labNumber);
+  if (!snapshot) {
+    throw new Error(`Failed to save code snapshot for user "${userId}" lab ${labNumber}`);
+  }
+
+  return snapshot;
+}
+
+/**
+ * 获取某个用户在某个 Lab 的代码草稿。
+ */
+export function getCodeSnapshot(
+  userId: string,
+  labNumber: number
+): CodeSnapshotRecord | null {
+  const database = getDb();
+  const row = database
+    .prepare<[string, number], CodeSnapshotRow>(
+      `
+        SELECT user_id, lab_number, code, updated_at
+        FROM code_snapshots
+        WHERE user_id = ? AND lab_number = ?
+      `
+    )
+    .get(userId, labNumber);
+
+  return row ? mapCodeSnapshot(row) : null;
 }
