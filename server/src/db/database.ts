@@ -6,14 +6,24 @@
  */
 
 import BetterSqlite3 from 'better-sqlite3';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
 type DatabaseHandle = BetterSqlite3.Database;
 
 type SessionRow = {
   id: string;
+  user_id: string | null;
   container_id: string | null;
   environment_status: string;
+};
+
+type UserRow = {
+  id: string;
+  kind: string;
+  github_id: string | null;
+  nickname: string | null;
+  avatar_url: string | null;
 };
 
 type ProgressRow = {
@@ -31,6 +41,16 @@ export type EnvironmentStatus =
   | 'stopped'
   | 'expired'
   | 'error';
+
+export type UserKind = 'anonymous' | 'github';
+
+export type UserRecord = {
+  id: string;
+  kind: UserKind;
+  githubId: string | null;
+  nickname: string | null;
+  avatarUrl: string | null;
+};
 
 function getDb(): DatabaseHandle {
   if (!db) {
@@ -54,12 +74,23 @@ export function initDatabase(): void {
   db.pragma('journal_mode = WAL');
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL DEFAULT 'anonymous',
+      github_id TEXT UNIQUE,
+      nickname TEXT,
+      avatar_url TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
+      user_id TEXT,
       container_id TEXT,
       environment_status TEXT DEFAULT 'not_started',
       created_at TEXT DEFAULT (datetime('now')),
-      last_active TEXT DEFAULT (datetime('now'))
+      last_active TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS progress (
@@ -82,7 +113,68 @@ export function initDatabase(): void {
     db.exec("ALTER TABLE sessions ADD COLUMN environment_status TEXT DEFAULT 'not_started'");
   }
 
+  if (!sessionColumns.includes('user_id')) {
+    db.exec('ALTER TABLE sessions ADD COLUMN user_id TEXT REFERENCES users(id)');
+  }
+
   console.log(`💾 Database initialized: ${DB_PATH}`);
+}
+
+function mapUser(row: UserRow): UserRecord {
+  return {
+    id: row.id,
+    kind: row.kind as UserKind,
+    githubId: row.github_id,
+    nickname: row.nickname,
+    avatarUrl: row.avatar_url,
+  };
+}
+
+/**
+ * 创建匿名用户。
+ *
+ * 匿名 user 不是登录系统，它只是一个稳定的数据库归属点：
+ * - 现在用来把 session 绑定到 user_id
+ * - 下一步可用于 progress / code snapshot
+ * - 以后 GitHub OAuth 可以把匿名 user 升级成 github user
+ */
+export function createAnonymousUser(): UserRecord {
+  const database = getDb();
+  const userId = randomUUID();
+
+  database
+    .prepare(
+      `
+        INSERT INTO users (id, kind)
+        VALUES (?, 'anonymous')
+      `
+    )
+    .run(userId);
+
+  const user = getUser(userId);
+  if (!user) {
+    throw new Error(`Failed to create anonymous user "${userId}"`);
+  }
+
+  return user;
+}
+
+/**
+ * 根据 user_id 获取用户。
+ */
+export function getUser(userId: string): UserRecord | null {
+  const database = getDb();
+  const row = database
+    .prepare<[string], UserRow>(
+      `
+        SELECT id, kind, github_id, nickname, avatar_url
+        FROM users
+        WHERE id = ?
+      `
+    )
+    .get(userId);
+
+  return row ? mapUser(row) : null;
 }
 
 /**
@@ -91,22 +183,24 @@ export function initDatabase(): void {
 export function createSession(
   sessionId: string,
   containerId: string | null = null,
-  environmentStatus: EnvironmentStatus = containerId ? 'running' : 'not_started'
+  environmentStatus: EnvironmentStatus = containerId ? 'running' : 'not_started',
+  userId: string | null = null
 ): void {
   const database = getDb();
 
   database
     .prepare(
       `
-        INSERT INTO sessions (id, container_id, environment_status, last_active)
-        VALUES (?, ?, ?, datetime('now'))
+        INSERT INTO sessions (id, user_id, container_id, environment_status, last_active)
+        VALUES (?, ?, ?, ?, datetime('now'))
         ON CONFLICT(id) DO UPDATE SET
+          user_id = COALESCE(excluded.user_id, user_id),
           container_id = excluded.container_id,
           environment_status = excluded.environment_status,
           last_active = datetime('now')
       `
     )
-    .run(sessionId, containerId, environmentStatus);
+    .run(sessionId, userId, containerId, environmentStatus);
 }
 
 /**
@@ -114,11 +208,16 @@ export function createSession(
  */
 export function getSession(
   sessionId: string
-): { id: string; containerId: string | null; environmentStatus: EnvironmentStatus } | null {
+): {
+  id: string;
+  userId: string | null;
+  containerId: string | null;
+  environmentStatus: EnvironmentStatus;
+} | null {
   const database = getDb();
   const row = database
     .prepare<[string], SessionRow>(
-      'SELECT id, container_id, environment_status FROM sessions WHERE id = ?'
+      'SELECT id, user_id, container_id, environment_status FROM sessions WHERE id = ?'
     )
     .get(sessionId);
 
@@ -128,6 +227,7 @@ export function getSession(
 
   return {
     id: row.id,
+    userId: row.user_id,
     containerId: row.container_id,
     environmentStatus: row.environment_status as EnvironmentStatus,
   };

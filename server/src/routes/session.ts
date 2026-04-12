@@ -12,6 +12,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { createSession, getSession } from '../db/database.js';
+import { getOptionalAuthUser } from '../middleware/auth.js';
 
 export const sessionRouter = Router();
 
@@ -24,22 +25,41 @@ sessionRouter.post('/api/session', async (req, res) => {
 
     const sessionId = requestedSessionId ?? uuidv4();
     const existingSession = getSession(sessionId);
+    const authUser = getOptionalAuthUser(req);
 
     if (existingSession) {
+      if (existingSession.userId && authUser && existingSession.userId !== authUser.id) {
+        res.status(403).json({
+          message: 'This session belongs to a different user.',
+        });
+        return;
+      }
+
+      if (!existingSession.userId && authUser) {
+        createSession(
+          existingSession.id,
+          existingSession.containerId,
+          existingSession.environmentStatus,
+          authUser.id
+        );
+      }
+
       res.json({
         sessionId: existingSession.id,
         status: 'restored',
         environmentStatus: existingSession.environmentStatus,
+        userId: existingSession.userId ?? authUser?.id ?? null,
       });
       return;
     }
 
-    createSession(sessionId, null, 'not_started');
+    createSession(sessionId, null, 'not_started', authUser?.id ?? null);
 
     res.json({
       sessionId,
       status: 'created',
       environmentStatus: 'not_started',
+      userId: authUser?.id ?? null,
     });
   } catch (error) {
     const message =

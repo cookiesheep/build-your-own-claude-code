@@ -813,6 +813,58 @@
 - 4. 点击“启动实验环境”后确认才新增 `lab-*` 容器
 - 5. 验证 terminal、submit、reset 三条前端路径
 
+### 2026-04-12（会话 18 / 匿名 User 身份基础后端）
+
+**完成项**：
+- ✅ 在 `codex/anonymous-user-identity` 分支完成后端匿名 user 身份基础
+- ✅ 修改 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - 新增 `users` 表
+  - sessions 表新增 `user_id`
+  - 新增轻量 SQLite 迁移逻辑
+  - 新增 `createAnonymousUser`
+  - 新增 `getUser`
+  - `createSession` 支持可选 `userId`
+- ✅ 新增 [server/src/services/auth-token.ts](D:/code/build-your-own-claude-code/server/src/services/auth-token.ts)
+  - 使用 Node 内置 `crypto` 做 HMAC token
+  - 不新增外部 JWT 依赖
+  - 支持 `BYOCC_AUTH_SECRET`
+- ✅ 新增 [server/src/middleware/auth.ts](D:/code/build-your-own-claude-code/server/src/middleware/auth.ts)
+  - 从 `Authorization: Bearer <token>` 中读取可选 user
+- ✅ 新增 [server/src/routes/auth.ts](D:/code/build-your-own-claude-code/server/src/routes/auth.ts)
+  - `POST /api/auth/anonymous`
+  - `GET /api/me`
+- ✅ 修改 [server/src/routes/session.ts](D:/code/build-your-own-claude-code/server/src/routes/session.ts)
+  - 带 token 创建 session 时绑定 `user_id`
+  - 不带 token 的旧流程仍兼容
+- ✅ 修改 [server/src/index.ts](D:/code/build-your-own-claude-code/server/src/index.ts)
+  - 注册 `authRouter`
+- ✅ 新增 [AUTH_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/AUTH_API_CONTRACT.md)
+  - 给前端接入匿名身份 token 使用
+
+**验证**：
+- `cd server && npm run build`
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `POST /api/auth/anonymous`
+  - 返回 `token`
+  - 返回 `user.kind: "anonymous"`
+- `GET /api/me`
+  - 带 token 返回当前 user
+- `POST /api/session`
+  - 带 token 返回 `userId`
+  - 不带 token 仍然兼容，返回 `userId: null`
+
+**进行中**：
+- 🔄 前端尚未接入 `byocc-auth-token`
+- 🔄 progress 仍然按 session_id 查询，尚未迁移到 user_id
+
+**阻塞项**：
+- 无
+
+**下一步建议**：
+- 1. 前端接入 [AUTH_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/AUTH_API_CONTRACT.md)
+- 2. 页面启动时自动创建/恢复 anonymous user token
+- 3. 后续再做 `code_snapshots`，让代码草稿绑定 user_id
+
 ---
 
 ## 关键资源
