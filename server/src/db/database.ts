@@ -115,6 +115,15 @@ export function initDatabase(): void {
       PRIMARY KEY (session_id, lab_number)
     );
 
+    CREATE TABLE IF NOT EXISTS user_progress (
+      user_id TEXT NOT NULL,
+      lab_number INTEGER NOT NULL,
+      completed INTEGER DEFAULT 0,
+      completed_at TEXT,
+      PRIMARY KEY (user_id, lab_number),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS code_snapshots (
       user_id TEXT NOT NULL,
       lab_number INTEGER NOT NULL,
@@ -329,6 +338,53 @@ export function getProgress(sessionId: string): Array<{ labNumber: number; compl
       `
     )
     .all(sessionId);
+
+  return rows.map((row) => ({
+    labNumber: row.lab_number,
+    completed: row.completed === 1,
+  }));
+}
+
+/**
+ * 更新用户级 Lab 完成进度。
+ *
+ * 旧的 progress 表绑定 session_id，只能表示“这次浏览器会话完成了什么”。
+ * user_progress 绑定 user_id，表示“这个学习者完成了什么”，可以跨 session 恢复。
+ */
+export function updateUserProgress(userId: string, labNumber: number, completed: boolean): void {
+  const database = getDb();
+
+  database
+    .prepare(
+      `
+        INSERT INTO user_progress (user_id, lab_number, completed, completed_at)
+        VALUES (?, ?, ?, CASE WHEN ? = 1 THEN datetime('now') ELSE NULL END)
+        ON CONFLICT(user_id, lab_number) DO UPDATE SET
+          completed = excluded.completed,
+          completed_at = CASE
+            WHEN excluded.completed = 1 THEN datetime('now')
+            ELSE NULL
+          END
+      `
+    )
+    .run(userId, labNumber, completed ? 1 : 0, completed ? 1 : 0);
+}
+
+/**
+ * 获取用户级 Lab 完成进度。
+ */
+export function getUserProgress(userId: string): Array<{ labNumber: number; completed: boolean }> {
+  const database = getDb();
+  const rows = database
+    .prepare<[string], ProgressRow>(
+      `
+        SELECT lab_number, completed
+        FROM user_progress
+        WHERE user_id = ?
+        ORDER BY lab_number ASC
+      `
+    )
+    .all(userId);
 
   return rows.map((row) => ({
     labNumber: row.lab_number,
