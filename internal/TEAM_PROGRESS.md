@@ -1030,6 +1030,53 @@
 - 1. 在浏览器中用 DevTools 复现旧 session / 新 token 场景，确认页面不再停在“实验环境异常”
 - 2. 继续跑 Lab 3 草稿恢复、自动保存、submit 前保存的手动 E2E
 
+### 2026-04-13（会话 23 / User 级 Progress 后端）
+
+**完成项**：
+- ✅ 在 `codex/progress-by-user` 分支完成 user 级 progress 后端迁移基础
+- ✅ 修改 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - 新增 `user_progress` 表
+  - 新增 `updateUserProgress(userId, labNumber, completed)`
+  - 新增 `getUserProgress(userId)`
+- ✅ 修改 [server/src/routes/submit.ts](D:/code/build-your-own-claude-code/server/src/routes/submit.ts)
+  - submit 成功时继续写旧 session progress
+  - 如果请求带有效 user token，同时写入 user_progress
+- ✅ 修改 [server/src/routes/progress.ts](D:/code/build-your-own-claude-code/server/src/routes/progress.ts)
+  - 带 token 时优先读取 user_progress
+  - 迁移期合并 session progress 作为兼容
+  - 不带 token 时继续旧 session progress 行为
+- ✅ 新增 [PROGRESS_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/PROGRESS_API_CONTRACT.md)
+  - 记录 user 级 progress 的 API contract 与迁移策略
+
+**验证**：
+- `cd server && npm run build`
+- `npx tsc --noEmit --project server/tsconfig.json`
+- DB 层验证：
+  - 创建 anonymous user
+  - `updateUserProgress(user.id, 3, true)`
+  - `getUserProgress(user.id)` 返回 `lab 3 completed: true`
+- HTTP 层验证：
+  - `POST /api/auth/anonymous` 获取 token
+  - 脚本写入该 user 的 user_progress
+  - `GET /api/progress?sessionId=fresh-session-without-progress` 带 token 返回 `lab 3 completed: true`
+
+**进行中**：
+- 🔄 完整 `submit -> user_progress -> new session -> getProgress` 容器链路尚未复测
+
+**阻塞项**：
+- ⚠️ 当前 Docker Desktop API 返回 `Internal Server Error ... dockerDesktopLinuxEngine/v1.47`，导致本轮无法完成依赖 Docker 的 submit 全链路验证
+- ⚠️ 这看起来是本机 Docker Desktop API 状态问题，不是 TypeScript 编译或数据库逻辑失败
+
+**下一步建议**：
+- 1. 重启 Docker Desktop 后补跑完整容器链路：
+  - 同一 token 创建 session A
+  - start environment
+  - submit Lab 3
+  - 同一 token 创建 session B
+  - `GET /api/progress` 应仍返回 Lab 3 completed
+- 2. 若验证通过，前端无需大改，当前 `getProgress(sessionId)` 已通过 `authorizedFetch` 自动带 token
+- 3. 后续再考虑把前端 progress API 简化为无 sessionId
+
 ---
 
 ## 关键资源

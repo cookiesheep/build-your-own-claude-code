@@ -9,7 +9,7 @@
  */
 
 import { Router } from 'express';
-import { getSession, updateProgress, upsertCodeSnapshot } from '../db/database.js';
+import { getSession, updateProgress, updateUserProgress, upsertCodeSnapshot } from '../db/database.js';
 import { getOptionalAuthUser } from '../middleware/auth.js';
 import { buildInContainer, injectCode } from '../services/container-manager.js';
 
@@ -67,6 +67,9 @@ submitRouter.post('/api/submit', async (req, res) => {
 
     if (buildResult.success) {
       updateProgress(sessionId, labNumber, true);
+      if (authUser) {
+        updateUserProgress(authUser.id, labNumber, true);
+      }
     }
 
     res.json({
