@@ -3,13 +3,14 @@
  *
  * 推荐用法：
  *   npx tsx src/scripts/cleanup-containers.ts --dry-run
- *   npx tsx src/scripts/cleanup-containers.ts --max-age-minutes 120
+ *   npx tsx src/scripts/cleanup-containers.ts --max-idle-minutes 120
  *
  * 为了避免误删，脚本默认 dry-run。
  * 真正删除时需要显式传 `--execute`。
  */
 
 import { cleanupContainers } from '../services/container-cleanup.js';
+import { initDatabase } from '../db/database.js';
 
 type ParsedArgs = {
   dryRun: boolean;
@@ -33,12 +34,12 @@ function readValue(args: string[], name: string): string | undefined {
 
 function parseArgs(args: string[]): ParsedArgs {
   const execute = args.includes('--execute');
-  const maxAgeValue = readValue(args, '--max-age-minutes');
+  const maxAgeValue = readValue(args, '--max-idle-minutes') ?? readValue(args, '--max-age-minutes');
   const sessionPrefix = readValue(args, '--session-prefix');
   const maxAgeMinutes = maxAgeValue ? Number.parseInt(maxAgeValue, 10) : 120;
 
   if (!Number.isInteger(maxAgeMinutes) || maxAgeMinutes < 0) {
-    throw new Error('--max-age-minutes must be a non-negative integer');
+    throw new Error('--max-idle-minutes must be a non-negative integer');
   }
 
   return {
@@ -50,10 +51,11 @@ function parseArgs(args: string[]): ParsedArgs {
 }
 
 const options = parseArgs(process.argv.slice(2));
+initDatabase();
 const result = await cleanupContainers(options);
 
 const modeLabel = result.dryRun ? 'DRY RUN' : 'EXECUTE';
-console.log(`[${modeLabel}] maxAgeMinutes=${result.maxAgeMinutes}`);
+console.log(`[${modeLabel}] maxIdleMinutes=${result.maxAgeMinutes}`);
 
 if (options.sessionPrefix) {
   console.log(`sessionPrefix=${options.sessionPrefix}`);
@@ -61,18 +63,32 @@ if (options.sessionPrefix) {
 
 if (result.candidates.length === 0) {
   console.log('No BYOCC containers matched the cleanup criteria.');
-  process.exit(0);
+} else {
+  console.table(
+    result.candidates.map((candidate) => ({
+      name: candidate.name,
+      sessionId: candidate.sessionId ?? '<none>',
+      status: candidate.status,
+      inactiveMinutes: candidate.inactiveMinutes,
+      containerAgeMinutes: candidate.containerAgeMinutes,
+      lastActive: candidate.lastActive,
+      action: result.dryRun ? 'would remove' : 'removed',
+    }))
+  );
 }
 
-console.table(
-  result.candidates.map((candidate) => ({
-    name: candidate.name,
-    sessionId: candidate.sessionId ?? '<none>',
-    status: candidate.status,
-    ageMinutes: candidate.ageMinutes,
-    action: result.dryRun ? 'would remove' : 'removed',
-  }))
-);
+if (result.skippedOrphans.length > 0) {
+  console.log('Skipped BYOCC-managed containers that are not safe to auto-remove:');
+  console.table(
+    result.skippedOrphans.map((container) => ({
+      name: container.name,
+      sessionId: container.sessionId ?? '<none>',
+      status: container.status,
+      containerAgeMinutes: container.containerAgeMinutes,
+      reason: container.reason,
+    }))
+  );
+}
 
 if (result.dryRun) {
   console.log('No containers were removed. Re-run with --execute to delete them.');

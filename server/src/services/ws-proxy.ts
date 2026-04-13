@@ -9,6 +9,8 @@
 
 import type { Server } from 'http';
 import httpProxy from 'http-proxy';
+import { getSession, touchSessionActivity } from '../db/database.js';
+import { verifyTerminalToken } from './auth-token.js';
 import { getTtydPort } from './container-manager.js';
 
 const TERMINAL_PATH_PREFIX = '/api/terminal/';
@@ -43,15 +45,17 @@ export function setupWebSocketProxy(server: Server): void {
 
   server.on('upgrade', async (req, socket, head) => {
     const requestUrl = req.url ?? '';
+    const parsedUrl = new URL(requestUrl, 'http://127.0.0.1');
 
     // 只拦截我们自己的 terminal 通道。
     // 其他升级请求不处理，避免把整个 server 的 upgrade 流量都吞掉。
-    if (!requestUrl.startsWith(TERMINAL_PATH_PREFIX)) {
+    if (!parsedUrl.pathname.startsWith(TERMINAL_PATH_PREFIX)) {
       return;
     }
 
-    const rawSessionId = requestUrl.slice(TERMINAL_PATH_PREFIX.length);
+    const rawSessionId = parsedUrl.pathname.slice(TERMINAL_PATH_PREFIX.length);
     const sessionId = decodeURIComponent(rawSessionId).trim();
+    const terminalToken = parsedUrl.searchParams.get('token');
 
     if (sessionId === '') {
       socket.write('HTTP/1.1 400 Bad Request\r\n\r\nMissing sessionId');
@@ -59,8 +63,29 @@ export function setupWebSocketProxy(server: Server): void {
       return;
     }
 
+    if (!terminalToken) {
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\nMissing terminal token');
+      socket.destroy();
+      return;
+    }
+
     try {
+      const tokenPayload = verifyTerminalToken(terminalToken);
+      if (!tokenPayload || tokenPayload.sessionId !== sessionId) {
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\nInvalid terminal token');
+        socket.destroy();
+        return;
+      }
+
+      const session = getSession(sessionId);
+      if (!session || session.userId !== tokenPayload.userId) {
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\nTerminal token does not match session owner');
+        socket.destroy();
+        return;
+      }
+
       const ttydPort = await getTtydPort(sessionId);
+      touchSessionActivity(sessionId);
 
       // 到这里为止，后端真正做的事情是：
       // 1. 根据 sessionId 找到对应容器

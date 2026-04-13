@@ -18,7 +18,9 @@
 ```text
 如果请求带有效 Authorization token
 → 优先返回 user_progress
-→ 同时合并 session progress 作为迁移期兼容
+→ 只有当 session_id 属于当前 user 时，才合并 session progress 作为迁移期兼容
+→ 如果 session_id 属于别的 user，返回 403
+→ 如果 session_id 仍是旧的无 owner session，返回 403；前端应先调用 /api/session 让后端把旧 session 绑定到当前 user
 
 如果请求不带 token
 → 继续按 session_id 返回旧 progress
@@ -55,6 +57,7 @@ Authorization: Bearer <byocc-auth-token>
 - 当前 `platform/src/lib/api.ts` 的 `getProgress(sessionId)` 已经使用 `authorizedFetch`，所以会自动带 token。
 - 第一版前端可以继续传 `sessionId`，不必马上改为无参 `getProgress()`。
 - 后续可以再把前端接口简化为 `getProgress()`，完全由 token 决定 user。
+- 如果前端持有旧 sessionId 且该 session 不属于当前 token user，应先走 `/api/session` 的 403 fallback 创建新 session，而不是直接把旧 sessionId 传给 progress。
 
 ---
 
