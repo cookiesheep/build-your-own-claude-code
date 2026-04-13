@@ -20,8 +20,23 @@ type TokenPayload = {
   issuedAt: string;
 };
 
+type TerminalTokenPayload = {
+  purpose: 'terminal';
+  sessionId: string;
+  userId: string;
+  issuedAt: string;
+  expiresAt: string;
+};
+
 const AUTH_SECRET =
   process.env.BYOCC_AUTH_SECRET ?? 'byocc-dev-secret-change-me-before-public-demo';
+const TERMINAL_TOKEN_TTL_SECONDS_INPUT = Number.parseInt(
+  process.env.BYOCC_TERMINAL_TOKEN_TTL_SECONDS ?? '300',
+  10
+);
+const TERMINAL_TOKEN_TTL_SECONDS = Number.isInteger(TERMINAL_TOKEN_TTL_SECONDS_INPUT)
+  ? Math.max(30, TERMINAL_TOKEN_TTL_SECONDS_INPUT)
+  : 300;
 
 if (!process.env.BYOCC_AUTH_SECRET) {
   console.warn(
@@ -79,4 +94,48 @@ export function verifyUserToken(token: string): TokenPayload | null {
   }
 
   return decodeJson<TokenPayload>(encodedPayload);
+}
+
+export function createTerminalToken(input: { sessionId: string; userId: string }): string {
+  const issuedAt = new Date();
+  const expiresAt = new Date(
+    issuedAt.getTime() + TERMINAL_TOKEN_TTL_SECONDS * 1000
+  );
+  const payload: TerminalTokenPayload = {
+    purpose: 'terminal',
+    sessionId: input.sessionId,
+    userId: input.userId,
+    issuedAt: issuedAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+  };
+
+  const encodedPayload = encodeJson(payload);
+  return `${encodedPayload}.${sign(encodedPayload)}`;
+}
+
+export function verifyTerminalToken(token: string): TerminalTokenPayload | null {
+  const [encodedPayload, signature] = token.split('.');
+  if (!encodedPayload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = sign(encodedPayload);
+  if (!signaturesMatch(signature, expectedSignature)) {
+    return null;
+  }
+
+  const payload = decodeJson<TerminalTokenPayload>(encodedPayload);
+  if (!payload || payload.purpose !== 'terminal') {
+    return null;
+  }
+
+  if (!payload.sessionId || !payload.userId || !payload.expiresAt) {
+    return null;
+  }
+
+  if (Date.parse(payload.expiresAt) <= Date.now()) {
+    return null;
+  }
+
+  return payload;
 }

@@ -5,7 +5,7 @@
  */
 
 import { Router } from 'express';
-import { getProgress, getUserProgress } from '../db/database.js';
+import { getProgress, getSession, getUserProgress } from '../db/database.js';
 import { getOptionalAuthUser } from '../middleware/auth.js';
 
 export const progressRouter = Router();
@@ -16,8 +16,24 @@ progressRouter.get('/api/progress', async (req, res) => {
 
   if (authUser) {
     const userProgress = getUserProgress(authUser.id);
-    const sessionProgress =
-      sessionId && sessionId.trim() !== '' ? getProgress(sessionId) : [];
+    let sessionProgress: Array<{ labNumber: number; completed: boolean }> = [];
+
+    if (sessionId && sessionId.trim() !== '') {
+      const session = getSession(sessionId.trim());
+      if (session && session.userId !== authUser.id) {
+        res.status(403).json({
+          labs: [],
+          message: session.userId
+            ? 'This session belongs to a different user.'
+            : 'This session is not associated with the current user. Restore it through /api/session first.',
+        });
+        return;
+      }
+
+      if (session?.userId === authUser.id) {
+        sessionProgress = getProgress(sessionId.trim());
+      }
+    }
     const merged = new Map<number, boolean>();
 
     // MVP 迁移期：先合并旧 session progress，避免老数据突然消失；

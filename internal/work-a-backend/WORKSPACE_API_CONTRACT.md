@@ -113,7 +113,8 @@ Content-Type: application/json
 }
 ```
 
-如果请求带有有效 `Authorization` token，后端会在构建前自动保存一份 workspace snapshot。
+submit 现在要求有效 `Authorization` token，并且 token 必须拥有提交请求里的 `sessionId`。
+后端会在构建前自动保存一份 workspace snapshot。
 
 这不是替代前端自动保存，而是兜底：
 

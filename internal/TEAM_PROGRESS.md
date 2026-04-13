@@ -1079,6 +1079,63 @@
 
 ---
 
+### 2026-04-13（会话 24 / Review Boundary Fixes）
+
+**完成项**：
+- ✅ 在 `codex/review-boundary-fixes` 分支修复 targeted code review 的 session / auth / environment / terminal / cleanup 边界问题
+- ✅ 修改 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - 补 `sessions.last_active` 旧库迁移
+  - 导出 `SessionRecord`
+  - 新增 `touchSessionActivity`
+- ✅ 修改 [server/src/middleware/auth.ts](D:/code/build-your-own-claude-code/server/src/middleware/auth.ts)
+  - 新增 `requireSessionAccess`
+  - 统一判断 token 是否能操作 session
+- ✅ 修改 [server/src/routes/session.ts](D:/code/build-your-own-claude-code/server/src/routes/session.ts)、[server/src/routes/environment.ts](D:/code/build-your-own-claude-code/server/src/routes/environment.ts)、[server/src/routes/submit.ts](D:/code/build-your-own-claude-code/server/src/routes/submit.ts)、[server/src/routes/progress.ts](D:/code/build-your-own-claude-code/server/src/routes/progress.ts)、[server/src/routes/reset.ts](D:/code/build-your-own-claude-code/server/src/routes/reset.ts)
+  - 已绑定 user 的 session 不能被无 token / 其他 user token 操作
+  - container-mutating APIs 现在要求有效 token
+  - progress 只在 session 属于当前 user 时合并 session progress
+- ✅ 修改 [server/src/services/auth-token.ts](D:/code/build-your-own-claude-code/server/src/services/auth-token.ts) 与 [server/src/services/ws-proxy.ts](D:/code/build-your-own-claude-code/server/src/services/ws-proxy.ts)
+  - 新增短期 terminal token
+  - WebSocket upgrade 校验 terminal token 与 session owner
+- ✅ 修改 [server/src/services/container-cleanup.ts](D:/code/build-your-own-claude-code/server/src/services/container-cleanup.ts) 与 [server/src/scripts/cleanup-containers.ts](D:/code/build-your-own-claude-code/server/src/scripts/cleanup-containers.ts)
+  - cleanup 候选从 Docker 创建时间改为 DB `last_active` 空闲时间
+  - 删除容器后同步把 environment 标为 `expired`
+  - dry-run 会报告带 BYOCC label 但不安全自动删除的 orphan / mismatch 容器
+  - CLI 新增 `--max-idle-minutes`，旧 `--max-age-minutes` 保留兼容
+- ✅ 更新 [internal/work-a-backend/AUTH_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/AUTH_API_CONTRACT.md)、[internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md)、[internal/work-a-backend/PROGRESS_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/PROGRESS_API_CONTRACT.md)、[internal/work-a-backend/WORKSPACE_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/WORKSPACE_API_CONTRACT.md)、[internal/work-a-backend/E2E_SMOKE_TEST.md](D:/code/build-your-own-claude-code/internal/work-a-backend/E2E_SMOKE_TEST.md)
+
+**进行中**：
+- 🔄 尚未把 cleanup 接成 server 后台 interval；本轮只修 safe candidate selection
+- 🔄 尚未做 GitHub OAuth / 手机号 / 邮箱登录
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `cd server && npm run build`
+- 临时 server smoke：user B 操作 user A 的 session restore / environment status / environment start / environment reset / submit / legacy reset / progress 全部返回 `401/403`，user A 自己查 environment status 返回 `200`
+- 临时 server smoke：带 token 查询旧无 owner session 的 progress 返回 `403`，要求先通过 `/api/session` 绑定
+- terminal token smoke：合法 token 可解析出 `purpose/sessionId/userId`，篡改 token 返回 `null`
+- cleanup dry-run：`npx tsx src/scripts/cleanup-containers.ts --dry-run --max-age-minutes=999999`
+- 人工 E2E 验证：
+  - `/api/auth/anonymous`、`/api/session`、`/api/environment/start`、`/api/submit` 成功
+  - `Invoke-RestMethod ... /api/progress` 返回 `labNumber=3 completed=True`
+  - `environment.terminalUrl` 包含 `/api/terminal/<sessionId>?token=...`
+  - 浏览器终端中运行 `node cli.js` 成功进入 `cookiesheep's claude-code v2.1.88` 真实 TUI
+  - `npx tsx src/scripts/cleanup-containers.ts --dry-run --max-idle-minutes=999999` 未删除容器
+- architect verification 初次返回 `REQUEST_CHANGES`；已按建议明确 legacy progress 策略与 cleanup orphan 策略
+- `git diff --check`
+- `cd server && npm test` 未通过；原因是 Vitest 在 `server` 工作目录向上加载根目录 `vitest.config.ts`，并在该解析上下文找不到根 `vitest` 包，不是业务测试断言失败
+
+**下一步**：
+- 1. 如需继续公网演示，优先补完整 Docker/browser E2E：environment start → submit → terminal token URL → ttyd → `node cli.js`
+- 2. 再做 `codex/container-ttl-cleanup`：把当前 safe cleanup candidate 接入 server interval，并加入 terminal heartbeat / activity 更新策略
+- 3. 最后再做 `codex/github-oauth-identity`，只做 GitHub 绑定 anonymous user，不混入手机号/邮箱/管理后台
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |

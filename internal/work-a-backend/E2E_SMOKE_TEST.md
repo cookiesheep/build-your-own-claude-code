@@ -146,11 +146,16 @@ cookiesheep's claude-code v2.1.88
 如果浏览器联调失败，可以先绕过前端验证后端。
 
 ```powershell
-$session = Invoke-RestMethod 'http://127.0.0.1:3001/api/session' -Method Post -ContentType 'application/json' -Body '{}'
+$auth = Invoke-RestMethod 'http://127.0.0.1:3001/api/auth/anonymous' -Method Post -ContentType 'application/json' -Body '{}'
+$headers = @{
+  Authorization = "Bearer $($auth.token)"
+}
+
+$session = Invoke-RestMethod 'http://127.0.0.1:3001/api/session' -Method Post -ContentType 'application/json' -Headers $headers -Body '{}'
 
 # session 现在只创建会话，不创建 Docker 容器。
 $environmentBody = @{ sessionId = $session.sessionId } | ConvertTo-Json -Compress
-$environment = Invoke-RestMethod 'http://127.0.0.1:3001/api/environment/start' -Method Post -ContentType 'application/json' -Body $environmentBody
+$environment = Invoke-RestMethod 'http://127.0.0.1:3001/api/environment/start' -Method Post -ContentType 'application/json' -Headers $headers -Body $environmentBody
 
 $code = [System.IO.File]::ReadAllText('D:\test-claude-code\claude-code\src\query-lab.ts')
 
@@ -160,7 +165,7 @@ $body = @{
   labNumber = 3
 } | ConvertTo-Json -Compress
 
-$submit = Invoke-RestMethod 'http://127.0.0.1:3001/api/submit' -Method Post -ContentType 'application/json' -Body $body
+$submit = Invoke-RestMethod 'http://127.0.0.1:3001/api/submit' -Method Post -ContentType 'application/json' -Headers $headers -Body $body
 $submit.success
 ```
 
@@ -173,7 +178,7 @@ True
 验证进度：
 
 ```powershell
-Invoke-RestMethod ("http://127.0.0.1:3001/api/progress?sessionId=" + $session.sessionId)
+Invoke-RestMethod ("http://127.0.0.1:3001/api/progress?sessionId=" + $session.sessionId) -Headers $headers
 ```
 
 应看到 Lab 3：
@@ -203,6 +208,10 @@ npx tsx src/scripts/cleanup-containers.ts --execute --max-age-minutes=0
 npx tsx src/scripts/cleanup-containers.ts --dry-run --max-age-minutes=0 --session-prefix=cleanup-smoke-
 npx tsx src/scripts/cleanup-containers.ts --execute --max-age-minutes=0 --session-prefix=cleanup-smoke-
 ```
+
+注意：cleanup 现在按 session 的 `last_active` 判断空闲时间，不再按 Docker 容器创建时间判断。dry-run 输出中的 `inactiveMinutes` 才是本次清理阈值依据。新命令可以用更准确的 `--max-idle-minutes`，旧的 `--max-age-minutes` 暂时保留兼容。
+
+如果 dry-run 输出 `Skipped BYOCC-managed containers that are not safe to auto-remove`，说明这些容器带有 BYOCC label，但缺少匹配的 DB session、session label，或 DB `container_id` 不一致。当前自动 cleanup 不会删除它们，避免误删；需要人工确认后再手动处理。
 
 ## 7. 常见问题
 

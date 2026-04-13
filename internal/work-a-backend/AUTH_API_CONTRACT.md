@@ -124,7 +124,7 @@ Authorization: Bearer <token>
 
 ### 不带 token 请求
 
-仍然可用，用于兼容旧前端：
+创建新 session 仍然可用，用于兼容旧前端：
 
 ```json
 {
@@ -134,6 +134,8 @@ Authorization: Bearer <token>
   "userId": null
 }
 ```
+
+如果请求体里传入的是一个已经绑定到 user 的旧 `sessionId`，但请求没有携带 token，后端会返回 `401`。如果携带的是另一个 user 的 token，后端会返回 `403`。
 
 前端接入后应优先带 token。
 
@@ -166,6 +168,27 @@ BYOCC_AUTH_SECRET
 ```
 
 如果本地没有设置，后端会使用开发默认值，并打印 warning。公开部署前必须设置真实 secret。
+
+### Terminal token
+
+浏览器 WebSocket 连接无法复用 `Authorization: Bearer ...` 请求头，因此后端会在 environment API 的 `terminalUrl` 中签发短期 terminal token：
+
+```text
+ws://127.0.0.1:3001/api/terminal/<sessionId>?token=<terminal-token>
+```
+
+terminal token 只用于连接容器 ttyd，payload 会绑定：
+
+```json
+{
+  "purpose": "terminal",
+  "sessionId": "...",
+  "userId": "...",
+  "expiresAt": "..."
+}
+```
+
+前端不要自己拼 terminal URL，应直接使用 `environment/start` 或 `environment/status` 返回的完整 `terminalUrl`。
 
 ---
 

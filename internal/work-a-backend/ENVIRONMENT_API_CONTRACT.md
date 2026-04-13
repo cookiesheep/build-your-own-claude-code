@@ -13,6 +13,8 @@
 - `session` 只表示浏览器会话，不再自动创建 Docker 容器。
 - `environment` 表示真实 Docker 实验环境，只有用户点击“启动实验环境”后才创建。
 - `terminalUrl` 只有 environment 处于 `running` 时才应该使用。
+- environment API 现在必须带 `Authorization: Bearer <byocc-auth-token>`，并且该 token 必须拥有对应 `sessionId`。
+- `terminalUrl` 会带一个短期 `token` query 参数；前端应直接使用后端返回的完整 URL，不要自己拼 `/api/terminal/:sessionId`。
 
 也就是说：
 
@@ -78,6 +80,12 @@
 
 为 session 创建或恢复 Docker 容器。
 
+### 请求头
+
+```text
+Authorization: Bearer <byocc-auth-token>
+```
+
 ### 请求
 
 ```json
@@ -94,7 +102,7 @@
   "sessionId": "c19aec43-f33f-45f6-9741-7070bd7d4a92",
   "environmentStatus": "running",
   "containerId": "060141c36e4d...",
-  "terminalUrl": "ws://127.0.0.1:3001/api/terminal/c19aec43-f33f-45f6-9741-7070bd7d4a92"
+  "terminalUrl": "ws://127.0.0.1:3001/api/terminal/c19aec43-f33f-45f6-9741-7070bd7d4a92?token=<terminal-token>"
 }
 ```
 
@@ -109,6 +117,12 @@
 ## GET /api/environment/status?sessionId=...
 
 查询当前 session 对应的 Docker 环境状态。
+
+### 请求头
+
+```text
+Authorization: Bearer <byocc-auth-token>
+```
 
 ### 返回：未启动
 
@@ -129,7 +143,7 @@
   "sessionId": "c19aec43-f33f-45f6-9741-7070bd7d4a92",
   "environmentStatus": "running",
   "containerId": "060141c36e4d...",
-  "terminalUrl": "ws://127.0.0.1:3001/api/terminal/c19aec43-f33f-45f6-9741-7070bd7d4a92"
+  "terminalUrl": "ws://127.0.0.1:3001/api/terminal/c19aec43-f33f-45f6-9741-7070bd7d4a92?token=<terminal-token>"
 }
 ```
 
@@ -168,6 +182,12 @@
 
 删除旧容器并创建新容器。
 
+### 请求头
+
+```text
+Authorization: Bearer <byocc-auth-token>
+```
+
 ### 请求
 
 ```json
@@ -184,7 +204,7 @@
   "sessionId": "c19aec43-f33f-45f6-9741-7070bd7d4a92",
   "containerId": "964af8e789...",
   "environmentStatus": "running",
-  "terminalUrl": "ws://127.0.0.1:3001/api/terminal/c19aec43-f33f-45f6-9741-7070bd7d4a92"
+  "terminalUrl": "ws://127.0.0.1:3001/api/terminal/c19aec43-f33f-45f6-9741-7070bd7d4a92?token=<terminal-token>"
 }
 ```
 
@@ -211,11 +231,13 @@
 
 但前端应该在 `environmentStatus === "running"` 后才允许 submit。
 
+现在 submit 也必须带 `Authorization: Bearer <byocc-auth-token>`，后端会拒绝 token 与 `sessionId` 不匹配的请求。
+
 ### WS /api/terminal/:sessionId
 
-保持不变。
+路径保持不变，但授权方式已改变。
 
-前端应使用 `environment/start` 或 `environment/status` 返回的 `terminalUrl`，不要自己拼路径。
+前端必须使用 `environment/start` 或 `environment/status` 返回的完整 `terminalUrl`，因为该 URL 里包含短期 terminal token。没有 token 或 token 与 session owner 不匹配时，WebSocket upgrade 会被拒绝。
 
 ---
 

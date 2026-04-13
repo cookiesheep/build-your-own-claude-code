@@ -28,6 +28,13 @@ sessionRouter.post('/api/session', async (req, res) => {
     const authUser = getOptionalAuthUser(req);
 
     if (existingSession) {
+      if (existingSession.userId && !authUser) {
+        res.status(401).json({
+          message: 'Missing or invalid auth token.',
+        });
+        return;
+      }
+
       if (existingSession.userId && authUser && existingSession.userId !== authUser.id) {
         res.status(403).json({
           message: 'This session belongs to a different user.',

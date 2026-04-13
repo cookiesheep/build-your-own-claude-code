@@ -9,8 +9,15 @@
  */
 
 import { Router } from 'express';
-import { getSession, updateProgress, updateUserProgress, upsertCodeSnapshot } from '../db/database.js';
-import { getOptionalAuthUser } from '../middleware/auth.js';
+import {
+  createSession,
+  getSession,
+  touchSessionActivity,
+  updateProgress,
+  updateUserProgress,
+  upsertCodeSnapshot,
+} from '../db/database.js';
+import { requireSessionAccess } from '../middleware/auth.js';
 import { buildInContainer, injectCode } from '../services/container-manager.js';
 
 export const submitRouter = Router();
@@ -53,23 +60,32 @@ submitRouter.post('/api/submit', async (req, res) => {
     return;
   }
 
-  const authUser = getOptionalAuthUser(req);
+  const access = requireSessionAccess(req, session);
+  if (!access.ok) {
+    res.status(access.statusCode).json({
+      success: false,
+      buildLog: access.message,
+    });
+    return;
+  }
 
   try {
-    // submit 本身仍然以 session 为入口，保持旧链路兼容。
-    // 如果请求带了有效 user token，就顺手保存一份代码快照。
-    if (authUser) {
-      upsertCodeSnapshot(authUser.id, labNumber, code);
+    if (access.shouldBindSession) {
+      createSession(sessionId, session.containerId, session.environmentStatus, access.user.id);
     }
 
+    // submit 本身仍然以 session 为入口，保持旧链路兼容。
+    // 如果请求带了有效 user token，就顺手保存一份代码快照。
+    upsertCodeSnapshot(access.user.id, labNumber, code);
+
+    touchSessionActivity(sessionId);
     await injectCode(sessionId, code, labNumber);
     const buildResult = await buildInContainer(sessionId, labNumber);
+    touchSessionActivity(sessionId);
 
     if (buildResult.success) {
       updateProgress(sessionId, labNumber, true);
-      if (authUser) {
-        updateUserProgress(authUser.id, labNumber, true);
-      }
+      updateUserProgress(access.user.id, labNumber, true);
     }
 
     res.json({

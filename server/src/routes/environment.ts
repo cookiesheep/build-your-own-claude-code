@@ -15,14 +15,21 @@ import {
   getSession,
   updateSessionEnvironment,
 } from '../db/database.js';
+import { requireSessionAccess } from '../middleware/auth.js';
+import { createTerminalToken } from '../services/auth-token.js';
 import { createContainer, getContainerStatus, removeContainer } from '../services/container-manager.js';
 
 export const environmentRouter = Router();
 
-function getTerminalUrl(req: { protocol: string; get(name: string): string | undefined }, sessionId: string): string {
+function getTerminalUrl(
+  req: { protocol: string; get(name: string): string | undefined },
+  sessionId: string,
+  userId: string
+): string {
   const host = req.get('host') ?? '127.0.0.1:3001';
   const wsProtocol = req.protocol === 'https' ? 'wss' : 'ws';
-  return `${wsProtocol}://${host}/api/terminal/${encodeURIComponent(sessionId)}`;
+  const terminalToken = createTerminalToken({ sessionId, userId });
+  return `${wsProtocol}://${host}/api/terminal/${encodeURIComponent(sessionId)}?token=${encodeURIComponent(terminalToken)}`;
 }
 
 function readSessionId(body: unknown): string | null {
@@ -101,17 +108,30 @@ environmentRouter.post('/api/environment/start', async (req, res) => {
     return;
   }
 
+  const access = requireSessionAccess(req, session);
+  if (!access.ok) {
+    res.status(access.statusCode).json({
+      success: false,
+      message: access.message,
+    });
+    return;
+  }
+
   try {
+    if (access.shouldBindSession) {
+      createSession(sessionId, session.containerId, session.environmentStatus, access.user.id);
+    }
+
     updateSessionEnvironment(sessionId, session.containerId, 'starting');
     const containerId = await createContainer(sessionId);
-    createSession(sessionId, containerId, 'running');
+    createSession(sessionId, containerId, 'running', access.user.id);
 
     res.json({
       success: true,
       sessionId,
       environmentStatus: 'running',
       containerId,
-      terminalUrl: getTerminalUrl(req, sessionId),
+      terminalUrl: getTerminalUrl(req, sessionId, access.user.id),
     });
   } catch (error) {
     updateSessionEnvironment(sessionId, session.containerId, 'error');
@@ -139,6 +159,32 @@ environmentRouter.get('/api/environment/status', async (req, res) => {
   }
 
   try {
+    const session = getSession(sessionId);
+    if (!session) {
+      res.status(400).json({
+        success: false,
+        sessionId,
+        environmentStatus: 'error',
+        message: 'Session not found. Please create a session first.',
+      });
+      return;
+    }
+
+    const access = requireSessionAccess(req, session);
+    if (!access.ok) {
+      res.status(access.statusCode).json({
+        success: false,
+        sessionId,
+        environmentStatus: 'error',
+        message: access.message,
+      });
+      return;
+    }
+
+    if (access.shouldBindSession) {
+      createSession(sessionId, session.containerId, session.environmentStatus, access.user.id);
+    }
+
     const status = await syncEnvironmentStatus(sessionId);
 
     res.json({
@@ -147,7 +193,9 @@ environmentRouter.get('/api/environment/status', async (req, res) => {
       environmentStatus: status.environmentStatus,
       containerId: status.containerId,
       terminalUrl:
-        status.environmentStatus === 'running' ? getTerminalUrl(req, sessionId) : undefined,
+        status.environmentStatus === 'running'
+          ? getTerminalUrl(req, sessionId, access.user.id)
+          : undefined,
     });
   } catch (error) {
     const message =
@@ -182,18 +230,31 @@ environmentRouter.post('/api/environment/reset', async (req, res) => {
     return;
   }
 
+  const access = requireSessionAccess(req, session);
+  if (!access.ok) {
+    res.status(access.statusCode).json({
+      success: false,
+      message: access.message,
+    });
+    return;
+  }
+
   try {
+    if (access.shouldBindSession) {
+      createSession(sessionId, session.containerId, session.environmentStatus, access.user.id);
+    }
+
     updateSessionEnvironment(sessionId, session.containerId, 'starting');
     await removeContainer(sessionId);
     const containerId = await createContainer(sessionId);
-    createSession(sessionId, containerId, 'running');
+    createSession(sessionId, containerId, 'running', access.user.id);
 
     res.json({
       success: true,
       sessionId,
       containerId,
       environmentStatus: 'running',
-      terminalUrl: getTerminalUrl(req, sessionId),
+      terminalUrl: getTerminalUrl(req, sessionId, access.user.id),
     });
   } catch (error) {
     updateSessionEnvironment(sessionId, session.containerId, 'error');

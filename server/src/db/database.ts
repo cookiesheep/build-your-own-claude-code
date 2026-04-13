@@ -16,6 +16,7 @@ type SessionRow = {
   user_id: string | null;
   container_id: string | null;
   environment_status: string;
+  last_active: string;
 };
 
 type UserRow = {
@@ -57,6 +58,14 @@ export type UserRecord = {
   githubId: string | null;
   nickname: string | null;
   avatarUrl: string | null;
+};
+
+export type SessionRecord = {
+  id: string;
+  userId: string | null;
+  containerId: string | null;
+  environmentStatus: EnvironmentStatus;
+  lastActive: string;
 };
 
 export type CodeSnapshotRecord = {
@@ -147,6 +156,15 @@ export function initDatabase(): void {
 
   if (!sessionColumns.includes('user_id')) {
     db.exec('ALTER TABLE sessions ADD COLUMN user_id TEXT REFERENCES users(id)');
+  }
+
+  if (!sessionColumns.includes('last_active')) {
+    db.exec(`
+      ALTER TABLE sessions ADD COLUMN last_active TEXT;
+      UPDATE sessions
+      SET last_active = datetime('now')
+      WHERE last_active IS NULL;
+    `);
   }
 
   console.log(`💾 Database initialized: ${DB_PATH}`);
@@ -249,16 +267,11 @@ export function createSession(
  */
 export function getSession(
   sessionId: string
-): {
-  id: string;
-  userId: string | null;
-  containerId: string | null;
-  environmentStatus: EnvironmentStatus;
-} | null {
+): SessionRecord | null {
   const database = getDb();
   const row = database
     .prepare<[string], SessionRow>(
-      'SELECT id, user_id, container_id, environment_status FROM sessions WHERE id = ?'
+      'SELECT id, user_id, container_id, environment_status, last_active FROM sessions WHERE id = ?'
     )
     .get(sessionId);
 
@@ -271,7 +284,27 @@ export function getSession(
     userId: row.user_id,
     containerId: row.container_id,
     environmentStatus: row.environment_status as EnvironmentStatus,
+    lastActive: row.last_active,
   };
+}
+
+/**
+ * 只更新 session 活跃时间，不改变容器状态。
+ *
+ * 这会被 submit / terminal websocket 等“用户正在使用环境”的信号调用。
+ */
+export function touchSessionActivity(sessionId: string): void {
+  const database = getDb();
+
+  database
+    .prepare(
+      `
+        UPDATE sessions
+        SET last_active = datetime('now')
+        WHERE id = ?
+      `
+    )
+    .run(sessionId);
 }
 
 /**
