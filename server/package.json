@@ -11,7 +11,9 @@
     "start": "node --loader ts-node/esm dist/index.js",
     "build": "tsc",
     "test": "vitest run",
-    "cleanup:containers": "tsx src/scripts/cleanup-containers.ts"
+    "cleanup:containers": "tsx src/scripts/cleanup-containers.ts",
+    "e2e:regression": "tsx src/scripts/e2e-regression.ts",
+    "e2e:regression:full": "tsx src/scripts/e2e-regression.ts --full-docker"
   },
   "dependencies": {
     "express": "^4.18.0",
