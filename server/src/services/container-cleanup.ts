@@ -43,6 +43,7 @@ export type CleanupOptions = {
   dryRun: boolean;
   maxAgeMinutes: number;
   sessionPrefix?: string;
+  protectedSessionIds?: Iterable<string>;
 };
 
 export type CleanupResult = {
@@ -108,7 +109,7 @@ function toSkippedContainer(
 function analyzeContainer(
   container: Docker.ContainerInfo,
   nowMs: number,
-  options: { sessionPrefix?: string }
+  options: { sessionPrefix?: string; protectedSessionIds?: ReadonlySet<string> }
 ): ContainerAnalysis {
   const sessionId = getLabel(container.Labels, SESSION_LABEL);
   if (!matchesSessionPrefix(sessionId, options)) {
@@ -131,6 +132,18 @@ function analyzeContainer(
   if (session.containerId !== container.Id) {
     return {
       skipped: toSkippedContainer(container, nowMs, sessionId, 'DB session container_id mismatch'),
+    };
+  }
+
+  if (options.protectedSessionIds?.has(sessionId)) {
+    return {
+      skipped: toSkippedContainer(container, nowMs, sessionId, 'protected active terminal session'),
+    };
+  }
+
+  if (session.environmentStatus === 'starting') {
+    return {
+      skipped: toSkippedContainer(container, nowMs, sessionId, 'environment is starting'),
     };
   }
 
@@ -186,6 +199,7 @@ async function analyzeCleanupContainers(
   skippedOrphans: CleanupSkippedContainer[];
 }> {
   const nowMs = Date.now();
+  const protectedSessionIds = new Set(options.protectedSessionIds ?? []);
   const containers = await docker.listContainers({
     all: true,
     filters: {
@@ -197,7 +211,10 @@ async function analyzeCleanupContainers(
   const skippedOrphans: CleanupSkippedContainer[] = [];
 
   for (const container of containers) {
-    const analysis = analyzeContainer(container, nowMs, options);
+    const analysis = analyzeContainer(container, nowMs, {
+      sessionPrefix: options.sessionPrefix,
+      protectedSessionIds,
+    });
     if (analysis.candidate && matchesOptions(analysis.candidate, { ...options, dryRun: true })) {
       candidates.push(analysis.candidate);
     }
@@ -220,6 +237,7 @@ export async function cleanupContainers(options: CleanupOptions): Promise<Cleanu
   const { candidates, skippedOrphans } = await analyzeCleanupContainers({
     maxAgeMinutes: options.maxAgeMinutes,
     sessionPrefix: options.sessionPrefix,
+    protectedSessionIds: options.protectedSessionIds,
   });
 
   const removed: CleanupCandidate[] = [];

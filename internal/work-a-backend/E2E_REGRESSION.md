@@ -168,9 +168,38 @@ npx tsx src/scripts/cleanup-containers.ts --dry-run --max-idle-minutes=999999
 dry-run 不会删除容器。  
 如果输出 skipped orphan / mismatch，先人工确认，不要直接 execute。
 
+## 7. TTL cleanup server config
+
+后端现在会在 server 进程里启动 TTL cleanup。默认配置：
+
+```text
+BYOCC_CONTAINER_CLEANUP_ENABLED=true
+BYOCC_CONTAINER_TTL_MINUTES=120
+BYOCC_CONTAINER_CLEANUP_INTERVAL_MINUTES=10
+BYOCC_CONTAINER_CLEANUP_RUN_ON_START=false
+```
+
+临时关闭：
+
+```powershell
+$env:BYOCC_CONTAINER_CLEANUP_ENABLED="false"
+npm run dev
+```
+
+调小 TTL 做本地验证时，建议只在受控环境中使用：
+
+```powershell
+$env:BYOCC_CONTAINER_TTL_MINUTES="1"
+$env:BYOCC_CONTAINER_CLEANUP_INTERVAL_MINUTES="1"
+$env:BYOCC_CONTAINER_CLEANUP_RUN_ON_START="true"
+npm run dev
+```
+
+注意：active terminal session 和 `starting` environment 会被保护，不会被后台 cleanup 删除。
+
 ---
 
-## 7. 常见问题
+## 8. 常见问题
 
 ### Temporary BYOCC server did not become ready
 

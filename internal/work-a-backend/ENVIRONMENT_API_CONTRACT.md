@@ -15,6 +15,7 @@
 - `terminalUrl` 只有 environment 处于 `running` 时才应该使用。
 - environment API 现在必须带 `Authorization: Bearer <byocc-auth-token>`，并且该 token 必须拥有对应 `sessionId`。
 - `terminalUrl` 会带一个短期 `token` query 参数；前端应直接使用后端返回的完整 URL，不要自己拼 `/api/terminal/:sessionId`。
+- 后端现在会启动容器 TTL 后台回收；超过 TTL 且没有活跃 terminal 连接的容器会被删除，session 的 environment 会被标记为 `expired`。
 
 也就是说：
 
@@ -175,6 +176,26 @@ Authorization: Bearer <byocc-auth-token>
 - `running`：连接 terminal
 - `expired`：显示“环境已过期，请重新启动”
 - `error`：显示错误信息
+
+### TTL cleanup 配置
+
+后端启动时默认启用 TTL cleanup：
+
+| 环境变量 | 默认值 | 含义 |
+| --- | --- | --- |
+| `BYOCC_CONTAINER_CLEANUP_ENABLED` | `true` | 是否启用后台回收；设为 `false` / `0` / `off` 可关闭 |
+| `BYOCC_CONTAINER_TTL_MINUTES` | `120` | session 空闲多少分钟后回收容器 |
+| `BYOCC_CONTAINER_CLEANUP_INTERVAL_MINUTES` | `10` | 后台扫描间隔 |
+| `BYOCC_CONTAINER_CLEANUP_RUN_ON_START` | `false` | 是否在 server 启动时立即跑一次 cleanup |
+
+cleanup 判断依据：
+
+- 只处理带 `byocc.managed=true` label 的容器。
+- 只处理 DB 中 `container_id` 匹配的 session 容器。
+- 使用 `sessions.last_active` 计算空闲时间。
+- 正在打开 terminal WebSocket 的 session 会被保护。
+- `environment_status = "starting"` 的 session 会被保护。
+- 被删除后，session 会更新为 `environmentStatus: "expired"`。
 
 ---
 
