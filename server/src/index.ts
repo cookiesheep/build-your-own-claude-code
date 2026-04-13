@@ -21,6 +21,7 @@ import { submitRouter } from './routes/submit.js';
 import { progressRouter } from './routes/progress.js';
 import { resetRouter } from './routes/reset.js';
 import { initDatabase } from './db/database.js';
+import { startContainerCleanupScheduler } from './services/container-cleanup-scheduler.js';
 import { setupWebSocketProxy } from './services/ws-proxy.js';
 
 const app = express();
@@ -75,5 +76,8 @@ const server = app.listen(PORT, HOST, () => {
 
 // 设置 WebSocket 代理（升级 HTTP → WebSocket）
 setupWebSocketProxy(server);
+
+// 启动容器 TTL 后台回收。
+startContainerCleanupScheduler();
 
 export default app;

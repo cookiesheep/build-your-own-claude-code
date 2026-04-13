@@ -14,6 +14,31 @@ import { verifyTerminalToken } from './auth-token.js';
 import { getTtydPort } from './container-manager.js';
 
 const TERMINAL_PATH_PREFIX = '/api/terminal/';
+const activeTerminalSessions = new Map<string, number>();
+
+function markTerminalSessionOpen(sessionId: string): () => void {
+  activeTerminalSessions.set(sessionId, (activeTerminalSessions.get(sessionId) ?? 0) + 1);
+
+  let closed = false;
+  return () => {
+    if (closed) {
+      return;
+    }
+    closed = true;
+
+    const count = activeTerminalSessions.get(sessionId) ?? 0;
+    if (count <= 1) {
+      activeTerminalSessions.delete(sessionId);
+      return;
+    }
+
+    activeTerminalSessions.set(sessionId, count - 1);
+  };
+}
+
+export function getActiveTerminalSessionIds(): string[] {
+  return Array.from(activeTerminalSessions.keys());
+}
 
 /**
  * 设置 WebSocket 代理
@@ -86,6 +111,11 @@ export function setupWebSocketProxy(server: Server): void {
 
       const ttydPort = await getTtydPort(sessionId);
       touchSessionActivity(sessionId);
+      const markClosed = markTerminalSessionOpen(sessionId);
+      socket.once('close', () => {
+        markClosed();
+        touchSessionActivity(sessionId);
+      });
 
       // 到这里为止，后端真正做的事情是：
       // 1. 根据 sessionId 找到对应容器

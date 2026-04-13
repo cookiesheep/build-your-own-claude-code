@@ -1185,6 +1185,53 @@
 
 ---
 
+### 2026-04-13（会话 26 / Container TTL Cleanup）
+
+**完成项**：
+- ✅ 在 `codex/container-ttl-cleanup` 分支接入 server 后台 TTL cleanup
+- ✅ 新增 [server/src/services/container-cleanup-scheduler.ts](D:/code/build-your-own-claude-code/server/src/services/container-cleanup-scheduler.ts)
+  - 默认启用，TTL 默认 120 分钟，扫描间隔默认 10 分钟
+  - 支持 `BYOCC_CONTAINER_CLEANUP_ENABLED`
+  - 支持 `BYOCC_CONTAINER_TTL_MINUTES`
+  - 支持 `BYOCC_CONTAINER_CLEANUP_INTERVAL_MINUTES`
+  - 支持 `BYOCC_CONTAINER_CLEANUP_RUN_ON_START`
+- ✅ 修改 [server/src/services/ws-proxy.ts](D:/code/build-your-own-claude-code/server/src/services/ws-proxy.ts)
+  - 记录活跃 terminal WebSocket session
+  - WebSocket 关闭时更新 session activity
+- ✅ 修改 [server/src/services/container-cleanup.ts](D:/code/build-your-own-claude-code/server/src/services/container-cleanup.ts)
+  - 支持 `protectedSessionIds`
+  - 保护活跃 terminal session
+  - 保护 `environment_status = "starting"` 的 session
+- ✅ 修改 [server/src/index.ts](D:/code/build-your-own-claude-code/server/src/index.ts)
+  - server 启动后注册 TTL cleanup scheduler
+- ✅ 更新 [internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md) 与 [internal/work-a-backend/E2E_REGRESSION.md](D:/code/build-your-own-claude-code/internal/work-a-backend/E2E_REGRESSION.md)
+  - 记录 TTL cleanup 默认值、配置方式、保护策略和验证方式
+
+**进行中**：
+- 🔄 尚未做 Cloudflare Tunnel 公开访问安全清单
+- 🔄 尚未做 GitHub OAuth
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `cd server && npm test`
+- `cd server && npm run build`
+- `npm run e2e:regression` 通过
+- `npm run e2e:regression:full` 通过，full mode 创建/submit/验证 terminal token 后清理测试容器
+- `BYOCC_CONTAINER_CLEANUP_ENABLED=false` 启动 server 时输出 `Container TTL cleanup: disabled by BYOCC_CONTAINER_CLEANUP_ENABLED`
+- 默认配置启动 server 时输出 `Container TTL cleanup: enabled ttl=120m interval=10m`
+- `npx tsx src/scripts/cleanup-containers.ts --dry-run --max-idle-minutes=999999`
+
+**下一步**：
+- 1. 浏览器人工确认 terminal 长连接期间不会被后台 cleanup 回收
+- 2. 继续做 Cloudflare Tunnel 公开访问安全清单
+- 3. 再做 GitHub OAuth anonymous user 绑定
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |
