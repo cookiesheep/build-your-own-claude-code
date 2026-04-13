@@ -1136,6 +1136,55 @@
 
 ---
 
+### 2026-04-13（会话 25 / E2E Regression Hardening）
+
+**完成项**：
+- ✅ 在 `codex/e2e-regression-hardening` 分支新增后端 E2E regression gate
+- ✅ 新增 [server/src/scripts/e2e-regression.ts](D:/code/build-your-own-claude-code/server/src/scripts/e2e-regression.ts)
+  - 默认 boundary mode 不创建 Docker，只验证 auth / session / environment / submit / reset / progress 边界
+  - `--full-docker` mode 会创建 Lab 容器、submit Lab 代码、验证 progress、验证 terminal WebSocket token upgrade
+  - full mode 默认清理自己创建的测试容器；`--keep-container` 可保留容器用于排查
+  - 支持 `BYOCC_E2E_BASE_URL` 与 `BYOCC_E2E_CODE_FILE`
+- ✅ 修改 [server/package.json](D:/code/build-your-own-claude-code/server/package.json)
+  - 新增 `npm run e2e:regression`
+  - 新增 `npm run e2e:regression:full`
+- ✅ 新增 [server/vitest.config.ts](D:/code/build-your-own-claude-code/server/vitest.config.ts)
+  - 修复 `cd server && npm test` 误加载根目录 vitest config 的问题
+  - 当前 server 没有测试文件时以 code 0 退出
+- ✅ 新增 [internal/work-a-backend/E2E_REGRESSION.md](D:/code/build-your-own-claude-code/internal/work-a-backend/E2E_REGRESSION.md)
+  - 记录 boundary mode、full Docker mode、浏览器人工补充验证、cleanup dry-run
+- ✅ 更新 [internal/work-a-backend/E2E_SMOKE_TEST.md](D:/code/build-your-own-claude-code/internal/work-a-backend/E2E_SMOKE_TEST.md)
+  - 指向新的 regression gate 文档
+
+**进行中**：
+- 🔄 浏览器 terminal `node cli.js` 仍保留为人工验证项，尚未接 Playwright/浏览器自动化
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `cd server && npm test`
+- `cd server && npm run build`
+- 临时后端 `BYOCC_E2E_BASE_URL=http://127.0.0.1:3018 npm run e2e:regression`
+- 临时后端 `BYOCC_E2E_BASE_URL=http://127.0.0.1:3019 npm run e2e:regression:full`
+  - full mode 验证 terminal URL 带 token
+  - 不带 token 的 WebSocket upgrade 被拒绝
+  - 带 terminal token 的 WebSocket upgrade 成功
+  - submit 后 progress 返回 Lab 3 completed
+  - 脚本清理了 1 个本次测试容器
+- 人工复跑默认端口验证：
+  - `npm run e2e:regression` 在 `http://127.0.0.1:3001` 全部 PASS
+  - `npm run e2e:regression:full` 在 `http://127.0.0.1:3001` 全部 PASS，并清理了 1 个本次测试容器
+
+**下一步**：
+- 1. 后续做 `codex/container-ttl-cleanup` 前先跑 `npm run e2e:regression`
+- 2. TTL 后台任务完成后跑 `npm run e2e:regression:full` 和浏览器人工 `node cli.js`
+- 3. GitHub OAuth 前继续保持“只绑定 anonymous user，不做手机号/邮箱/管理后台”的 scope
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |

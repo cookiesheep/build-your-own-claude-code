@@ -2,6 +2,8 @@
 
 > 目标：用最少步骤验证 BYOCC 平台核心闭环是否仍然可用。
 
+> 如果你只是想跑可重复 regression gate，优先看 [E2E_REGRESSION.md](./E2E_REGRESSION.md)。本文件保留为人工 smoke test 清单。
+
 这份文档验证的是完整本地链路：
 
 ```text
