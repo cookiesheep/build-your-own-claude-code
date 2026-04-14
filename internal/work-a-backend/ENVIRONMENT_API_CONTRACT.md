@@ -260,6 +260,8 @@ Authorization: Bearer <byocc-auth-token>
 
 前端必须使用 `environment/start` 或 `environment/status` 返回的完整 `terminalUrl`，因为该 URL 里包含短期 terminal token。没有 token 或 token 与 session owner 不匹配时，WebSocket upgrade 会被拒绝。
 
+Cloudflare Tunnel 公开访问时，浏览器页面是 `https://`，terminal URL 必须是 `wss://`。后端会优先读取 `X-Forwarded-Proto`，再回退到 Express `req.protocol` 来决定 `ws` / `wss`。
+
 ---
 
 ## 手动验证命令

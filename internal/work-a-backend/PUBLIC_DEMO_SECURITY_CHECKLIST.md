@@ -207,6 +207,7 @@ cookiesheep's claude-code v2.1.88
 - [ ] `BYOCC_AUTH_SECRET` 不是示例值，也不是 dev fallback。
 - [ ] `CORS_ORIGINS` 只包含前端公开域名和必要的本地开发域名。
 - [ ] `NEXT_PUBLIC_API_URL` 指向后端公开域名或正确的同源代理地址。
+- [ ] 启动环境后返回的 `terminalUrl` 使用 `wss://`，不是 `ws://`。
 - [ ] Cloudflare Access policy 已限制访问者。
 - [ ] 后端启动日志显示 TTL cleanup enabled。
 - [ ] `npm run e2e:regression` 通过。
@@ -214,6 +215,14 @@ cookiesheep's claude-code v2.1.88
 - [ ] cleanup dry-run 不会误删。
 - [ ] 浏览器 `/lab/3` 手动 `node cli.js` 成功。
 - [ ] 你知道如何停止 tunnel 和本地 server。
+
+如果 HTTPS 前端页面报错：
+
+```text
+Mixed Content: attempted to connect to the insecure WebSocket endpoint ws://...
+```
+
+说明 terminal URL 没有按公网 HTTPS 生成 `wss://`。此时优先检查后端是否在最新代码上运行，以及 Cloudflare 请求是否带 `X-Forwarded-Proto: https`。
 
 ---
 
