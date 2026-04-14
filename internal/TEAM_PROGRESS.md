@@ -1232,6 +1232,72 @@
 
 ---
 
+### 2026-04-13（会话 27 / Public Demo Safety Checklist）
+
+**完成项**：
+- ✅ 在 `codex/public-demo-safety-checklist` 分支新增 Cloudflare Tunnel 公开 demo 安全清单
+- ✅ 新增 [internal/work-a-backend/PUBLIC_DEMO_SECURITY_CHECKLIST.md](D:/code/build-your-own-claude-code/internal/work-a-backend/PUBLIC_DEMO_SECURITY_CHECKLIST.md)
+  - 说明 Tunnel / Access / Quick Tunnel 的推荐用法和风险
+  - 明确公开前必须设置 `BYOCC_AUTH_SECRET`、`CORS_ORIGINS`、`HOST`、`NEXT_PUBLIC_API_URL`
+  - 明确 container TTL / terminal token TTL 的 demo 推荐值
+  - 明确公开前必须跑 E2E regression、cleanup dry-run、浏览器 `node cli.js`
+  - 明确 demo 结束后的 rollback / cleanup 步骤
+- ✅ 更新 [.env.example](D:/code/build-your-own-claude-code/.env.example)
+  - 增加 BYOCC 平台公开 demo env 模板，不包含真实 secret
+- ✅ 更新 [internal/work-a-backend/README.md](D:/code/build-your-own-claude-code/internal/work-a-backend/README.md)
+  - 部署步骤指向新的公开 demo 安全清单
+
+**进行中**：
+- 🔄 尚未实际启动 Cloudflare Tunnel
+- 🔄 尚未做 GitHub OAuth
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `git diff --check`
+
+**下一步**：
+- 1. 按清单本地填入真实 `BYOCC_AUTH_SECRET` 和公开域名 env
+- 2. 配置 Cloudflare Access / Tunnel 后跑 `npm run e2e:regression` 与 `npm run e2e:regression:full`
+- 3. 公网 demo 通过后，再做 `codex/github-oauth-identity`
+
+---
+
+### 2026-04-14（会话 28 / 文档索引与 AI 协作审查规则）
+
+**完成项**：
+- ✅ 在当前 `codex/public-demo-safety-checklist` 分支继续补充两份中文文档
+- ✅ 新增 [internal/work-a-backend/AI_COLLAB_REVIEW_CHECKLIST.md](D:/code/build-your-own-claude-code/internal/work-a-backend/AI_COLLAB_REVIEW_CHECKLIST.md)
+  - 记录 Leader 与 AI 协作时的固定审查框架
+  - 明确每次开发后 AI 必须交付的 4 段内容：
+    - 这次改动要保证的真理
+    - 改了哪些文件
+    - 必须跑的命令
+    - 不懂代码也能观察到的正确现象
+  - 记录最小验证流程、反向验证思路、什么时候要求 AI 重讲
+- ✅ 新增 [开发前必看.md](D:/code/build-your-own-claude-code/开发前必看.md)
+  - 用中文说明根目录主要目录做什么
+  - 解释 `internal/`、`server/`、`platform/`、`infrastructure/`、`docs/`、`labs/`、`shared/`
+  - 说明 `internal/work-a-backend/` 下每个关键文档的作用
+  - 给队友一个统一的接手顺序
+
+**进行中**：
+- 🔄 当前分支尚未 commit / push
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `git diff --check`
+
+**下一步**：
+- 1. commit 并 push 当前 `codex/public-demo-safety-checklist`
+- 2. 让队友先按 [开发前必看.md](D:/code/build-your-own-claude-code/开发前必看.md) 接手
+- 3. 公开 demo 安全门禁完成后，再做 `codex/github-oauth-identity`
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |

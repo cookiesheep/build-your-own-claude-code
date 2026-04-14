@@ -184,6 +184,9 @@ db.exec(`
 
 ### Step 6：部署到台式机（Sprint 2-3）
 
+> 当前部署前置清单已迁移到 [PUBLIC_DEMO_SECURITY_CHECKLIST.md](./PUBLIC_DEMO_SECURITY_CHECKLIST.md)。
+> 公开分享 URL 前，必须先按该清单设置 `BYOCC_AUTH_SECRET`、`CORS_ORIGINS`、Cloudflare Access policy 和 E2E regression。
+
 ```bash
 # 1. 在台式机上安装 Cloudflare Tunnel
 winget install cloudflare.cloudflared
