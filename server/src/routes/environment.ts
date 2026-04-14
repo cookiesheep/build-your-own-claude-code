@@ -21,13 +21,22 @@ import { createContainer, getContainerStatus, removeContainer } from '../service
 
 export const environmentRouter = Router();
 
+function getRequestProtocol(req: { protocol: string; get(name: string): string | undefined }): string {
+  const forwardedProtocol = req.get('x-forwarded-proto')?.split(',')[0]?.trim().toLowerCase();
+  if (forwardedProtocol === 'https' || forwardedProtocol === 'http') {
+    return forwardedProtocol;
+  }
+
+  return req.protocol;
+}
+
 function getTerminalUrl(
   req: { protocol: string; get(name: string): string | undefined },
   sessionId: string,
   userId: string
 ): string {
   const host = req.get('host') ?? '127.0.0.1:3001';
-  const wsProtocol = req.protocol === 'https' ? 'wss' : 'ws';
+  const wsProtocol = getRequestProtocol(req) === 'https' ? 'wss' : 'ws';
   const terminalToken = createTerminalToken({ sessionId, userId });
   return `${wsProtocol}://${host}/api/terminal/${encodeURIComponent(sessionId)}?token=${encodeURIComponent(terminalToken)}`;
 }

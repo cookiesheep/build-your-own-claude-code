@@ -32,6 +32,10 @@ const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+// Cloudflare Tunnel terminates public HTTPS before forwarding to this local HTTP server.
+// Trust proxy headers so generated URLs can use the browser-facing scheme.
+app.set('trust proxy', true);
+
 // 中间件
 app.use(
   cors({

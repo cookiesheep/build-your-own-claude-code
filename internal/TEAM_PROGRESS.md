@@ -1298,6 +1298,44 @@
 
 ---
 
+### 2026-04-14（会话 29 / Public Tunnel WSS 修复）
+
+**完成项**：
+- ✅ 在 `codex/public-tunnel-wss-terminal` 分支修复 Cloudflare Quick Tunnel 下 terminal URL 生成 `ws://` 的问题
+- ✅ 修改 [server/src/routes/environment.ts](D:/code/build-your-own-claude-code/server/src/routes/environment.ts)
+  - `terminalUrl` 生成时优先读取 `X-Forwarded-Proto`
+  - 当公网请求来自 HTTPS tunnel 时返回 `wss://...`
+- ✅ 修改 [server/src/index.ts](D:/code/build-your-own-claude-code/server/src/index.ts)
+  - 启用 Express `trust proxy`
+- ✅ 更新 [internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/ENVIRONMENT_API_CONTRACT.md) 与 [internal/work-a-backend/PUBLIC_DEMO_SECURITY_CHECKLIST.md](D:/code/build-your-own-claude-code/internal/work-a-backend/PUBLIC_DEMO_SECURITY_CHECKLIST.md)
+  - 记录 HTTPS 页面必须连接 `wss://` terminal
+  - 记录 Mixed Content 报错的排查方式
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `cd server && npm test`
+- `cd server && npm run build`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `git diff --check`
+- Cloudflare Quick Tunnel 人工验证通过：
+  - 前端公网页面 `/lab/3` 可打开并显示代码 / 页面
+  - 点击“启动实验环境”后 terminal 不再被 Mixed Content 拦截
+  - terminal 显示 `Connecting to wss://...`，不再是 `ws://...`
+  - Cloudflare 前端 tunnel + 后端 tunnel 全链路可进入 Lab 页面并连接 terminal
+
+**下一步**：
+- 1. commit 并 push `codex/public-tunnel-wss-terminal`
+- 2. 合并后同步 `main`
+- 3. 正式进入 `codex/github-oauth-identity`
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |
