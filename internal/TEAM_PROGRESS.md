@@ -650,6 +650,34 @@
 - 2. 做一次真实浏览器端到端联调：`/lab/3` → submit → terminal → `node cli.js`
 - 3. 端到端跑通后，再考虑 TTL cleanup 或演示 token
 
+### 2026-04-18（会话 18 / API Key 管理 review + 修复）
+
+**完成项**：
+- ✅ Review API Key 管理系统（`feat/api-key-management` 分支）
+- ✅ 修复 Navbar 登录状态延迟：`useEffect` 依赖加 `pathname`，路由切换时重新检查 auth
+- ✅ 诊断 ByteString 错误根因：ENCRYPTION_KEY 通过 `$env:` 临时设置导致加解密 key 不一致
+- ✅ 创建 `server/.env` 稳定配置文件（含 ENCRYPTION_KEY、AUTH_SECRET 等）
+- ✅ 清除数据库中损坏的加密 API Key
+- ✅ 验证端到端流程：登录 → 设置 API Key → 启动环境 → 容器注入 ENV → TUI 对话正常
+- ✅ 整理 `internal/prompt/` 目录结构（中文命名）
+
+**进行中**：
+- 🔄 byocc.cc 域名 + Cloudflare Tunnel 部署（另一同学负责）
+- 🔄 登录页面动效美化（`认证界面开发提示词.md` 待执行）
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `docker inspect` 确认容器 ENV 正确注入 ANTHROPIC_API_KEY 和 ANTHROPIC_BASE_URL
+- TUI 内可正常对话（智谱/DeepSeek via Anthropic 兼容接口）
+- Navbar 登录状态即时更新
+
+**下一步**：
+- 提交 `feat/api-key-management` 分支并开 PR
+- 前端同学执行 `认证界面开发提示词.md` 美化登录页
+- 部署 byocc.cc 公开首页
+
 ### 2026-04-17（会话 17 / 紧急重排路线图 + 认证 + API Key 提示词）
 
 **完成项**：
@@ -1459,14 +1487,93 @@
   - WebSocket terminal 代理不再把原始错误消息返回给客户端
   - `.env.example` 移除重复 `BYOCC_AUTH_SECRET` 段落
 - anonymous token TTL smoke：
-  - `BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS=1` 时，token 创建后立即有效，约 1.2 秒后失效
+- `BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS=1` 时，token 创建后立即有效，约 1.2 秒后失效
 - 复跑 `npm run e2e:regression` 通过
+- 复跑 `npm run e2e:regression:full` 通过，并清理 1 个测试容器
 
 **下一步**：
 - 1. 浏览器验证 `/login` 使用 `byocc_team` / `2024cs`
 - 2. 验证 `/lab/3` 未登录跳转 `/login`
 - 3. 公开 demo 前设置 `SERVER_SESSION_SECRET`、`BYOCC_COOKIE_SECURE=true`、`BYOCC_ANONYMOUS_AUTH_ENABLED=false`
 - 4. 后续再做 `codex/github-oauth-identity`
+
+---
+
+### 2026-04-18（会话 31 / API Key Management）
+
+**完成项**：
+- ✅ 在 `feat/api-key-management` 分支接入 API Key 管理第一版
+- ✅ 新增 [server/src/services/encryption.ts](D:/code/build-your-own-claude-code/server/src/services/encryption.ts)
+  - 使用 AES-256-CBC
+  - `ENCRYPTION_KEY` 为 64 位 hex
+  - 存储格式为 `iv_hex:ciphertext_hex`
+- ✅ 新增 [server/src/routes/settings.ts](D:/code/build-your-own-claude-code/server/src/routes/settings.ts)
+  - `GET /api/settings/api-key`
+  - `PUT /api/settings/api-key`
+  - `DELETE /api/settings/api-key`
+  - 设置接口只允许已登录 password user 使用
+  - 支持保存第三方 Anthropic 兼容 API Base URL
+- ✅ 修改 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - 新增 `getUserSettings`
+  - 新增 `upsertUserSettings`
+  - 新增 `clearUserApiKey`
+- ✅ 修改 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts)
+  - `createContainer(sessionId, userId?)` 支持 userId
+  - 容器创建时解析用户自定义 Key 或 `DEFAULT_API_KEY`
+  - 注入 `ANTHROPIC_API_KEY=...`
+  - 注入 `ANTHROPIC_BASE_URL=...`（如果配置了 Base URL）
+- ✅ 修改 [server/src/routes/environment.ts](D:/code/build-your-own-claude-code/server/src/routes/environment.ts) 与 [server/src/routes/reset.ts](D:/code/build-your-own-claude-code/server/src/routes/reset.ts)
+  - 创建 / reset 容器时传入当前 userId
+- ✅ 新增 [platform/src/lib/settings.ts](D:/code/build-your-own-claude-code/platform/src/lib/settings.ts)
+  - 前端 GET / PUT / DELETE API Key 设置
+- ✅ 新增 [platform/src/components/SettingsModal.tsx](D:/code/build-your-own-claude-code/platform/src/components/SettingsModal.tsx)
+  - 读取当前 Key 来源
+  - 读取当前 API Base URL
+  - 保存自定义 Key
+  - 保存第三方 API Base URL
+  - 恢复默认 Key
+  - 提示“重启实验环境后生效”
+- ✅ 修改 [platform/src/components/Navbar.tsx](D:/code/build-your-own-claude-code/platform/src/components/Navbar.tsx)
+  - 已登录用户菜单新增“API Key 设置”
+- ✅ 新增 [internal/work-a-backend/API_KEY_SETTINGS_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/API_KEY_SETTINGS_CONTRACT.md)
+  - 记录 API Key / API Base URL 来源优先级、加密方式、接口契约和容器 ENV 注入
+
+**进行中**：
+- 🔄 尚未做 API Key 有效性校验
+- 🔄 尚未做 Key 使用统计 / 多 Key 轮转 / 管理员查看
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `cd server && npm test`
+- `cd server && npm run build`
+- `cd platform && npm run build`
+- 临时后端 settings API smoke：
+  - 登录 `byocc_team`
+  - `GET /api/settings/api-key` 初始返回 `source=default hasKey=false`
+  - `PUT /api/settings/api-key` 保存 `sk-ant-test-key-12345` 后返回 `source=user maskedKey=sk-ant***345`
+  - `PUT /api/settings/api-key` 支持保存 `apiBaseUrl=https://open.bigmodel.cn/api/anthropic`
+  - 再次 GET 返回 `source=user maskedKey=已保存自定义 Key` 和对应 `apiBaseUrl`
+  - DELETE 后返回 `source=default hasKey=false`
+- 容器 ENV smoke：
+  - 登录 `byocc_team`
+  - 保存用户自定义 Key `sk-ant-user-key-xyz987`
+  - 保存用户自定义 Base URL `https://open.bigmodel.cn/api/anthropic`
+  - 启动环境后 `docker inspect` 显示 `ANTHROPIC_API_KEY=sk-ant-user-key-xyz987`
+  - 启动环境后 `docker inspect` 显示 `ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic`
+  - 测试容器已清理
+- `npm run e2e:regression` 通过
+- `npm run e2e:regression:full` 通过
+- `npx tsx src/scripts/cleanup-containers.ts --dry-run --max-idle-minutes=999999`
+- `git diff --check`
+
+**下一步**：
+- 1. 浏览器人工验证：Navbar 打开 API Key 设置弹窗，保存/恢复默认可用
+- 2. 公开 demo 前设置 `ENCRYPTION_KEY` 和 `DEFAULT_API_KEY`
+- 3. 后续再做 API Key 有效性校验 / 使用统计 / 多 Key 轮转
 
 ---
 

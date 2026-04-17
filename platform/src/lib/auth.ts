@@ -12,8 +12,21 @@ export interface AuthState {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
+function shouldUseSameOriginApi(): boolean {
+  if (!API_BASE) {
+    return true;
+  }
+
+  try {
+    const url = new URL(API_BASE);
+    return url.hostname === "127.0.0.1" || url.hostname === "localhost";
+  } catch {
+    return true;
+  }
+}
+
 function apiUrl(path: string): string {
-  return API_BASE ? `${API_BASE}${path}` : path;
+  return shouldUseSameOriginApi() ? path : `${API_BASE}${path}`;
 }
 
 export async function checkAuth(): Promise<AuthState> {

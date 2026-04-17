@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LABS } from "@/lib/labs";
 import PlatformLabCards from "@/components/PlatformLabCards";
 import ScrollReactiveOrbs from "@/components/ScrollReactiveOrbs";
+import FloatingCodeBlocks from "@/components/FloatingCodeBlocks";
 
 export const metadata = {
   title: "BYOCC — 选择 Lab",
@@ -11,6 +12,7 @@ export const metadata = {
 export default function PlatformPage() {
   return (
     <div className="grid-pattern relative min-h-[calc(100vh-56px)] overflow-y-auto bg-[var(--bg-page)] pt-14">
+      <FloatingCodeBlocks />
       <ScrollReactiveOrbs />
       <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col px-6 pb-16 pt-12 sm:px-8 lg:px-10">
         <section className="relative overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--bg-panel)] px-8 py-10 shadow-[0_24px_80px_rgba(0,0,0,0.25)] sm:px-10 sm:py-12">
