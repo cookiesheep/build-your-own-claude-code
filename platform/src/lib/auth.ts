@@ -10,9 +10,15 @@ export interface AuthState {
   loading: boolean;
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+
+function apiUrl(path: string): string {
+  return API_BASE ? `${API_BASE}${path}` : path;
+}
+
 export async function checkAuth(): Promise<AuthState> {
   try {
-    const res = await fetch("/api/auth/me", { credentials: "include" });
+    const res = await fetch(apiUrl("/api/auth/me"), { credentials: "include" });
     if (res.ok) {
       const data = await res.json();
       return {
@@ -32,7 +38,7 @@ export async function login(
   password: string,
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch(apiUrl("/api/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -50,7 +56,7 @@ export async function login(
 
 export async function logout(): Promise<void> {
   try {
-    await fetch("/api/auth/logout", {
+    await fetch(apiUrl("/api/auth/logout"), {
       method: "POST",
       credentials: "include",
     });

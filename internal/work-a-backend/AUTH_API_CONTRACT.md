@@ -1,20 +1,157 @@
-# Anonymous User API Contract
+# Auth API Contract
 
-> 状态：后端已实现，前端待接入  
-> 日期：2026-04-12  
-> 目标：先建立稳定 `user_id`，为 progress / code snapshot / GitHub OAuth 打地基。
+> 状态：已实现 anonymous token + username/password cookie auth
+> 更新：2026-04-17
+> 目标：先建立稳定 `user_id`，并在公开 demo 前用内部账号保护 Lab / container 资源。
 
 ---
 
 ## 核心语义
 
-这一步不是完整登录系统，也不是 GitHub OAuth。
+当前有两条认证路径：
 
-它只解决一个问题：
+1. **用户名/密码 cookie auth**：给内部成员使用，保护 `/lab/:id` 与容器资源。
+2. **anonymous HMAC token**：保留为兼容 / E2E 降级路径，后续可以在公开 demo 中通过 `BYOCC_ANONYMOUS_AUTH_ENABLED=false` 关闭。
+
+这还不是 GitHub OAuth，也不是完整用户管理后台。
+
+---
+
+## 用户名/密码认证
+
+### 创建用户
+
+管理员在后端目录运行：
+
+```powershell
+cd D:\code\build-your-own-claude-code\server
+npx tsx src/scripts/create-user.ts --username byocc_team --password 2024cs --role admin
+```
+
+脚本会：
+
+- 校验用户名 / 密码
+- 使用 bcryptjs hash 密码
+- 写入 `users` 表
+- 如果用户已存在，则打印已有用户信息并退出
+
+### POST /api/auth/login
+
+登录并写入 httpOnly cookie。
+
+请求：
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+```
+
+```json
+{
+  "username": "byocc_team",
+  "password": "2024cs"
+}
+```
+
+成功：
+
+```json
+{
+  "success": true,
+  "user": {
+    "id": "...",
+    "username": "byocc_team",
+    "role": "admin"
+  }
+}
+```
+
+响应会设置：
 
 ```text
-前端怎样拿到一个稳定 user_id，让后端知道“这个 session 属于哪个学习者”？
+Set-Cookie: byocc_session=<jwt>; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800
 ```
+
+失败：
+
+```http
+401
+```
+
+```json
+{
+  "success": false,
+  "error": "用户名或密码错误。"
+}
+```
+
+### GET /api/auth/me
+
+读取当前 cookie 登录状态。
+
+成功：
+
+```json
+{
+  "authenticated": true,
+  "user": {
+    "id": "...",
+    "username": "byocc_team",
+    "role": "admin"
+  }
+}
+```
+
+未登录：
+
+```http
+401
+```
+
+```json
+{
+  "authenticated": false,
+  "user": null
+}
+```
+
+### POST /api/auth/logout
+
+清除登录 cookie。
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
+## Cookie 配置
+
+| 名称 | 默认值 | 说明 |
+| --- | --- | --- |
+| `SERVER_SESSION_SECRET` | 无 | 签名 `byocc_session` 的推荐 secret |
+| `BYOCC_AUTH_SECRET` | dev fallback | 若 `SERVER_SESSION_SECRET` 未设置，会回退到该值 |
+| `BYOCC_COOKIE_SECURE` | `NODE_ENV=production` 时 true | 可显式控制 cookie `Secure` |
+| `BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS` | `86400` | anonymous HMAC token 有效期，默认 24 小时 |
+
+公开 demo 建议：
+
+```powershell
+$env:SERVER_SESSION_SECRET="<真实随机 secret>"
+$env:BYOCC_COOKIE_SECURE="true"
+```
+
+本地开发可用：
+
+```powershell
+$env:BYOCC_COOKIE_SECURE="false"
+```
+
+---
+
+## Anonymous User API
 
 第一版支持匿名 user：
 
@@ -23,6 +160,13 @@
 - 前端把 token 存在 localStorage
 - 后续请求带 `Authorization: Bearer <token>`
 - `/api/session` 会把 session 绑定到 user_id
+- anonymous token 默认 24 小时过期，可通过 `BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS` 调整
+
+公开 demo 如果只允许内部账号访问，可以关闭匿名创建：
+
+```powershell
+$env:BYOCC_ANONYMOUS_AUTH_ENABLED="false"
+```
 
 ---
 

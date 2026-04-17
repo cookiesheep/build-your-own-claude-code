@@ -133,7 +133,7 @@ export function setupWebSocketProxy(server: Server): void {
         error instanceof Error ? error.message : 'Unknown terminal proxy error';
 
       console.error(`Failed to proxy terminal for session "${sessionId}":`, message);
-      socket.write(`HTTP/1.1 404 Not Found\r\n\r\n${message}`);
+      socket.write('HTTP/1.1 404 Not Found\r\n\r\nTerminal connection failed');
       socket.destroy();
     }
   });

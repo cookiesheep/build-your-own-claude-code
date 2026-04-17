@@ -30,6 +30,13 @@ type TerminalTokenPayload = {
 
 const AUTH_SECRET =
   process.env.BYOCC_AUTH_SECRET ?? 'byocc-dev-secret-change-me-before-public-demo';
+const ANONYMOUS_TOKEN_TTL_SECONDS_INPUT = Number.parseInt(
+  process.env.BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS ?? '86400',
+  10
+);
+const ANONYMOUS_TOKEN_TTL_SECONDS = Number.isInteger(ANONYMOUS_TOKEN_TTL_SECONDS_INPUT)
+  ? Math.max(1, ANONYMOUS_TOKEN_TTL_SECONDS_INPUT)
+  : 86400;
 const TERMINAL_TOKEN_TTL_SECONDS_INPUT = Number.parseInt(
   process.env.BYOCC_TERMINAL_TOKEN_TTL_SECONDS ?? '300',
   10
@@ -93,7 +100,21 @@ export function verifyUserToken(token: string): TokenPayload | null {
     return null;
   }
 
-  return decodeJson<TokenPayload>(encodedPayload);
+  const payload = decodeJson<TokenPayload>(encodedPayload);
+  if (!payload?.userId || !payload.kind || !payload.issuedAt) {
+    return null;
+  }
+
+  const issuedAtMs = Date.parse(payload.issuedAt);
+  if (Number.isNaN(issuedAtMs)) {
+    return null;
+  }
+
+  if (issuedAtMs + ANONYMOUS_TOKEN_TTL_SECONDS * 1000 <= Date.now()) {
+    return null;
+  }
+
+  return payload;
 }
 
 export function createTerminalToken(input: { sessionId: string; userId: string }): string {

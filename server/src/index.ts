@@ -39,6 +39,7 @@ app.set('trust proxy', true);
 // 中间件
 app.use(
   cors({
+    credentials: true,
     origin(origin, callback) {
       // 没有 Origin 的请求通常来自 curl、PowerShell 或同机脚本。
       // 本地开发阶段允许这类请求，浏览器跨域请求则必须命中白名单。

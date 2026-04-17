@@ -1400,6 +1400,76 @@
 
 ---
 
+### 2026-04-17（会话 30 / Username Password Auth）
+
+**完成项**：
+- ✅ 在 `feat/auth-system` 分支接入用户名/密码认证
+- ✅ 安装后端依赖 `bcryptjs` / `jsonwebtoken` 及类型包
+- ✅ 修改 [server/src/db/database.ts](D:/code/build-your-own-claude-code/server/src/db/database.ts)
+  - `users` 表增加 `username` / `password_hash` / `role`
+  - 新增 `user_settings` 表
+  - 新增 password user 查询与创建 helper
+- ✅ 新增 [server/src/services/session-cookie.ts](D:/code/build-your-own-claude-code/server/src/services/session-cookie.ts)
+  - 签发 / 验证 `byocc_session` httpOnly cookie
+  - 支持 `SERVER_SESSION_SECRET`
+- ✅ 修改 [server/src/routes/auth.ts](D:/code/build-your-own-claude-code/server/src/routes/auth.ts)
+  - 新增 `POST /api/auth/login`
+  - 新增 `POST /api/auth/logout`
+  - 新增 `GET /api/auth/me`
+  - 保留 `POST /api/auth/anonymous` 降级路径
+- ✅ 修改 [server/src/middleware/auth.ts](D:/code/build-your-own-claude-code/server/src/middleware/auth.ts)
+  - 优先读取 cookie session
+  - 再回退 Bearer anonymous token
+- ✅ 新增 [server/src/scripts/create-user.ts](D:/code/build-your-own-claude-code/server/src/scripts/create-user.ts)
+  - CLI 创建内部账号
+  - 已本地创建 `byocc_team` / `2024cs`
+- ✅ 修改 [platform/src/lib/auth.ts](D:/code/build-your-own-claude-code/platform/src/lib/auth.ts)
+  - login / logout / checkAuth 支持 `NEXT_PUBLIC_API_URL`
+- ✅ 修改 [platform/src/lib/api.ts](D:/code/build-your-own-claude-code/platform/src/lib/api.ts)
+  - API 请求 cookie 优先
+  - anonymous token 仅作为 401 后降级兼容
+- ✅ 更新 [internal/work-a-backend/AUTH_API_CONTRACT.md](D:/code/build-your-own-claude-code/internal/work-a-backend/AUTH_API_CONTRACT.md)、[internal/work-a-backend/PUBLIC_DEMO_SECURITY_CHECKLIST.md](D:/code/build-your-own-claude-code/internal/work-a-backend/PUBLIC_DEMO_SECURITY_CHECKLIST.md)、[.env.example](D:/code/build-your-own-claude-code/.env.example)
+
+**进行中**：
+- 🔄 尚未做 GitHub OAuth
+- 🔄 尚未做注册 / 密码重置 / 速率限制 / 管理后台
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `cd server && npm test`
+- `cd server && npm run build`
+- `cd platform && npm run build`
+- `npx tsx src/scripts/create-user.ts --username byocc_team --password 2024cs --role admin`
+- 临时后端 cookie smoke：
+  - 错误密码返回 `401`
+  - 正确密码返回 `success=true` 和 `Set-Cookie: byocc_session=...`
+  - `/api/auth/me` 返回 `authenticated=true user.username=byocc_team`
+  - logout 后 `/api/auth/me` 返回 `401`
+- `BYOCC_ANONYMOUS_AUTH_ENABLED=false` 时 `/api/auth/anonymous` 返回 `403`
+- `npm run e2e:regression` 通过
+- `npm run e2e:regression:full` 通过
+- `git diff --check`
+- 外部 review 安全修复：
+  - anonymous HMAC token 增加 `BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS` 过期检查
+  - 登录时用户不存在也执行 dummy bcrypt compare，降低用户名枚举时序差异
+  - WebSocket terminal 代理不再把原始错误消息返回给客户端
+  - `.env.example` 移除重复 `BYOCC_AUTH_SECRET` 段落
+- anonymous token TTL smoke：
+  - `BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS=1` 时，token 创建后立即有效，约 1.2 秒后失效
+- 复跑 `npm run e2e:regression` 通过
+
+**下一步**：
+- 1. 浏览器验证 `/login` 使用 `byocc_team` / `2024cs`
+- 2. 验证 `/lab/3` 未登录跳转 `/login`
+- 3. 公开 demo 前设置 `SERVER_SESSION_SECRET`、`BYOCC_COOKIE_SECURE=true`、`BYOCC_ANONYMOUS_AUTH_ENABLED=false`
+- 4. 后续再做 `codex/github-oauth-identity`
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |

@@ -11,6 +11,7 @@
 import type { Request } from 'express';
 import { getUser, type SessionRecord, type UserRecord } from '../db/database.js';
 import { verifyUserToken } from '../services/auth-token.js';
+import { getSessionUserFromRequest } from '../services/session-cookie.js';
 
 function getBearerToken(req: Request): string | null {
   const authorization = req.header('authorization');
@@ -27,6 +28,11 @@ function getBearerToken(req: Request): string | null {
 }
 
 export function getOptionalAuthUser(req: Request): UserRecord | null {
+  const sessionUser = getSessionUserFromRequest(req);
+  if (sessionUser) {
+    return sessionUser;
+  }
+
   const token = getBearerToken(req);
   if (!token) {
     return null;

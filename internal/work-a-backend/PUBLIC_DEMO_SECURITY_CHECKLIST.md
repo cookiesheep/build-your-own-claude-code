@@ -43,6 +43,10 @@ PowerShell 示例：
 cd D:\code\build-your-own-claude-code\server
 
 $env:BYOCC_AUTH_SECRET="<生成一个真实随机 secret，不要用示例值>"
+$env:SERVER_SESSION_SECRET="<生成另一个真实随机 secret>"
+$env:BYOCC_COOKIE_SECURE="true"
+$env:BYOCC_ANONYMOUS_AUTH_ENABLED="false"
+$env:BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS="86400"
 $env:HOST="127.0.0.1"
 $env:PORT="3001"
 $env:CORS_ORIGINS="https://<你的前端公开域名>"
@@ -58,6 +62,10 @@ npm run dev
 说明：
 
 - `BYOCC_AUTH_SECRET`：必须是真实随机 secret。公开 demo 不允许使用后端 dev fallback。
+- `SERVER_SESSION_SECRET`：签名登录 cookie 的 secret，公开 demo 必须设置。
+- `BYOCC_COOKIE_SECURE=true`：公开 HTTPS demo 下，登录 cookie 应设置 Secure。
+- `BYOCC_ANONYMOUS_AUTH_ENABLED=false`：内部账号准备好后，公开 demo 建议关闭匿名 token 创建。
+- `BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS`：anonymous 降级 token 的有效期，默认 24 小时。
 - `HOST=127.0.0.1`：Cloudflare Tunnel 和后端在同一台机器时，优先只监听本机回环地址。
 - `CORS_ORIGINS`：只允许真实前端公开域名。不要使用 `*`。
 - `BYOCC_CONTAINER_TTL_MINUTES`：demo 时建议 60-120 分钟。太短会打断用户，太长会积累容器。
@@ -205,6 +213,9 @@ cookiesheep's claude-code v2.1.88
 必须全部为 yes：
 
 - [ ] `BYOCC_AUTH_SECRET` 不是示例值，也不是 dev fallback。
+- [ ] `SERVER_SESSION_SECRET` 不是示例值，也不是 dev fallback。
+- [ ] 内部账号已创建，例如 `byocc_team`。
+- [ ] 公开 demo 使用内部账号时，`BYOCC_ANONYMOUS_AUTH_ENABLED=false`。
 - [ ] `CORS_ORIGINS` 只包含前端公开域名和必要的本地开发域名。
 - [ ] `NEXT_PUBLIC_API_URL` 指向后端公开域名或正确的同源代理地址。
 - [ ] 启动环境后返回的 `terminalUrl` 使用 `wss://`，不是 `ws://`。
