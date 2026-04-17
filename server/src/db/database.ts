@@ -42,6 +42,14 @@ type CodeSnapshotRow = {
   updated_at: string;
 };
 
+type UserSettingsRow = {
+  user_id: string;
+  api_key_encrypted: string | null;
+  api_base_url: string | null;
+  api_key_source: string;
+  updated_at: string;
+};
+
 const DB_PATH = join(process.cwd(), 'byocc.sqlite');
 let db: DatabaseHandle | undefined;
 
@@ -85,6 +93,16 @@ export type CodeSnapshotRecord = {
   userId: string;
   labNumber: number;
   code: string;
+  updatedAt: string;
+};
+
+export type ApiKeySource = 'default' | 'user';
+
+export type UserSettingsRecord = {
+  userId: string;
+  apiKeyEncrypted: string | null;
+  apiBaseUrl: string | null;
+  apiKeySource: ApiKeySource;
   updatedAt: string;
 };
 
@@ -161,6 +179,7 @@ export function initDatabase(): void {
     CREATE TABLE IF NOT EXISTS user_settings (
       user_id TEXT PRIMARY KEY,
       api_key_encrypted TEXT,
+      api_base_url TEXT,
       api_key_source TEXT DEFAULT 'default',
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id)
@@ -173,6 +192,10 @@ export function initDatabase(): void {
     .map((column) => column.name);
   const userColumns = db
     .prepare<[], { name: string }>('PRAGMA table_info(users)')
+    .all()
+    .map((column) => column.name);
+  const userSettingsColumns = db
+    .prepare<[], { name: string }>('PRAGMA table_info(user_settings)')
     .all()
     .map((column) => column.name);
 
@@ -211,6 +234,10 @@ export function initDatabase(): void {
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL'
   );
 
+  if (!userSettingsColumns.includes('api_base_url')) {
+    db.exec('ALTER TABLE user_settings ADD COLUMN api_base_url TEXT');
+  }
+
   console.log(`💾 Database initialized: ${DB_PATH}`);
 }
 
@@ -231,6 +258,16 @@ function mapCodeSnapshot(row: CodeSnapshotRow): CodeSnapshotRecord {
     userId: row.user_id,
     labNumber: row.lab_number,
     code: row.code,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapUserSettings(row: UserSettingsRow): UserSettingsRecord {
+  return {
+    userId: row.user_id,
+    apiKeyEncrypted: row.api_key_encrypted,
+    apiBaseUrl: row.api_base_url,
+    apiKeySource: row.api_key_source === 'user' ? 'user' : 'default',
     updatedAt: row.updated_at,
   };
 }
@@ -573,4 +610,82 @@ export function getCodeSnapshot(
     .get(userId, labNumber);
 
   return row ? mapCodeSnapshot(row) : null;
+}
+
+export function getUserSettings(userId: string): UserSettingsRecord | null {
+  const database = getDb();
+  const row = database
+    .prepare<[string], UserSettingsRow>(
+      `
+        SELECT user_id, api_key_encrypted, api_key_source, updated_at
+        , api_base_url
+        FROM user_settings
+        WHERE user_id = ?
+      `
+    )
+    .get(userId);
+
+  return row ? mapUserSettings(row) : null;
+}
+
+export function upsertUserSettings(
+  userId: string,
+  settings: {
+    apiKeyEncrypted?: string | null;
+    apiBaseUrl?: string | null;
+    apiKeySource?: ApiKeySource;
+  }
+): UserSettingsRecord {
+  const database = getDb();
+
+  database
+    .prepare(
+      `
+        INSERT INTO user_settings (user_id, api_key_encrypted, api_base_url, api_key_source, updated_at)
+        VALUES (?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(user_id) DO UPDATE SET
+          api_key_encrypted = COALESCE(excluded.api_key_encrypted, api_key_encrypted),
+          api_base_url = excluded.api_base_url,
+          api_key_source = COALESCE(excluded.api_key_source, api_key_source),
+          updated_at = datetime('now')
+      `
+    )
+    .run(
+      userId,
+      settings.apiKeyEncrypted ?? null,
+      settings.apiBaseUrl ?? null,
+      settings.apiKeySource ?? 'default'
+    );
+
+  const savedSettings = getUserSettings(userId);
+  if (!savedSettings) {
+    throw new Error(`Failed to save settings for user "${userId}"`);
+  }
+
+  return savedSettings;
+}
+
+export function clearUserApiKey(userId: string): UserSettingsRecord {
+  const database = getDb();
+
+  database
+    .prepare(
+      `
+        INSERT INTO user_settings (user_id, api_key_encrypted, api_base_url, api_key_source, updated_at)
+        VALUES (?, NULL, NULL, 'default', datetime('now'))
+        ON CONFLICT(user_id) DO UPDATE SET
+          api_key_encrypted = NULL,
+          api_base_url = NULL,
+          api_key_source = 'default',
+          updated_at = datetime('now')
+      `
+    )
+    .run(userId);
+
+  const savedSettings = getUserSettings(userId);
+  if (!savedSettings) {
+    throw new Error(`Failed to clear settings for user "${userId}"`);
+  }
+
+  return savedSettings;
 }

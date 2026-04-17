@@ -132,7 +132,7 @@ environmentRouter.post('/api/environment/start', async (req, res) => {
     }
 
     updateSessionEnvironment(sessionId, session.containerId, 'starting');
-    const containerId = await createContainer(sessionId);
+    const containerId = await createContainer(sessionId, access.user.id);
     createSession(sessionId, containerId, 'running', access.user.id);
 
     res.json({
@@ -255,7 +255,7 @@ environmentRouter.post('/api/environment/reset', async (req, res) => {
 
     updateSessionEnvironment(sessionId, session.containerId, 'starting');
     await removeContainer(sessionId);
-    const containerId = await createContainer(sessionId);
+    const containerId = await createContainer(sessionId, access.user.id);
     createSession(sessionId, containerId, 'running', access.user.id);
 
     res.json({

@@ -48,7 +48,7 @@ resetRouter.post('/api/reset', async (req, res) => {
     // MVP reset 策略：直接删旧容器，再从镜像创建新容器。
     // 这样比在容器里手动清理文件更可靠，也更容易给新同学理解。
     await removeContainer(sessionId);
-    const containerId = await createContainer(sessionId);
+    const containerId = await createContainer(sessionId, access.user.id);
     createSession(sessionId, containerId, 'running', access.user.id);
 
     res.json({

@@ -31,6 +31,8 @@
 | **better-sqlite3** | SQLite 数据库 | 存用户进度（极简，零配置） |
 | **Cloudflare Tunnel** | 内网穿透 | 把台式机服务暴露到公网 |
 
+API Key 管理契约见 [API_KEY_SETTINGS_CONTRACT.md](./API_KEY_SETTINGS_CONTRACT.md)。
+
 ---
 
 ## 起步指南（Step by Step）
