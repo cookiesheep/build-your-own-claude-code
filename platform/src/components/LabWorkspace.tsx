@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
+import { Group, Panel, Separator } from "react-resizable-panels";
 
 import {
   createSession,
@@ -263,76 +264,85 @@ export default function LabWorkspace({ lab }: LabWorkspaceProps) {
           : `状态: ${STATUS_LABELS[lab.status]}`;
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-[var(--bg-panel)] p-5">
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_48px_minmax(0,0.9fr)] gap-4">
-        <CodeEditor
-          code={code}
-          fileName={LAB_FILE_NAMES[lab.id] ?? "main.ts"}
-          onChange={handleCodeChange}
-        />
+    <section className="flex h-full min-w-0 flex-col overflow-hidden bg-[var(--bg-panel)] p-5">
+      <Group orientation="vertical" style={{ height: "100%" }}>
+        <Panel defaultSize="55%" minSize="25%">
+          <div className="flex h-full flex-col gap-4">
+            <div className="min-h-0 flex-1">
+              <CodeEditor
+                code={code}
+                fileName={LAB_FILE_NAMES[lab.id] ?? "main.ts"}
+                onChange={handleCodeChange}
+              />
+            </div>
+            <div className="flex h-12 shrink-0 items-center justify-between rounded-2xl border border-[var(--surface-hover)] bg-[color:rgba(10,10,10,0.92)] px-4">
+              <div className="flex items-center gap-3">
+                <SubmitButton onSubmit={handleSubmit} />
+                <button
+                  type="button"
+                  disabled={!sessionId || isStartingEnvironment || environmentStatus === "running"}
+                  onClick={() => {
+                    void handleStartEnvironment();
+                  }}
+                  className="rounded-xl border border-[color:rgba(34,211,238,0.35)] bg-[color:rgba(34,211,238,0.08)] px-3 py-2 text-sm text-[var(--accent)] transition-colors duration-150 hover:bg-[color:rgba(34,211,238,0.14)] disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-transparent disabled:text-[var(--text-disabled)]"
+                >
+                  {isStartingEnvironment
+                    ? "启动中..."
+                    : environmentStatus === "running"
+                      ? "环境已启动"
+                      : "启动实验环境"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleReset();
+                  }}
+                  className="rounded-xl border border-transparent px-3 py-2 text-sm text-[var(--text-muted)] transition-colors duration-150 hover:border-[var(--border)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                >
+                  重置环境
+                </button>
+              </div>
 
-        <div className="flex h-12 items-center justify-between rounded-2xl border border-[var(--surface-hover)] bg-[color:rgba(10,10,10,0.92)] px-4">
-          <div className="flex items-center gap-3">
-            <SubmitButton onSubmit={handleSubmit} />
-            <button
-              type="button"
-              disabled={!sessionId || isStartingEnvironment || environmentStatus === "running"}
-              onClick={() => {
-                void handleStartEnvironment();
-              }}
-              className="rounded-xl border border-[color:rgba(34,211,238,0.35)] bg-[color:rgba(34,211,238,0.08)] px-3 py-2 text-sm text-[var(--accent)] transition-colors duration-150 hover:bg-[color:rgba(34,211,238,0.14)] disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-transparent disabled:text-[var(--text-disabled)]"
-            >
-              {isStartingEnvironment
-                ? "启动中..."
-                : environmentStatus === "running"
-                  ? "环境已启动"
-                  : "启动实验环境"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                void handleReset();
-              }}
-              className="rounded-xl border border-transparent px-3 py-2 text-sm text-[var(--text-muted)] transition-colors duration-150 hover:border-[var(--border)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-            >
-              重置环境
-            </button>
+              <div className="flex items-center gap-3 text-sm">
+                <span className={canSubmit ? "text-[var(--status-success)]" : "text-[var(--text-secondary)]"}>
+                  {environmentStatusText}
+                </span>
+                <span className="text-[var(--text-secondary)]">{statusText}</span>
+                <span className="text-xs text-[var(--text-muted)]">
+                  {saveState === "loading"
+                    ? "草稿加载中"
+                    : saveState === "dirty"
+                      ? "草稿未保存"
+                      : saveState === "saving"
+                        ? "保存中..."
+                        : saveState === "saved"
+                          ? `已保存${lastSavedAt ? ` ${lastSavedAt}` : ""}`
+                          : saveState === "error"
+                            ? "保存失败"
+                            : "尚无草稿"}
+                </span>
+                <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1 text-xs text-[var(--text-muted)]">
+                  {sessionId || "session: pending"}
+                </span>
+                <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1 text-xs text-[var(--text-muted)]">
+                  {userId ? `user: ${userId.slice(0, 8)}` : "user: pending"}
+                </span>
+              </div>
+            </div>
           </div>
+        </Panel>
 
-          <div className="flex items-center gap-3 text-sm">
-            <span className={canSubmit ? "text-[var(--status-success)]" : "text-[var(--text-secondary)]"}>
-              {environmentStatusText}
-            </span>
-            <span className="text-[var(--text-secondary)]">{statusText}</span>
-            <span className="text-xs text-[var(--text-muted)]">
-              {saveState === "loading"
-                ? "草稿加载中"
-                : saveState === "dirty"
-                  ? "草稿未保存"
-                  : saveState === "saving"
-                    ? "保存中..."
-                    : saveState === "saved"
-                      ? `已保存${lastSavedAt ? ` ${lastSavedAt}` : ""}`
-                      : saveState === "error"
-                        ? "保存失败"
-                        : "尚无草稿"}
-            </span>
-            <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1 text-xs text-[var(--text-muted)]">
-              {sessionId || "session: pending"}
-            </span>
-            <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1 text-xs text-[var(--text-muted)]">
-              {userId ? `user: ${userId.slice(0, 8)}` : "user: pending"}
-            </span>
-          </div>
-        </div>
+        <Separator style={{ height: 1, background: "var(--border)" }} />
 
-        <Terminal
-          buildLog={buildLog}
-          showProgress={environmentStatus === "starting"}
-          waitingMessage={environmentMessage || environmentStatusText}
-          wsUrl={terminalUrl || undefined}
-        />
-      </div>
+        <Panel defaultSize="45%" minSize="20%">
+          <Terminal
+            buildLog={buildLog}
+            showProgress={environmentStatus === "starting"}
+            waitingMessage={environmentMessage || environmentStatusText}
+            wsUrl={terminalUrl || undefined}
+          />
+        </Panel>
+      </Group>
     </section>
   );
 }

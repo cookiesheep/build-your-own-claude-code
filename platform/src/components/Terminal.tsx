@@ -5,6 +5,8 @@ import type { IDisposable } from "xterm";
 import { Terminal as XTerm } from "xterm";
 import "xterm/css/xterm.css";
 
+import { useTheme } from "./ThemeProvider";
+
 type TerminalProps = {
   wsUrl?: string;
   buildLog?: string;
@@ -23,6 +25,28 @@ const TTYD_COMMAND = {
 } as const;
 
 const ESTIMATED_CONNECT_SECONDS = 35;
+
+const DARK_THEME = {
+  background: "#0d1117",
+  foreground: "#e5e5e5",
+  cursor: "#22d3ee",
+  selectionBackground: "rgba(34,211,238,0.25)",
+  black: "#0d1117",
+  brightBlack: "#666666",
+  cyan: "#22d3ee",
+  brightCyan: "#67e8f9",
+};
+
+const LIGHT_THEME = {
+  background: "#f8f6f1",
+  foreground: "#1a1a1a",
+  cursor: "#0891b2",
+  selectionBackground: "rgba(8,145,178,0.2)",
+  black: "#f8f6f1",
+  brightBlack: "#9ca3af",
+  cyan: "#0891b2",
+  brightCyan: "#06b6d4",
+};
 
 function useElapsedSeconds(): number {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -56,7 +80,7 @@ function TerminalWaitingPanel({
         : "连接时间较长，仍在等待后端返回终端地址";
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-b-2xl border border-[var(--border)] bg-[#0d1117] shadow-[0_-8px_30px_rgba(0,0,0,0.25)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden border border-[var(--border)] bg-[var(--bg-panel)]">
       <TerminalHeader state={showProgress ? "connecting" : "idle"} />
       <div className="flex min-h-0 flex-1 flex-col justify-between p-5">
         <div>
@@ -79,13 +103,13 @@ function TerminalWaitingPanel({
             </div>
           )}
           <div className="mt-4 rounded-xl border border-[color:rgba(34,211,238,0.18)] bg-[color:rgba(34,211,238,0.06)] p-3 text-xs leading-6 text-[var(--text-secondary)]">
-            点击“启动实验环境”后，平台会创建 Docker 容器并返回真实 ttyd 终端地址。
-            如果启动超过 60 秒，请检查后端 `http://localhost:3001` 和 Docker 容器状态。
+            点击「启动实验环境」后，平台会创建 Docker 容器并返回真实 ttyd 终端地址。
+            如果启动超过 60 秒，请检查后端和 Docker 容器状态。
           </div>
         </div>
 
         {buildLog ? (
-          <pre className="mt-4 max-h-36 overflow-auto rounded-xl border border-[var(--border)] bg-black/30 p-3 text-xs leading-5 text-[var(--text-secondary)]">
+          <pre className="mt-4 max-h-36 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] p-3 text-xs leading-5 text-[var(--text-secondary)]">
             {buildLog}
           </pre>
         ) : (
@@ -108,7 +132,7 @@ function TerminalHeader({ state }: { state: ConnectionState }) {
   }[state];
 
   return (
-    <div className="flex h-9 items-center justify-between border-b border-[var(--border)] bg-[color:rgba(10,10,10,0.92)] px-4">
+    <div className="flex h-9 items-center justify-between border-b border-[var(--border)] bg-[var(--bg-panel)] px-4">
       <span className="text-[0.7rem] uppercase tracking-[0.2em] text-[var(--text-muted)]">
         Terminal
       </span>
@@ -137,6 +161,7 @@ function ConnectedTerminal({
   const socketDisposablesRef = useRef<IDisposable[]>([]);
   const lastBuildLogRef = useRef<string>("");
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
+  const { theme } = useTheme();
 
   const disposeSocketDisposables = () => {
     socketDisposablesRef.current.forEach((disposable) => disposable.dispose());
@@ -148,10 +173,6 @@ function ConnectedTerminal({
     let setupTimer: number | null = null;
     let resizeObserver: ResizeObserver | null = null;
 
-    // React dev/StrictMode intentionally mounts and cleans up effects once
-    // before keeping the real instance. xterm schedules viewport refresh work
-    // during open(), so delay setup slightly to avoid creating then immediately
-    // disposing a terminal that still has internal refresh callbacks pending.
     setupTimer = window.setTimeout(() => {
       const host = hostRef.current;
       if (!host || disposed) {
@@ -168,16 +189,7 @@ function ConnectedTerminal({
         cursorBlink: true,
         fontSize: 13,
         fontFamily: "JetBrains Mono, Fira Code, monospace",
-        theme: {
-          background: "#0d1117",
-          foreground: "#e5e5e5",
-          cursor: "#22d3ee",
-          selectionBackground: "rgba(34,211,238,0.25)",
-          black: "#0d1117",
-          brightBlack: "#666666",
-          cyan: "#22d3ee",
-          brightCyan: "#67e8f9",
-        },
+        theme: theme === "light" ? LIGHT_THEME : DARK_THEME,
       });
 
       terminalRef.current = terminal;
@@ -288,7 +300,7 @@ function ConnectedTerminal({
       socket.addEventListener("error", () => {
         if (!disposed) {
           setConnectionState("error");
-          terminal.writeln("> WebSocket connection failed. 请确认后端 server 正在 http://localhost:3001 运行。");
+          terminal.writeln("> WebSocket connection failed. 请确认后端 server 正在运行。");
         }
       });
 
@@ -314,7 +326,7 @@ function ConnectedTerminal({
       terminalRef.current?.dispose();
       terminalRef.current = null;
     };
-  }, [wsUrl]);
+  }, [wsUrl, theme]);
 
   useEffect(() => {
     const terminal = terminalRef.current;
@@ -329,8 +341,10 @@ function ConnectedTerminal({
     terminal.writeln("---------------------");
   }, [buildLog]);
 
+  const bgColor = theme === "light" ? "#f8f6f1" : "#0d1117";
+
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-b-2xl border border-[var(--border)] bg-[#0d1117] shadow-[0_-8px_30px_rgba(0,0,0,0.25)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden border border-[var(--border)]" style={{ background: bgColor }}>
       <TerminalHeader state={connectionState} />
       <div ref={hostRef} className="min-h-0 flex-1 px-2 py-2" />
     </div>

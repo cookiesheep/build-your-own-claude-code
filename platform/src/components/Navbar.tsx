@@ -1,10 +1,11 @@
 'use client';
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import { LABS, STATUS_COLORS } from "@/lib/labs";
+import { checkAuth, logout, type User } from "@/lib/auth";
 import { useTheme } from "./ThemeProvider";
 
 /* ─── Sun / Moon icons ─── */
@@ -121,7 +122,34 @@ function LandingNav({ scrolled }: { scrolled: boolean }) {
 /* ─── Lab Navbar ─── */
 function LabNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const [user, setUser] = useState<User | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    void checkAuth().then((auth) => {
+      if (auth.isAuthenticated) setUser(auth.user);
+    });
+  }, []);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const handleLogout = async () => {
+    setShowDropdown(false);
+    await logout();
+    setUser(null);
+    router.push("/");
+  };
 
   return (
     <nav
@@ -182,13 +210,36 @@ function LabNav() {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5">
-          <span
-            className="h-2 w-2 rounded-full"
-            style={{ backgroundColor: STATUS_COLORS.completed }}
-          />
-          <span className="text-[0.72rem] text-[var(--text-muted)]">容器未连接</span>
-        </div>
+        {user ? (
+          <div ref={dropdownRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5 text-[0.72rem] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+            >
+              <span className="h-2 w-2 rounded-full bg-[var(--status-success)]" />
+              <span>{user.username}</span>
+            </button>
+            {showDropdown && (
+              <div className="absolute right-0 top-full mt-1 w-32 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] shadow-lg">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                >
+                  登出
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link
+            href={`/login?redirect=${encodeURIComponent(pathname)}`}
+            className="rounded-xl border border-[color:rgba(212,165,116,0.35)] bg-[color:rgba(212,165,116,0.08)] px-3 py-1.5 text-xs text-[var(--accent)] transition-colors hover:bg-[color:rgba(212,165,116,0.14)]"
+          >
+            登录
+          </Link>
+        )}
 
         <button
           onClick={toggleTheme}

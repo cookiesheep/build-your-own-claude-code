@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 
+import { useTheme } from "./ThemeProvider";
+
 const Editor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
   loading: () => (
@@ -22,9 +24,11 @@ export default function CodeEditor({
   fileName,
   onChange,
 }: CodeEditorProps) {
+  const { theme } = useTheme();
+
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--bg-panel)] shadow-[0_0_0_1px_rgba(255,255,255,0.01),0_16px_40px_rgba(0,0,0,0.35)]">
-      <div className="flex h-9 items-center gap-2 border-b border-[var(--border)] bg-[color:rgba(15,15,15,0.98)] px-4">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden border-b border-[var(--border)] bg-[var(--bg-panel)]">
+      <div className="flex h-9 items-center gap-2 border-b border-[var(--border)] bg-[var(--bg-panel)] px-4">
         <span className="text-[0.7rem] uppercase tracking-[0.18em] text-[var(--text-muted)]">
           TS
         </span>
@@ -34,7 +38,7 @@ export default function CodeEditor({
         <Editor
           height="100%"
           defaultLanguage="typescript"
-          theme="vs-dark"
+          theme={theme === "light" ? "light" : "vs-dark"}
           value={code}
           onChange={(value) => {
             onChange(value ?? "");

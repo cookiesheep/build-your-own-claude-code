@@ -650,6 +650,41 @@
 - 2. 做一次真实浏览器端到端联调：`/lab/3` → submit → terminal → `node cli.js`
 - 3. 端到端跑通后，再考虑 TTL cleanup 或演示 token
 
+### 2026-04-17（会话 17 / 紧急重排路线图 + 认证 + API Key 提示词）
+
+**完成项**：
+- ✅ 发现 GitHub 同名竞品 codecrafters-io/build-your-own-claude-code，紧急重排路线图
+- ✅ 创建 `internal/prompt/紧急重排路线图.md` — 新优先级：认证 > API Key > Lab 打磨
+- ✅ 创建 `internal/prompt/认证系统开发提示词.md` — 用户名/密码认证系统完整提示词
+  - 管理员 CLI 创建账号，不开放注册
+  - JWT + httpOnly cookie 会话管理
+  - bcrypt 密码哈希
+  - /platform 首页可匿名浏览，/lab/:id 需登录
+- ✅ 创建 `internal/prompt/API密钥管理开发提示词.md` — API Key 管理系统完整提示词
+  - 默认共享 Key + 用户可选自带 Key
+  - AES-256-CBC 加密存储
+  - 容器创建时通过 ENV 注入
+- ✅ 确认认证方案：用户名/密码（Leader 给队友/内测者发账号），后续加 GitHub OAuth
+- ✅ 确认 API Key 方案：默认共享 + 用户可选，后续考虑细粒度管理
+
+**进行中**：
+- 🔄 byocc.cc 域名 + Cloudflare Tunnel 部署（另一同学负责）
+- 🔄 营销首页 + Lab 工作台已在另一会话实现（粒子动画 + 可调整面板）
+
+**阻塞项**：
+- ⚠️ 公开部署依赖认证系统完成
+
+**验证**：
+- 三个提示词文件已创建，结构完整
+- `internal/REPRIORITIZED_ROADMAP.md` 包含完整时间线和风险分析
+
+**下一步**：
+- 后端同学使用 `internal/prompt/认证系统开发提示词.md` 实现认证 API
+- 前端同学使用 `internal/prompt/认证界面开发提示词.md` 实现登录页面
+- 认证完成后使用 `internal/prompt/API密钥管理开发提示词.md` 实现 Key 管理
+- Lab 工作台改动（PR-P2.1）待认证完成后一起提交合并
+- 部署 byocc.cc 公开首页和文档
+
 ### 2026-04-16（会话 15 / 平台架构复盘 + 前端重构规划）
 
 **完成项**：
