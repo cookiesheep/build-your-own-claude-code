@@ -31,6 +31,7 @@ export default function RootLayout({
     <html
       lang="zh-CN"
       data-theme="dark"
+      suppressHydrationWarning
       className={`${inter.variable} ${jetBrainsMono.variable} h-full antialiased`}
       data-scroll-behavior="smooth"
     >
