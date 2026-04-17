@@ -1,24 +1,75 @@
 @import "tailwindcss";
 
-:root {
-  --bg-page: #0a0a0a;
-  --bg-panel: #111111;
-  --bg-card: #161616;
-  --surface-hover: #1c1c1c;
+/* ─── Dark mode (default) ─── */
+[data-theme="dark"] {
+  --bg-page: #0B0B0B;
+  --bg-panel: #141414;
+  --bg-card: #141414;
+  --surface-hover: #1C1C1C;
+
   --border: #262626;
-  --border-hover: #333333;
-  --text-primary: #e5e5e5;
-  --text-secondary: #888888;
-  --text-muted: #666666;
-  --text-disabled: #444444;
-  --accent: #22d3ee;
-  --accent-dark: #0891b2;
-  --accent-button-bg: #164e63;
-  --accent-button-text: #22d3ee;
-  --status-success: #10b981;
-  --status-warning: #f59e0b;
-  --status-error: #ef4444;
-  --status-progress: #3b82f6;
+  --border-hover: #3A3A3A;
+
+  --text-primary: #E8E4DD;
+  --text-secondary: #8B8578;
+  --text-muted: #6B6560;
+  --text-disabled: #4A4640;
+
+  --accent: #D4A574;
+  --accent-light: #E8C49A;
+  --accent-dark: #B8895A;
+  --accent-button-bg: rgba(212, 165, 116, 0.12);
+  --accent-button-text: #D4A574;
+  --accent-border: rgba(212, 165, 116, 0.3);
+
+  --aux-blue: #8B9DAF;
+  --aux-green: #7EBF8E;
+
+  --status-success: #7EBF8E;
+  --status-warning: #D4A574;
+  --status-error: #C75050;
+  --status-progress: #8B9DAF;
+
+  --particle-color: #D4A574;
+  --particle-glow: rgba(212, 165, 116, 0.4);
+
+  --background: var(--bg-page);
+  --foreground: var(--text-primary);
+}
+
+/* ─── Light mode ─── */
+[data-theme="light"] {
+  --bg-page: #F7F4EF;
+  --bg-panel: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --surface-hover: #EDE9E3;
+
+  --border: #E8E4DD;
+  --border-hover: #D4CFC7;
+
+  --text-primary: #1A1A1A;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --text-disabled: #D1D5DB;
+
+  --accent: #C17F4E;
+  --accent-light: #D4975E;
+  --accent-dark: #A66A3C;
+  --accent-button-bg: rgba(193, 127, 78, 0.1);
+  --accent-button-text: #C17F4E;
+  --accent-border: rgba(193, 127, 78, 0.3);
+
+  --aux-blue: #6B7FAF;
+  --aux-green: #5A9A5A;
+
+  --status-success: #5A9A5A;
+  --status-warning: #C17F4E;
+  --status-error: #B04040;
+  --status-progress: #6B7FAF;
+
+  --particle-color: #C17F4E;
+  --particle-glow: rgba(193, 127, 78, 0.3);
+
   --background: var(--bg-page);
   --foreground: var(--text-primary);
 }
@@ -30,6 +81,7 @@
   --font-mono: var(--font-jetbrains-mono);
 }
 
+/* ─── Base ─── */
 * {
   box-sizing: border-box;
 }
@@ -51,21 +103,59 @@ a {
 }
 
 ::selection {
-  background: rgba(34, 211, 238, 0.2);
+  background: rgba(212, 165, 116, 0.2);
 }
 
+/* ─── Utility classes ─── */
 .grid-pattern {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    radial-gradient(circle at top, rgba(34, 211, 238, 0.12), transparent 28%);
+    radial-gradient(circle at top, rgba(212, 165, 116, 0.08), transparent 28%);
   background-position: center;
   background-size: 36px 36px, 36px 36px, 100% 100%;
 }
 
-@keyframes pulse-dot {
-  0%,
+/* ─── Animations ─── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceDown {
+  0%, 100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, 8px);
+  }
+}
+
+@keyframes flowRight {
+  0% {
+    left: -4px;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
   100% {
+    left: calc(100% - 4px);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
     opacity: 0.55;
     transform: scale(0.9);
   }
@@ -75,6 +165,7 @@ a {
   }
 }
 
+/* ─── Markdown body (used by Lab pages) ─── */
 .markdown-body {
   line-height: 1.7;
 }
@@ -83,7 +174,7 @@ a {
   margin: 1.5rem 0 0.75rem;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #f5f5f5;
+  color: var(--text-primary);
 }
 
 .markdown-body h2 {
@@ -99,12 +190,12 @@ a {
   margin: 1rem 0 0.4rem;
   font-size: 1rem;
   font-weight: 600;
-  color: #d4d4d4;
+  color: var(--text-primary);
 }
 
 .markdown-body p {
   margin: 0.5rem 0;
-  color: #a3a3a3;
+  color: var(--text-secondary);
 }
 
 .markdown-body code {
@@ -134,7 +225,7 @@ a {
 .markdown-body ul,
 .markdown-body ol {
   padding-left: 1.5rem;
-  color: #a3a3a3;
+  color: var(--text-secondary);
 }
 
 .markdown-body li {
@@ -157,10 +248,10 @@ a {
 }
 
 .markdown-body td {
-  border: 1px solid var(--surface-hover);
+  border: 1px solid var(--border);
   padding: 0.5rem 0.75rem;
   font-size: 0.85rem;
-  color: #a3a3a3;
+  color: var(--text-secondary);
 }
 
 .markdown-body blockquote {
@@ -193,20 +284,20 @@ a {
 
 .admonition.danger {
   border-color: var(--status-error);
-  background: #1a0505;
+  background: rgba(199, 80, 80, 0.08);
 }
 
 .admonition.warning {
   border-color: var(--status-warning);
-  background: #1a1205;
+  background: rgba(212, 165, 116, 0.08);
 }
 
 .admonition.note {
   border-color: var(--accent);
-  background: #051a1a;
+  background: rgba(212, 165, 116, 0.06);
 }
 
 .admonition.success {
   border-color: var(--status-success);
-  background: #051a0d;
+  background: rgba(126, 191, 142, 0.06);
 }
