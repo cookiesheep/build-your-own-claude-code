@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 
 import Navbar from "@/components/Navbar";
+import ThemeProvider from "@/components/ThemeProvider";
 
 import "./globals.css";
 
@@ -17,7 +18,8 @@ const jetBrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Build Your Own Claude Code",
-  description: "Learn Agent Harness Engineering by building Claude Code from scratch",
+  description:
+    "Learn Agent Harness Engineering by building Claude Code from scratch",
 };
 
 export default function RootLayout({
@@ -28,12 +30,22 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
+      data-theme="dark"
       className={`${inter.variable} ${jetBrainsMono.variable} h-full antialiased`}
       data-scroll-behavior="smooth"
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('byocc-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-full bg-[var(--bg-page)]">
-        <Navbar />
-        <main className="h-screen pt-14">{children}</main>
+        <ThemeProvider>
+          <Navbar />
+          <main>{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   );
