@@ -1,8 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import LabSidebar from "@/components/LabSidebar";
-import LabWorkspace from "@/components/LabWorkspace";
+import LabLayout from "@/components/LabLayout";
 import { LABS } from "@/lib/labs";
 
 type LabPageProps = {
@@ -33,9 +32,8 @@ export default async function LabPage({ params }: LabPageProps) {
   const content = await readLabMarkdown(lab.id);
 
   return (
-    <div className="flex h-[calc(100vh-56px)] overflow-hidden bg-[var(--bg-page)]">
-      <LabSidebar labId={lab.id} content={content} />
-      <LabWorkspace key={lab.id} lab={lab} />
+    <div style={{ marginTop: 56 }}>
+      <LabLayout lab={lab} content={content} />
     </div>
   );
 }
