@@ -34,12 +34,12 @@ type Phase =
 
 /* ─── Phase Timing (seconds) ─── */
 const PHASE_DURATION: Record<Phase, number> = {
-  scatter: 9,
-  terminal: 15,
+  scatter: 6,
+  terminal: 12,
   explode1: 4,
-  buildYourOwn: 9,
+  buildYourOwn: 7,
   explode2: 4,
-  stable: 15,        // loops back to scatter after this
+  stable: 12,        // loops back to scatter after this
 };
 
 

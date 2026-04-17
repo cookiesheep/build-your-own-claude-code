@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 // 进入后端联调阶段后，默认应该优先走真实后端。
 // 如果你只是单独调前端，也可以手动设置 NEXT_PUBLIC_MOCK_MODE=true 切回 mock。
 const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
@@ -105,20 +105,31 @@ function withAuthHeader(
 }
 
 async function authorizedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  const token = await ensureAnonymousUser();
   const firstResponse = await fetch(input, {
     ...init,
-    headers: withAuthHeader(init.headers, token),
+    credentials: "include",
   });
 
   if (firstResponse.status !== 401) {
     return firstResponse;
   }
 
+  const token = await ensureAnonymousUser();
+  const secondResponse = await fetch(input, {
+    ...init,
+    credentials: "include",
+    headers: withAuthHeader(init.headers, token),
+  });
+
+  if (secondResponse.status !== 401) {
+    return secondResponse;
+  }
+
   clearStoredAuthToken();
   const refreshedToken = await ensureAnonymousUser();
   return fetch(input, {
     ...init,
+    credentials: "include",
     headers: withAuthHeader(init.headers, refreshedToken),
   });
 }

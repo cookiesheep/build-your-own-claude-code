@@ -23,6 +23,9 @@ type UserRow = {
   id: string;
   kind: string;
   github_id: string | null;
+  username: string | null;
+  password_hash: string | null;
+  role: string | null;
   nickname: string | null;
   avatar_url: string | null;
 };
@@ -50,14 +53,24 @@ export type EnvironmentStatus =
   | 'expired'
   | 'error';
 
-export type UserKind = 'anonymous' | 'github';
+export type UserKind = 'anonymous' | 'github' | 'password';
+export type UserRole = 'admin' | 'user';
 
 export type UserRecord = {
   id: string;
   kind: UserKind;
   githubId: string | null;
+  username: string | null;
+  role: UserRole | null;
   nickname: string | null;
   avatarUrl: string | null;
+};
+
+export type PasswordUserRecord = UserRecord & {
+  kind: 'password';
+  username: string;
+  role: UserRole;
+  passwordHash: string;
 };
 
 export type SessionRecord = {
@@ -101,6 +114,9 @@ export function initDatabase(): void {
       id TEXT PRIMARY KEY,
       kind TEXT NOT NULL DEFAULT 'anonymous',
       github_id TEXT UNIQUE,
+      username TEXT,
+      password_hash TEXT,
+      role TEXT DEFAULT 'user',
       nickname TEXT,
       avatar_url TEXT,
       created_at TEXT DEFAULT (datetime('now'))
@@ -141,10 +157,22 @@ export function initDatabase(): void {
       PRIMARY KEY (user_id, lab_number),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS user_settings (
+      user_id TEXT PRIMARY KEY,
+      api_key_encrypted TEXT,
+      api_key_source TEXT DEFAULT 'default',
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
   `);
 
   const sessionColumns = db
     .prepare<[], { name: string }>('PRAGMA table_info(sessions)')
+    .all()
+    .map((column) => column.name);
+  const userColumns = db
+    .prepare<[], { name: string }>('PRAGMA table_info(users)')
     .all()
     .map((column) => column.name);
 
@@ -167,6 +195,22 @@ export function initDatabase(): void {
     `);
   }
 
+  if (!userColumns.includes('username')) {
+    db.exec('ALTER TABLE users ADD COLUMN username TEXT');
+  }
+
+  if (!userColumns.includes('password_hash')) {
+    db.exec('ALTER TABLE users ADD COLUMN password_hash TEXT');
+  }
+
+  if (!userColumns.includes('role')) {
+    db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
+  }
+
+  db.exec(
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL'
+  );
+
   console.log(`💾 Database initialized: ${DB_PATH}`);
 }
 
@@ -175,6 +219,8 @@ function mapUser(row: UserRow): UserRecord {
     id: row.id,
     kind: row.kind as UserKind,
     githubId: row.github_id,
+    username: row.username,
+    role: row.role as UserRole | null,
     nickname: row.nickname,
     avatarUrl: row.avatar_url,
   };
@@ -226,7 +272,7 @@ export function getUser(userId: string): UserRecord | null {
   const row = database
     .prepare<[string], UserRow>(
       `
-        SELECT id, kind, github_id, nickname, avatar_url
+        SELECT id, kind, github_id, username, password_hash, role, nickname, avatar_url
         FROM users
         WHERE id = ?
       `
@@ -234,6 +280,56 @@ export function getUser(userId: string): UserRecord | null {
     .get(userId);
 
   return row ? mapUser(row) : null;
+}
+
+export function getPasswordUserByUsername(username: string): PasswordUserRecord | null {
+  const database = getDb();
+  const row = database
+    .prepare<[string], UserRow>(
+      `
+        SELECT id, kind, github_id, username, password_hash, role, nickname, avatar_url
+        FROM users
+        WHERE username = ? AND password_hash IS NOT NULL
+      `
+    )
+    .get(username);
+
+  if (!row || row.kind !== 'password' || !row.username || !row.password_hash || !row.role) {
+    return null;
+  }
+
+  return {
+    ...mapUser(row),
+    kind: 'password',
+    username: row.username,
+    role: row.role as UserRole,
+    passwordHash: row.password_hash,
+  };
+}
+
+export function createPasswordUser(input: {
+  id: string;
+  username: string;
+  passwordHash: string;
+  role: UserRole;
+}): UserRecord {
+  const database = getDb();
+
+  database
+    .prepare(
+      `
+        INSERT INTO users (id, kind, username, password_hash, role)
+        VALUES (?, 'password', ?, ?, ?)
+      `
+    )
+    .run(input.id, input.username, input.passwordHash, input.role);
+
+  const user = getUser(input.id);
+  if (!user) {
+    throw new Error(`Failed to create user "${input.username}"`);
+  }
+
+  return user;
 }
 
 /**
