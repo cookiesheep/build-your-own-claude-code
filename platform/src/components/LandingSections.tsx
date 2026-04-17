@@ -23,6 +23,91 @@ function useInView(threshold = 0.15) {
   return { ref, visible };
 }
 
+/* ─── Scroll parallax hook ─── */
+function useScrollParallax(rate = 0.04) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let raf = 0;
+    const isMobile = window.innerWidth < 768;
+    const effectiveRate = isMobile ? rate * 0.5 : rate;
+
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const viewH = window.innerHeight;
+        if (rect.bottom > 0 && rect.top < viewH) {
+          const center = rect.top + rect.height / 2;
+          const fromCenter = (center - viewH / 2) / viewH;
+          el.style.transform = `translateY(${fromCenter * effectiveRate * viewH}px)`;
+        }
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [rate]);
+
+  return ref;
+}
+
+/* ─── Tilt card wrapper ─── */
+function TiltCard({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
+    const el = ref.current;
+    if (!el) return;
+
+    let enabled = false;
+    const timer = setTimeout(() => { enabled = true; }, 800);
+
+    const onMove = (e: MouseEvent) => {
+      if (!enabled) return;
+      const rect = el.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      el.style.transform = `perspective(800px) rotateY(${x * 20}deg) rotateX(${-y * 20}deg)`;
+      el.style.setProperty('--tilt-x', `${x * 100 + 50}%`);
+      el.style.setProperty('--tilt-y', `${y * 100 + 50}%`);
+    };
+
+    const onLeave = () => {
+      if (!enabled) return;
+      el.style.transform = '';
+    };
+
+    el.addEventListener('mousemove', onMove);
+    el.addEventListener('mouseleave', onLeave);
+    return () => {
+      clearTimeout(timer);
+      el.removeEventListener('mousemove', onMove);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className="relative" style={{ transition: 'transform 0.15s ease-out', willChange: 'transform' }}>
+      <div
+        className="pointer-events-none absolute inset-0 z-10 rounded-2xl"
+        style={{
+          background: 'radial-gradient(circle at var(--tilt-x, 50%) var(--tilt-y, 50%), rgba(212,165,116,0.12) 0%, transparent 60%)',
+        }}
+      />
+      {children}
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════
    Section 1 — Hero
    ═══════════════════════════════════════ */
@@ -156,35 +241,48 @@ const SELLING_POINTS = [
 
 export function SellingPointsSection() {
   const { ref, visible } = useInView();
+  const titleRef = useScrollParallax(0.04);
 
   return (
     <section className="relative py-28 sm:py-36" ref={ref}>
       <div className="mx-auto max-w-6xl px-6 sm:px-8">
-        <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-[var(--text-primary)] sm:text-4xl">
-          为什么 BYOCC 不一样
-        </h2>
+        <div ref={titleRef} className="will-change-transform">
+          <h2
+            className="text-center text-3xl font-bold tracking-[-0.03em] text-[var(--text-primary)] sm:text-4xl"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(16px)',
+              transition: 'opacity 0.6s ease, transform 0.6s ease',
+            }}
+          >
+            为什么 BYOCC 不一样
+          </h2>
+        </div>
 
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {SELLING_POINTS.map((point, i) => (
             <div
               key={point.title}
-              className="group rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-7 transition-all duration-300 hover:border-[var(--accent)]"
               style={{
                 opacity: visible ? 1 : 0,
                 transform: visible ? 'translateY(0)' : 'translateY(24px)',
                 transition: `opacity 0.6s ease ${i * 0.12}s, transform 0.6s ease ${i * 0.12}s`,
               }}
             >
-              <div className="mb-5 text-[var(--accent)]">{point.icon}</div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                {point.title}
-              </h3>
-              <p className="mt-1 text-sm font-medium uppercase tracking-[0.15em] text-[var(--accent)]">
-                {point.subtitle}
-              </p>
-              <p className="mt-4 text-[0.92rem] leading-7 text-[var(--text-secondary)]">
-                {point.desc}
-              </p>
+              <TiltCard>
+                <div className="group rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-7 transition-all duration-300 hover:border-[var(--accent)]">
+                  <div className="mb-5 text-[var(--accent)]">{point.icon}</div>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    {point.title}
+                  </h3>
+                  <p className="mt-1 text-sm font-medium uppercase tracking-[0.15em] text-[var(--accent)]">
+                    {point.subtitle}
+                  </p>
+                  <p className="mt-4 text-[0.92rem] leading-7 text-[var(--text-secondary)]">
+                    {point.desc}
+                  </p>
+                </div>
+              </TiltCard>
             </div>
           ))}
         </div>
@@ -207,13 +305,23 @@ const LAB_DATA = [
 
 export function LabPreviewSection() {
   const { ref, visible } = useInView();
+  const titleRef = useScrollParallax(0.04);
 
   return (
     <section className="relative py-28 sm:py-36" ref={ref}>
       <div className="mx-auto max-w-6xl px-6 sm:px-8">
-        <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-[var(--text-primary)] sm:text-4xl">
-          6 个 Lab，从 0 到 Agent
-        </h2>
+        <div ref={titleRef} className="will-change-transform">
+          <h2
+            className="text-center text-3xl font-bold tracking-[-0.03em] text-[var(--text-primary)] sm:text-4xl"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(16px)',
+              transition: 'opacity 0.6s ease, transform 0.6s ease',
+            }}
+          >
+            6 个 Lab，从 0 到 Agent
+          </h2>
+        </div>
 
         {/* Horizontal scroll */}
         <div
@@ -286,12 +394,15 @@ const ARCH_NODES = [
   { title: 'Claude Code TUI', lines: ['真实 Agent', '工具调用循环'] },
 ];
 
-function Connector() {
+function Connector({ active }: { active: boolean }) {
   return (
     <div className="relative hidden h-0.5 w-12 flex-shrink-0 bg-[var(--border)] sm:block">
       <span
-        className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--accent)]"
-        style={{ animation: 'flowRight 2.4s ease-in-out infinite' }}
+        className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--accent)] transition-opacity duration-500"
+        style={{
+          animation: active ? 'flowRight 2.4s ease-in-out infinite' : 'none',
+          opacity: active ? 1 : 0.3,
+        }}
       />
     </div>
   );
@@ -299,15 +410,40 @@ function Connector() {
 
 export function ArchitectureSection() {
   const { ref, visible } = useInView();
+  const titleRef = useScrollParallax(0.04);
+  const [activeIdx, setActiveIdx] = useState(-1);
+
+  useEffect(() => {
+    if (!visible) return;
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setActiveIdx(ARCH_NODES.length - 1);
+      return;
+    }
+
+    const timers = ARCH_NODES.map((_, i) =>
+      setTimeout(() => setActiveIdx(i), 400 + i * 350)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [visible]);
 
   return (
     <section className="relative py-28 sm:py-36" ref={ref}>
       <div className="mx-auto max-w-5xl px-6 sm:px-8">
-        <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-[var(--text-primary)] sm:text-4xl">
-          它是怎么工作的
-        </h2>
+        <div ref={titleRef} className="will-change-transform">
+          <h2
+            className="text-center text-3xl font-bold tracking-[-0.03em] text-[var(--text-primary)] sm:text-4xl"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(16px)',
+              transition: 'opacity 0.6s ease, transform 0.6s ease',
+            }}
+          >
+            它是怎么工作的
+          </h2>
+        </div>
 
-        {/* Desktop: horizontal layout */}
+        {/* Desktop: horizontal layout with sequential reveal */}
         <div
           className="mt-16 hidden items-center justify-center sm:flex"
           style={{
@@ -316,17 +452,29 @@ export function ArchitectureSection() {
             transition: 'opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s',
           }}
         >
-          {ARCH_NODES.map((node, i) => (
-            <div key={node.title} className="flex items-center">
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-5 py-4 text-center transition-colors duration-300 hover:border-[var(--accent)]" style={{ minWidth: '140px' }}>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{node.title}</p>
-                {node.lines.map((line) => (
-                  <p key={line} className="mt-1 text-xs text-[var(--text-muted)]">{line}</p>
-                ))}
+          {ARCH_NODES.map((node, i) => {
+            const isActive = i <= activeIdx;
+            return (
+              <div key={node.title} className="flex items-center">
+                <div
+                  className="rounded-xl border bg-[var(--bg-card)] px-5 py-4 text-center"
+                  style={{
+                    minWidth: '140px',
+                    opacity: isActive ? 1 : 0.3,
+                    borderColor: isActive ? 'var(--accent)' : 'var(--border)',
+                    boxShadow: isActive ? '0 0 12px rgba(212,165,116,0.1)' : 'none',
+                    transition: `all 0.5s ease ${i * 0.1}s`,
+                  }}
+                >
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{node.title}</p>
+                  {node.lines.map((line) => (
+                    <p key={line} className="mt-1 text-xs text-[var(--text-muted)]">{line}</p>
+                  ))}
+                </div>
+                {i < ARCH_NODES.length - 1 && <Connector active={activeIdx > i} />}
               </div>
-              {i < ARCH_NODES.length - 1 && <Connector />}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Mobile: vertical layout */}

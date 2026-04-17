@@ -1,6 +1,8 @@
 import Link from "next/link";
 
-import { LABS, STATUS_LABELS } from "@/lib/labs";
+import { LABS } from "@/lib/labs";
+import PlatformLabCards from "@/components/PlatformLabCards";
+import ScrollReactiveOrbs from "@/components/ScrollReactiveOrbs";
 
 export const metadata = {
   title: "BYOCC — 选择 Lab",
@@ -8,8 +10,9 @@ export const metadata = {
 
 export default function PlatformPage() {
   return (
-    <div className="grid-pattern min-h-[calc(100vh-56px)] overflow-y-auto bg-[var(--bg-page)] pt-14">
-      <div className="mx-auto flex w-full max-w-7xl flex-col px-6 pb-16 pt-12 sm:px-8 lg:px-10">
+    <div className="grid-pattern relative min-h-[calc(100vh-56px)] overflow-y-auto bg-[var(--bg-page)] pt-14">
+      <ScrollReactiveOrbs />
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col px-6 pb-16 pt-12 sm:px-8 lg:px-10">
         <section className="relative overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--bg-panel)] px-8 py-10 shadow-[0_24px_80px_rgba(0,0,0,0.25)] sm:px-10 sm:py-12">
           <div
             className="absolute inset-0"
@@ -60,86 +63,7 @@ export default function PlatformPage() {
           </div>
         </section>
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {LABS.map((lab) => (
-            <Link
-              key={lab.id}
-              href={`/lab/${lab.id}`}
-              className="group relative overflow-hidden rounded-[24px] border bg-[var(--bg-panel)] p-5 transition duration-200"
-              style={{
-                borderColor: lab.highlight ? 'var(--accent-border)' : 'var(--border)',
-                boxShadow: lab.highlight
-                  ? '0 0 0 1px rgba(212,165,116,0.06), 0 18px 48px rgba(212,165,116,0.06)'
-                  : '0 12px 36px rgba(0,0,0,0.15)',
-              }}
-            >
-              <div className="absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      'linear-gradient(180deg, rgba(212,165,116,0.04), transparent 65%)',
-                  }}
-                />
-              </div>
-              <div
-                className="absolute inset-0 rounded-[24px] border border-transparent transition-colors duration-200 group-hover:border-[var(--accent)]"
-                aria-hidden="true"
-              />
-              <div className="relative flex h-full flex-col">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{lab.emoji}</span>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                        Lab {lab.id}
-                      </p>
-                      <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-                        {lab.name}
-                      </h2>
-                    </div>
-                  </div>
-                  <span
-                    className="rounded-full border px-2.5 py-1 text-[0.68rem] uppercase tracking-[0.15em]"
-                    style={{
-                      color: lab.highlight ? 'var(--accent)' : 'var(--text-secondary)',
-                      borderColor: lab.highlight ? 'var(--accent-border)' : 'var(--border)',
-                      background: lab.highlight
-                        ? 'var(--accent-button-bg)'
-                        : 'rgba(255,255,255,0.02)',
-                    }}
-                  >
-                    {lab.tag}
-                  </span>
-                </div>
-
-                <p className="mt-4 flex-1 text-sm leading-7 text-[var(--text-secondary)]">
-                  {lab.desc}
-                </p>
-
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{
-                        backgroundColor:
-                          lab.status === "completed"
-                            ? "var(--status-success)"
-                            : lab.status === "in_progress"
-                              ? "var(--status-progress)"
-                              : "var(--text-disabled)",
-                      }}
-                    />
-                    <span>{STATUS_LABELS[lab.status]}</span>
-                  </div>
-                  <span className="text-sm font-medium text-[var(--accent)] transition-transform duration-200 group-hover:translate-x-1">
-                    开始 →
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </section>
+        <PlatformLabCards labs={LABS} />
       </div>
     </div>
   );
