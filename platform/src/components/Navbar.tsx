@@ -132,7 +132,7 @@ function LabNav() {
 
   useEffect(() => {
     void checkAuth().then((auth) => {
-      if (auth.isAuthenticated) setUser(auth.user);
+      setUser(auth.isAuthenticated ? auth.user : null);
     });
   }, [pathname]);
 

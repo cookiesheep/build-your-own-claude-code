@@ -9,6 +9,11 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { createAnonymousUser, getPasswordUserByUsername } from '../db/database.js';
 import { getOptionalAuthUser } from '../middleware/auth.js';
+import {
+  checkLoginRateLimit,
+  clearLoginRateLimit,
+  recordLoginFailure,
+} from '../middleware/rate-limit.js';
 import { createUserToken } from '../services/auth-token.js';
 import {
   clearSessionCookie,
@@ -51,6 +56,13 @@ function publicUser(user: ReturnType<typeof toSessionUser>) {
 authRouter.post('/api/auth/anonymous', (req, res) => {
   const existingUser = getOptionalAuthUser(req);
   if (existingUser) {
+    if (existingUser.kind !== 'anonymous') {
+      res.status(409).json({
+        message: 'Already authenticated with a login session.',
+      });
+      return;
+    }
+
     res.json({
       token: createUserToken(existingUser),
       user: existingUser,
@@ -83,6 +95,15 @@ authRouter.post('/api/auth/login', async (req, res) => {
     return;
   }
 
+  const rateLimit = checkLoginRateLimit(req, credentials.username);
+  if (!rateLimit.allowed) {
+    res.status(429).json({
+      success: false,
+      error: `登录失败次数过多，请 ${Math.ceil(rateLimit.retryAfterSeconds / 60)} 分钟后再试。`,
+    });
+    return;
+  }
+
   const user = getPasswordUserByUsername(credentials.username);
   const passwordMatches = await bcrypt.compare(
     credentials.password,
@@ -90,6 +111,7 @@ authRouter.post('/api/auth/login', async (req, res) => {
   );
 
   if (!user || !passwordMatches) {
+    recordLoginFailure(req, credentials.username);
     res.status(401).json({
       success: false,
       error: '用户名或密码错误。',
@@ -97,6 +119,7 @@ authRouter.post('/api/auth/login', async (req, res) => {
     return;
   }
 
+  clearLoginRateLimit(req, credentials.username);
   const sessionUser = toSessionUser(user);
   if (!sessionUser) {
     res.status(500).json({

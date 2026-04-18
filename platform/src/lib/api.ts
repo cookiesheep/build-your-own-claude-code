@@ -63,6 +63,10 @@ export type WorkspaceResponse = {
   updatedAt: string | null;
 };
 
+type CookieAuthResponse = {
+  authenticated?: boolean;
+};
+
 function apiUrl(path: string): string {
   if (!API_BASE) {
     return path;
@@ -121,13 +125,41 @@ function withAuthHeader(
   return nextHeaders;
 }
 
+async function hasCookieAuth(): Promise<boolean> {
+  if (MOCK_MODE) {
+    return false;
+  }
+
+  const response = await fetch(apiUrl("/api/auth/me"), {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    return false;
+  }
+
+  const data = (await response.json().catch(() => null)) as CookieAuthResponse | null;
+  if (data?.authenticated) {
+    clearStoredAuthToken();
+    return true;
+  }
+
+  return false;
+}
+
 async function authorizedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const existingToken = getStoredAuthToken();
+  const bearerToken = existingToken && !(await hasCookieAuth()) ? existingToken : null;
   const firstResponse = await fetch(input, {
     ...init,
     credentials: "include",
+    headers: bearerToken ? withAuthHeader(init.headers, bearerToken) : init.headers,
   });
 
   if (firstResponse.status !== 401) {
+    return firstResponse;
+  }
+
+  if (await hasCookieAuth()) {
     return firstResponse;
   }
 
@@ -171,6 +203,7 @@ export async function createAnonymousUser(): Promise<AuthResponse> {
   const existingToken = getStoredAuthToken();
   const response = await fetch(apiUrl("/api/auth/anonymous"), {
     method: "POST",
+    credentials: "include",
     headers: existingToken
       ? {
           Authorization: `Bearer ${existingToken}`,
@@ -187,6 +220,14 @@ export async function createAnonymousUser(): Promise<AuthResponse> {
   const result = (await response.json()) as AuthResponse;
   setStoredAuthToken(result.token);
   return result;
+}
+
+export async function ensurePlatformIdentity(): Promise<void> {
+  if (await hasCookieAuth()) {
+    return;
+  }
+
+  await ensureAnonymousUser();
 }
 
 export async function getCurrentUser(): Promise<CurrentUserResponse> {

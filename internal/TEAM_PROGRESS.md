@@ -1577,6 +1577,40 @@
 
 ---
 
+### 2026-04-18（会话 32 / Code Review Fixes）
+
+**完成项**：
+- ✅ 在 `feat/review-fixes` 分支修复 code review 中确认的认证与 API Key 风险
+- ✅ 修复生产/公网运行时缺少 `SERVER_SESSION_SECRET` / `BYOCC_AUTH_SECRET` 时仍使用公开 fallback secret 的问题
+- ✅ 新增内存级登录失败限速，按 IP + username 记录失败，5 次失败后封禁 15 分钟
+- ✅ 将 API Key 加密从新写入的 AES-CBC 升级为 AES-256-GCM，并保留旧 CBC 密文读取兼容
+- ✅ 修复 settings API 的加密失败 JSON 错误响应与非法 `apiBaseUrl` 静默丢弃问题
+- ✅ 修复 Lab 启动时 password cookie 用户被降级生成 localStorage bearer token 的问题，并拒绝旧 password-kind bearer token
+- ✅ 修复 Navbar 在 cookie 失效/登出后仍显示旧用户的问题
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `npx tsc --noEmit --project server/tsconfig.json`
+- `npx tsc --noEmit --pretty false --project platform/tsconfig.json`
+- `cd server && npm test`
+- `cd server && npm run build`
+- `cd platform && npm run build`
+- `git diff --check`
+- smoke：`HOST=0.0.0.0` 或公网 `CORS_ORIGINS` 且缺少 `BYOCC_AUTH_SECRET` 时 auth token 模块启动失败
+- smoke：AES-GCM 新密文可解密，旧 CBC 密文仍可兼容解密
+- smoke：登录限速 5 次失败后返回阻断状态
+
+**下一步**：
+- 浏览器人工验证 `/login -> /lab/3 -> 启动环境 -> API Key 设置` 全链路
+- 公开 demo 前确认真实 `.env` 已设置 `SERVER_SESSION_SECRET`、`BYOCC_AUTH_SECRET`、`ENCRYPTION_KEY`、`DEFAULT_API_KEY`
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |

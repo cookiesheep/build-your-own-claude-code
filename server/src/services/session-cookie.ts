@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { getUser, type UserRecord } from '../db/database.js';
+import { getRuntimeSecret } from './runtime-security.js';
 
 export type SessionUser = {
   id: string;
@@ -16,16 +17,11 @@ type SessionPayload = {
 
 export const SESSION_COOKIE_NAME = 'byocc_session';
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
-const SESSION_SECRET =
-  process.env.SERVER_SESSION_SECRET ??
-  process.env.BYOCC_AUTH_SECRET ??
-  'byocc-dev-session-secret-change-me-before-public-demo';
-
-if (!process.env.SERVER_SESSION_SECRET && !process.env.BYOCC_AUTH_SECRET) {
-  console.warn(
-    'SERVER_SESSION_SECRET and BYOCC_AUTH_SECRET are not set. Using a development-only session secret; do not use this for public deployment.'
-  );
-}
+const SESSION_SECRET = getRuntimeSecret({
+  envNames: ['SERVER_SESSION_SECRET'],
+  fallback: 'byocc-dev-session-secret-do-not-use-in-prod',
+  description: 'session secret',
+});
 
 function shouldUseSecureCookie(): boolean {
   const override = process.env.BYOCC_COOKIE_SECURE?.trim().toLowerCase();

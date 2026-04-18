@@ -13,6 +13,7 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { UserKind, UserRecord } from '../db/database.js';
+import { getRuntimeSecret } from './runtime-security.js';
 
 type TokenPayload = {
   userId: string;
@@ -28,8 +29,11 @@ type TerminalTokenPayload = {
   expiresAt: string;
 };
 
-const AUTH_SECRET =
-  process.env.BYOCC_AUTH_SECRET ?? 'byocc-dev-secret-change-me-before-public-demo';
+const AUTH_SECRET = getRuntimeSecret({
+  envNames: ['BYOCC_AUTH_SECRET'],
+  fallback: 'byocc-dev-auth-secret-do-not-use-in-prod',
+  description: 'auth token secret',
+});
 const ANONYMOUS_TOKEN_TTL_SECONDS_INPUT = Number.parseInt(
   process.env.BYOCC_ANONYMOUS_TOKEN_TTL_SECONDS ?? '86400',
   10
@@ -44,12 +48,6 @@ const TERMINAL_TOKEN_TTL_SECONDS_INPUT = Number.parseInt(
 const TERMINAL_TOKEN_TTL_SECONDS = Number.isInteger(TERMINAL_TOKEN_TTL_SECONDS_INPUT)
   ? Math.max(30, TERMINAL_TOKEN_TTL_SECONDS_INPUT)
   : 300;
-
-if (!process.env.BYOCC_AUTH_SECRET) {
-  console.warn(
-    'BYOCC_AUTH_SECRET is not set. Using a development-only auth secret; do not use this for public deployment.'
-  );
-}
 
 function encodeJson(value: unknown): string {
   return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
@@ -102,6 +100,10 @@ export function verifyUserToken(token: string): TokenPayload | null {
 
   const payload = decodeJson<TokenPayload>(encodedPayload);
   if (!payload?.userId || !payload.kind || !payload.issuedAt) {
+    return null;
+  }
+
+  if (payload.kind !== 'anonymous') {
     return null;
   }
 

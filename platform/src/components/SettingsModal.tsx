@@ -58,7 +58,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     setState("saving");
     setMessage("");
     try {
-      const nextSettings = await updateApiKey(apiKey.trim(), apiBaseUrl.trim());
+      const trimmedApiBaseUrl = apiBaseUrl.trim();
+      const nextSettings = await updateApiKey(
+        apiKey.trim(),
+        trimmedApiBaseUrl || undefined,
+      );
       setSettings(nextSettings);
       setApiKey("");
       setApiBaseUrl("");

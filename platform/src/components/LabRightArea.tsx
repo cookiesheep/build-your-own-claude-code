@@ -6,7 +6,7 @@ import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 import { LAB_FILE_NAMES, LAB_SKELETONS, STATUS_LABELS, type LabMeta } from "@/lib/labs";
 import {
   createSession,
-  ensureAnonymousUser,
+  ensurePlatformIdentity,
   getEnvironmentStatus,
   getWorkspace,
   resetEnvironment,
@@ -77,7 +77,7 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
       try {
         setSaveState("loading");
         setCode(LAB_SKELETONS[lab.id] ?? "");
-        await ensureAnonymousUser();
+        await ensurePlatformIdentity();
         const existingSessionId = window.localStorage.getItem(SESSION_STORAGE_KEY) ?? undefined;
         const session = await createSession(existingSessionId);
         if (cancelled) return;
