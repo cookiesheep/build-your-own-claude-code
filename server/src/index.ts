@@ -20,6 +20,7 @@ import { workspaceRouter } from './routes/workspace.js';
 import { submitRouter } from './routes/submit.js';
 import { progressRouter } from './routes/progress.js';
 import { resetRouter } from './routes/reset.js';
+import { settingsRouter } from './routes/settings.js';
 import { initDatabase } from './db/database.js';
 import { startContainerCleanupScheduler } from './services/container-cleanup-scheduler.js';
 import { setupWebSocketProxy } from './services/ws-proxy.js';
@@ -67,6 +68,7 @@ app.use(workspaceRouter);
 app.use(submitRouter);
 app.use(progressRouter);
 app.use(resetRouter);
+app.use(settingsRouter);
 
 // 健康检查
 app.get('/api/health', (_req, res) => {

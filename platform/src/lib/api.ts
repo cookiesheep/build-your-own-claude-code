@@ -63,6 +63,23 @@ export type WorkspaceResponse = {
   updatedAt: string | null;
 };
 
+function apiUrl(path: string): string {
+  if (!API_BASE) {
+    return path;
+  }
+
+  try {
+    const url = new URL(API_BASE);
+    if (url.hostname === "127.0.0.1" || url.hostname === "localhost") {
+      return path;
+    }
+  } catch {
+    return path;
+  }
+
+  return `${API_BASE}${path}`;
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -152,7 +169,7 @@ export async function createAnonymousUser(): Promise<AuthResponse> {
   }
 
   const existingToken = getStoredAuthToken();
-  const response = await fetch(`${API_BASE}/api/auth/anonymous`, {
+  const response = await fetch(apiUrl("/api/auth/anonymous"), {
     method: "POST",
     headers: existingToken
       ? {
@@ -191,7 +208,7 @@ export async function getCurrentUser(): Promise<CurrentUserResponse> {
     throw new Error("Missing auth token");
   }
 
-  const response = await fetch(`${API_BASE}/api/me`, {
+  const response = await fetch(apiUrl("/api/me"), {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -244,7 +261,7 @@ export async function createSession(
   }
 
   const requestSession = async (nextSessionId?: string) =>
-    authorizedFetch(`${API_BASE}/api/session`, {
+    authorizedFetch(apiUrl("/api/session"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -283,7 +300,7 @@ export async function startEnvironment(
     };
   }
 
-  const response = await authorizedFetch(`${API_BASE}/api/environment/start`, {
+  const response = await authorizedFetch(apiUrl("/api/environment/start"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -312,7 +329,7 @@ export async function getEnvironmentStatus(
   }
 
   const response = await authorizedFetch(
-    `${API_BASE}/api/environment/status?sessionId=${encodeURIComponent(sessionId)}`,
+    apiUrl(`/api/environment/status?sessionId=${encodeURIComponent(sessionId)}`),
     { method: "GET" },
   );
 
@@ -337,7 +354,7 @@ export async function resetEnvironment(
     };
   }
 
-  const response = await authorizedFetch(`${API_BASE}/api/environment/reset`, {
+  const response = await authorizedFetch(apiUrl("/api/environment/reset"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -365,7 +382,7 @@ export async function submitCode(
     };
   }
 
-  const response = await authorizedFetch(`${API_BASE}/api/submit`, {
+  const response = await authorizedFetch(apiUrl("/api/submit"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -388,7 +405,7 @@ export async function resetSession(
     return { success: true };
   }
 
-  const response = await authorizedFetch(`${API_BASE}/api/reset`, {
+  const response = await authorizedFetch(apiUrl("/api/reset"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -421,7 +438,7 @@ export async function getProgress(
   }
 
   const response = await authorizedFetch(
-    `${API_BASE}/api/progress?sessionId=${encodeURIComponent(sessionId)}`,
+    apiUrl(`/api/progress?sessionId=${encodeURIComponent(sessionId)}`),
     { method: "GET" },
   );
 
@@ -442,7 +459,7 @@ export async function getWorkspace(labNumber: number): Promise<WorkspaceResponse
     };
   }
 
-  const response = await authorizedFetch(`${API_BASE}/api/labs/${labNumber}/workspace`, {
+  const response = await authorizedFetch(apiUrl(`/api/labs/${labNumber}/workspace`), {
     method: "GET",
   });
 
@@ -466,7 +483,7 @@ export async function saveWorkspace(
     };
   }
 
-  const response = await authorizedFetch(`${API_BASE}/api/labs/${labNumber}/workspace`, {
+  const response = await authorizedFetch(apiUrl(`/api/labs/${labNumber}/workspace`), {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

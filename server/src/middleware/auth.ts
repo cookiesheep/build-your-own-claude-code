@@ -8,10 +8,14 @@
  * 等前端完全接入 token 后，再考虑把部分 API 改成强制认证。
  */
 
-import type { Request } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { getUser, type SessionRecord, type UserRecord } from '../db/database.js';
 import { verifyUserToken } from '../services/auth-token.js';
 import { getSessionUserFromRequest } from '../services/session-cookie.js';
+
+export type AuthenticatedRequest = Request & {
+  user: UserRecord;
+};
 
 function getBearerToken(req: Request): string | null {
   const authorization = req.header('authorization');
@@ -44,6 +48,19 @@ export function getOptionalAuthUser(req: Request): UserRecord | null {
   }
 
   return getUser(payload.userId);
+}
+
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  const user = getOptionalAuthUser(req);
+  if (!user) {
+    res.status(401).json({
+      message: 'Missing or invalid auth token.',
+    });
+    return;
+  }
+
+  (req as AuthenticatedRequest).user = user;
+  next();
 }
 
 export type SessionAccessResult =

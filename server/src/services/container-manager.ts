@@ -21,6 +21,8 @@
 
 import Docker from 'dockerode';
 import type { Readable } from 'node:stream';
+import { getUserSettings } from '../db/database.js';
+import { decrypt } from './encryption.js';
 
 // 自动连接到本地 Docker（Docker Desktop 必须在运行）
 const docker = new Docker();
@@ -114,6 +116,35 @@ async function ensureLabImageExists(): Promise<void> {
   }
 }
 
+type ContainerApiConfig = {
+  apiKey: string;
+  apiBaseUrl: string;
+};
+
+function resolveDefaultApiConfig(): ContainerApiConfig {
+  return {
+    apiKey: process.env.DEFAULT_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? '',
+    apiBaseUrl: process.env.DEFAULT_API_BASE_URL ?? process.env.ANTHROPIC_BASE_URL ?? '',
+  };
+}
+
+function resolveContainerApiConfig(userId?: string): ContainerApiConfig {
+  const defaultConfig = resolveDefaultApiConfig();
+  if (!userId) {
+    return defaultConfig;
+  }
+
+  const settings = getUserSettings(userId);
+  if (settings?.apiKeyEncrypted && settings.apiKeySource === 'user') {
+    return {
+      apiKey: decrypt(settings.apiKeyEncrypted),
+      apiBaseUrl: settings.apiBaseUrl ?? defaultConfig.apiBaseUrl,
+    };
+  }
+
+  return defaultConfig;
+}
+
 function readStreamToString(stream: Readable): Promise<string> {
   return new Promise((resolve, reject) => {
     let output = '';
@@ -197,7 +228,7 @@ async function runExecCommand(
  *   6. 记录到 sessionContainers Map
  *   7. 返回容器 ID
  */
-export async function createContainer(sessionId: string): Promise<string> {
+export async function createContainer(sessionId: string, userId?: string): Promise<string> {
   const existingContainer = await resolveContainer(sessionId);
   if (existingContainer) {
     if (existingContainer.info.State.Status !== 'running') {
@@ -209,10 +240,16 @@ export async function createContainer(sessionId: string): Promise<string> {
   }
 
   await ensureLabImageExists();
+  const apiConfig = resolveContainerApiConfig(userId);
+  const env = [`ANTHROPIC_API_KEY=${apiConfig.apiKey}`];
+  if (apiConfig.apiBaseUrl) {
+    env.push(`ANTHROPIC_BASE_URL=${apiConfig.apiBaseUrl}`);
+  }
 
   const container = await docker.createContainer({
     Image: LAB_IMAGE,
     name: getContainerName(sessionId),
+    Env: env,
     ExposedPorts: { [TTYD_PORT_KEY]: {} },
     Labels: {
       'byocc.managed': 'true',

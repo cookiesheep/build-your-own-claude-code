@@ -55,6 +55,9 @@ $env:BYOCC_CONTAINER_TTL_MINUTES="120"
 $env:BYOCC_CONTAINER_CLEANUP_INTERVAL_MINUTES="10"
 $env:BYOCC_CONTAINER_CLEANUP_RUN_ON_START="false"
 $env:BYOCC_TERMINAL_TOKEN_TTL_SECONDS="300"
+$env:ENCRYPTION_KEY="<64位hex字符串，用于加密用户自定义 API Key>"
+$env:DEFAULT_API_KEY="<平台共享 API Key>"
+$env:DEFAULT_API_BASE_URL="https://api.anthropic.com"
 
 npm run dev
 ```
@@ -70,6 +73,9 @@ npm run dev
 - `CORS_ORIGINS`：只允许真实前端公开域名。不要使用 `*`。
 - `BYOCC_CONTAINER_TTL_MINUTES`：demo 时建议 60-120 分钟。太短会打断用户，太长会积累容器。
 - `BYOCC_TERMINAL_TOKEN_TTL_SECONDS`：terminal URL 是短期能力 token，demo 时保持短 TTL。
+- `ENCRYPTION_KEY`：用于加密用户自定义 API Key，必须稳定保存，不能随意更换。
+- `DEFAULT_API_KEY`：平台共享 Key。用户没有自定义 Key 时，容器会注入这个值。
+- `DEFAULT_API_BASE_URL`：平台共享 Key 对应的默认请求地址。第三方 Anthropic 兼容服务应填写对应 endpoint，例如 `https://open.bigmodel.cn/api/anthropic`。
 
 ### 前端 `platform`
 
@@ -221,6 +227,9 @@ cookiesheep's claude-code v2.1.88
 - [ ] 启动环境后返回的 `terminalUrl` 使用 `wss://`，不是 `ws://`。
 - [ ] Cloudflare Access policy 已限制访问者。
 - [ ] 后端启动日志显示 TTL cleanup enabled。
+- [ ] `ENCRYPTION_KEY` 已设置，并且不会随意变化。
+- [ ] `DEFAULT_API_KEY` 已设置，或确认所有用户都会填写自己的 Key。
+- [ ] 如果使用第三方 Key，`DEFAULT_API_BASE_URL` 或用户自定义 Base URL 已正确设置。
 - [ ] `npm run e2e:regression` 通过。
 - [ ] `npm run e2e:regression:full` 通过。
 - [ ] cleanup dry-run 不会误删。

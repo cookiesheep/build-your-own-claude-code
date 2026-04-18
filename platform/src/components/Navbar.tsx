@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { LABS, STATUS_COLORS } from "@/lib/labs";
 import { checkAuth, logout, type User } from "@/lib/auth";
+import SettingsModal from "./SettingsModal";
 import { useTheme } from "./ThemeProvider";
 
 /* ─── Sun / Moon icons ─── */
@@ -126,13 +127,14 @@ function LabNav() {
   const { theme, toggleTheme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void checkAuth().then((auth) => {
       if (auth.isAuthenticated) setUser(auth.user);
     });
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -221,7 +223,17 @@ function LabNav() {
               <span>{user.username}</span>
             </button>
             {showDropdown && (
-              <div className="absolute right-0 top-full mt-1 w-32 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] shadow-lg">
+              <div className="absolute right-0 top-full mt-1 w-36 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDropdown(false);
+                    setSettingsOpen(true);
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                >
+                  API Key 设置
+                </button>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -249,6 +261,8 @@ function LabNav() {
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
       </div>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </nav>
   );
 }

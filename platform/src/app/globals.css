@@ -165,6 +165,43 @@ a {
   }
 }
 
+@keyframes node-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(212, 165, 116, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(212, 165, 116, 0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes scan-line {
+  0% { top: 0%; }
+  100% { top: 100%; }
+}
+
+@keyframes data-flow {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(28px); opacity: 0; }
+}
+
 /* ─── Markdown body (used by Lab pages) ─── */
 .markdown-body {
   line-height: 1.7;
