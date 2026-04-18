@@ -66,6 +66,19 @@ function readApiBaseUrl(body: unknown): string | null {
   }
 }
 
+function hasInvalidExplicitApiBaseUrl(body: unknown, parsedApiBaseUrl: string | null): boolean {
+  if (typeof body !== 'object' || body === null || !Object.hasOwn(body, 'apiBaseUrl')) {
+    return false;
+  }
+
+  const { apiBaseUrl } = body as { apiBaseUrl?: unknown };
+  if (apiBaseUrl === undefined || apiBaseUrl === null) {
+    return false;
+  }
+
+  return parsedApiBaseUrl === null;
+}
+
 function getDefaultApiBaseUrl(): string | null {
   return process.env.DEFAULT_API_BASE_URL ?? process.env.ANTHROPIC_BASE_URL ?? null;
 }
@@ -109,41 +122,60 @@ settingsRouter.get('/api/settings/api-key', (req, res) => {
 });
 
 settingsRouter.put('/api/settings/api-key', (req, res) => {
-  const user = (req as AuthenticatedRequest).user;
-  if (user.kind !== 'password') {
-    res.status(401).json({
-      message: 'Please log in to manage API keys.',
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    if (user.kind !== 'password') {
+      res.status(401).json({
+        message: 'Please log in to manage API keys.',
+      });
+      return;
+    }
+
+    const apiKey = readApiKey(req.body);
+    const apiBaseUrl = readApiBaseUrl(req.body);
+    if (!apiKey) {
+      res.status(400).json({
+        message: 'apiKey must be a non-empty string longer than 10 characters.',
+      });
+      return;
+    }
+
+    if (hasInvalidExplicitApiBaseUrl(req.body, apiBaseUrl)) {
+      res.status(400).json({
+        message: 'apiBaseUrl must be a valid http(s) URL.',
+      });
+      return;
+    }
+
+    upsertUserSettings(user.id, {
+      apiKeyEncrypted: encrypt(apiKey),
+      apiBaseUrl,
+      apiKeySource: 'user',
     });
-    return;
-  }
 
-  const apiKey = readApiKey(req.body);
-  const apiBaseUrl = readApiBaseUrl(req.body);
-  if (!apiKey) {
-    res.status(400).json({
-      message: 'apiKey must be a non-empty string longer than 10 characters.',
+    res.json(toSettingsResponse({ source: 'user', rawApiKey: apiKey, apiBaseUrl }));
+  } catch {
+    res.status(500).json({
+      message: '保存 API Key 失败，请检查服务端配置。',
     });
-    return;
   }
-
-  upsertUserSettings(user.id, {
-    apiKeyEncrypted: encrypt(apiKey),
-    apiBaseUrl,
-    apiKeySource: 'user',
-  });
-
-  res.json(toSettingsResponse({ source: 'user', rawApiKey: apiKey, apiBaseUrl }));
 });
 
 settingsRouter.delete('/api/settings/api-key', (req, res) => {
-  const user = (req as AuthenticatedRequest).user;
-  if (user.kind !== 'password') {
-    res.status(401).json({
-      message: 'Please log in to manage API keys.',
-    });
-    return;
-  }
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    if (user.kind !== 'password') {
+      res.status(401).json({
+        message: 'Please log in to manage API keys.',
+      });
+      return;
+    }
 
-  clearUserApiKey(user.id);
-  res.json(toSettingsResponse({ source: 'default', apiBaseUrl: getDefaultApiBaseUrl() }));
+    clearUserApiKey(user.id);
+    res.json(toSettingsResponse({ source: 'default', apiBaseUrl: getDefaultApiBaseUrl() }));
+  } catch {
+    res.status(500).json({
+      message: '恢复默认 API Key 失败，请稍后重试。',
+    });
+  }
 });

@@ -23,6 +23,7 @@ import { resetRouter } from './routes/reset.js';
 import { settingsRouter } from './routes/settings.js';
 import { initDatabase } from './db/database.js';
 import { startContainerCleanupScheduler } from './services/container-cleanup-scheduler.js';
+import { assertEncryptionConfig } from './services/encryption.js';
 import { setupWebSocketProxy } from './services/ws-proxy.js';
 
 const app = express();
@@ -59,6 +60,7 @@ app.use(express.json({ limit: '1mb' })); // 代码提交可能较大
 
 // 初始化数据库
 initDatabase();
+assertEncryptionConfig();
 
 // API 路由
 app.use(authRouter);
