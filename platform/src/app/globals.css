@@ -185,6 +185,23 @@ a {
   }
 }
 
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes scan-line {
+  0% { top: 0%; }
+  100% { top: 100%; }
+}
+
+@keyframes data-flow {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(28px); opacity: 0; }
+}
+
 /* ─── Markdown body (used by Lab pages) ─── */
 .markdown-body {
   line-height: 1.7;
