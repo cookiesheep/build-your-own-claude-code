@@ -85,6 +85,7 @@ function LoginContent() {
 
       if (result.success) {
         setFormState("success");
+        triggerShockwave();
         const redirect = searchParams.get("redirect") || "/platform";
         setTimeout(() => router.push(redirect), 800);
       } else {
@@ -119,7 +120,7 @@ function LoginContent() {
         className={`relative z-10 w-full max-w-md px-6 transition-all duration-700 ${
           mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         } ${formState === "success" ? "scale-95 opacity-0" : ""} ${
-          formState === "error" ? "animate-shake" : ""
+          (formState === "error" || formState === "success") ? "animate-shake" : ""
         }`}
       >
         <form
