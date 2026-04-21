@@ -7,6 +7,8 @@ import { useTheme } from './ThemeProvider';
 interface Particle {
   x: number;
   y: number;
+  prevX: number;
+  prevY: number;
   targetX: number;
   targetY: number;
   size: number;
@@ -49,7 +51,7 @@ const PHASE_ORDER: Phase[] = [
 
 /* ─── Config (user-tuned values preserved) ─── */
 const CFG = {
-  densityPerK: 2.0,
+  densityPerK: 5.0,
   mobileDensityPerK: 1.2,
   mouseRadius: 250,
   mouseForce: 1,
@@ -60,6 +62,13 @@ const CFG = {
   glowChance: 0.15,
   fadeInRate: 0.012,
   explosionForce: 18,
+  flowNoiseScale: 0.005,
+  flowNoiseForce: 0.0015,
+  flowDamping: 0.98,
+  flowVortexRadius: 200,
+  flowVortexForce: 0.02,
+  flowIllumRadius: 200,
+  flowIllumBoost: 1.9,
 };
 
 const PALETTE = {
@@ -72,6 +81,53 @@ const PALETTE = {
     glow: 'rgba(193,127,78,0.2)',
   },
 };
+
+/* ─── Perlin Noise (ported from LoginFlowField) ─── */
+
+function makeNoise(seed: number) {
+  const perm = new Uint8Array(512);
+  const grad = [
+    [1, 1], [-1, 1], [1, -1], [-1, -1],
+    [1, 0], [-1, 0], [0, 1], [0, -1],
+  ];
+  let s = seed;
+  function rng() {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  }
+  const p = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) p[i] = i;
+  for (let i = 255; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [p[i], p[j]] = [p[j], p[i]];
+  }
+  for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+
+  function dot(g: number[], x: number, y: number) {
+    return g[0] * x + g[1] * y;
+  }
+  function fade(t: number) {
+    return t * t * t * (t * (t * 6 - 15) + 10);
+  }
+
+  return function noise2D(x: number, y: number): number {
+    const X = Math.floor(x) & 255;
+    const Y = Math.floor(y) & 255;
+    const xf = x - Math.floor(x);
+    const yf = y - Math.floor(y);
+    const u = fade(xf);
+    const v = fade(yf);
+
+    const aa = perm[perm[X] + Y] & 7;
+    const ab = perm[perm[X] + Y + 1] & 7;
+    const ba = perm[perm[X + 1] + Y] & 7;
+    const bb = perm[perm[X + 1] + Y + 1] & 7;
+
+    const x1 = dot(grad[aa], xf, yf) * (1 - u) + dot(grad[ba], xf - 1, yf) * u;
+    const x2 = dot(grad[ab], xf, yf - 1) * (1 - u) + dot(grad[bb], xf - 1, yf - 1) * u;
+    return x1 * (1 - v) + x2 * v;
+  };
+}
 
 /* ─── Terminal image preload ─── */
 let terminalImg: HTMLImageElement | null = null;
@@ -212,6 +268,7 @@ export default function HeroParticles() {
     dpr: 1,
     phase: 'scatter' as Phase,
     phaseStart: 0,
+    flowTime: 100,
   });
 
   const { theme } = useTheme();
@@ -228,12 +285,20 @@ export default function HeroParticles() {
     const S = stateRef.current;
     let alive = true;
 
+    // Flow field noise generators (seed offset from login page)
+    const noiseFn = makeNoise(42);
+    const noiseFn2 = makeNoise(137);
+
     /* ─── Create Particle ─── */
     function makeParticle(tx: number, ty: number, scatter?: boolean, color?: string): Particle {
       const { w, h } = S;
+      const startX = scatter ? tx : (Math.random() - 0.5) * w * 0.3 + w / 2;
+      const startY = scatter ? ty : (Math.random() - 0.5) * h * 0.3 + h / 2;
       return {
-        x: scatter ? tx : (Math.random() - 0.5) * w * 0.3 + w / 2,
-        y: scatter ? ty : (Math.random() - 0.5) * h * 0.3 + h / 2,
+        x: startX,
+        y: startY,
+        prevX: startX,
+        prevY: startY,
         targetX: tx, targetY: ty,
         size: 3 + Math.random() * 2.5,
         baseAlpha: 0.4 + Math.random() * 0.6,
@@ -289,8 +354,8 @@ export default function HeroParticles() {
       const { w, h } = S;
       const isMobile = w < 768;
       const density = isMobile ? CFG.mobileDensityPerK : CFG.densityPerK;
-      const maxP = Math.min(Math.floor((w * h) / 1000 * density), isMobile ? 600 : 4000);
-      const count = Math.min(maxP, 4000);
+      const maxP = Math.min(Math.floor((w * h) / 1000 * density), isMobile ? 600 : 8000);
+      const count = Math.min(maxP, 8000);
 
       let pts: Target[];
 
@@ -380,82 +445,188 @@ export default function HeroParticles() {
       if (!alive) return;
 
       const { dpr, w, h, particles, mouse } = S;
+      const isMobile = w < 768;
+
+      // ── Scroll-based mode blending ──
+      const scrollY = window.scrollY || 0;
+      const heroH = h;
+      let blend = 0;     // 0 = Hero, 1 = Flow
+      let deepFade = 1;  // additional fade deep in flow
+
+      if (!isMobile) {
+        if (scrollY < heroH * 0.3) {
+          blend = 0;
+        } else if (scrollY < heroH * 0.7) {
+          blend = (scrollY - heroH * 0.3) / (heroH * 0.4);
+        } else {
+          blend = 1;
+          // Fade based on total page content, not viewport — consistent across screen sizes
+          const scrollRange = document.documentElement.scrollHeight - heroH;
+          const fadeLen = scrollRange * 1.0;
+          deepFade = fadeLen > 0 ? Math.max(0, 1 - (scrollY - heroH * 0.7) / fadeLen) : 0;
+        }
+      }
+
+      const mobileDissolve = isMobile
+        ? (scrollY > h * 0.2 ? Math.min(1, (scrollY - h * 0.2) / (h * 0.6)) : 0)
+        : 0;
+
+      // ── Canvas: always clear (transparent → background effects visible) ──
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
       c.clearRect(0, 0, w, h);
 
       S.time += 0.016;
+      S.flowTime += 0.003;
       const t = S.time;
+      const ft = S.flowTime;
 
-      // Phase transition check
-      const phaseElapsed = t - S.phaseStart;
-      if (phaseElapsed >= PHASE_DURATION[S.phase]) {
-        advancePhase();
-      }
-
-      // For explode phases, set real targets partway through
-      if (S.phase === 'explode1' && phaseElapsed > 0.4) {
-        S.phase = 'buildYourOwn';
-        S.phaseStart = t;
-        const targets = getPhaseTargets('buildYourOwn');
-        if (targets.length > 0) buildParticles(targets);
-      }
-      if (S.phase === 'explode2' && phaseElapsed > 0.4) {
-        S.phase = 'stable';
-        S.phaseStart = t;
-        const targets = getPhaseTargets('stable');
-        if (targets.length > 0) buildParticles(targets);
+      // ── Phase transition (Hero mode only) ──
+      if (blend < 0.3) {
+        const phaseElapsed = t - S.phaseStart;
+        if (phaseElapsed >= PHASE_DURATION[S.phase]) {
+          advancePhase();
+        }
+        if (S.phase === 'explode1' && phaseElapsed > 0.4) {
+          S.phase = 'buildYourOwn';
+          S.phaseStart = t;
+          const targets = getPhaseTargets('buildYourOwn');
+          if (targets.length > 0) buildParticles(targets);
+        }
+        if (S.phase === 'explode2' && phaseElapsed > 0.4) {
+          S.phase = 'stable';
+          S.phaseStart = t;
+          const targets = getPhaseTargets('stable');
+          if (targets.length > 0) buildParticles(targets);
+        }
       }
 
       const breathe = Math.sin(t * CFG.breatheSpeed) * CFG.breatheAmp;
       const pal = themeRef.current === 'light' ? PALETTE.light : PALETTE.dark;
       const len = particles.length;
+
       for (let i = 0; i < len; i++) {
         const p = particles[i];
 
-        // Float offset (stronger in scatter, gentler when formed)
-        const floatMult = (S.phase === 'scatter' || S.phase === 'explode1' || S.phase === 'explode2') ? 3 : 1;
-        const fx = Math.sin(t * p.floatSpeed + p.floatPhase) * p.floatRadius * floatMult;
-        const fy = Math.cos(t * p.floatSpeed * 0.7 + p.floatPhase + 1.3) * p.floatRadius * floatMult;
+        // Skip when fully faded out deep in flow
+        if (deepFade < 0.01 && blend > 0.5) continue;
 
-        // Spring toward target
-        const tx = p.targetX + fx;
-        const ty = p.targetY + fy;
-        p.vx += (tx - p.x) * CFG.ease;
-        p.vy += (ty - p.y) * CFG.ease;
+        // ── Hero: spring toward target (diminishes with blend) ──
+        if (blend < 1) {
+          const springMult = 1 - blend;
+          const floatMult = (S.phase === 'scatter' || S.phase === 'explode1' || S.phase === 'explode2') ? 3 : 1;
+          const fx = Math.sin(t * p.floatSpeed + p.floatPhase) * p.floatRadius * floatMult;
+          const fy = Math.cos(t * p.floatSpeed * 0.7 + p.floatPhase + 1.3) * p.floatRadius * floatMult;
+          p.vx += (p.targetX + fx - p.x) * CFG.ease * springMult;
+          p.vy += (p.targetY + fy - p.y) * CFG.ease * springMult;
+        }
 
-        // Mouse repulsion (all phases)
+        // ── Flow: gentle noise drift (all particles) ──
+        if (blend > 0) {
+          // Normalize force by viewport — same perceived speed on all screens
+          const viewNorm = h / 900;
+          const ns = CFG.flowNoiseScale;
+          const n1 = noiseFn(p.x * ns, p.y * ns + ft) * Math.PI * 2;
+          const n2 = noiseFn2(p.x * ns * 0.7 + 100, p.y * ns * 0.7 + ft * 0.6) * Math.PI * 2;
+          const angle = n1 * 0.7 + n2 * 0.3;
+          const force = CFG.flowNoiseForce * viewNorm * blend;
+          p.vx += Math.cos(angle) * force;
+          p.vy += Math.sin(angle) * force;
+        }
+
+        // ── Mouse interaction ──
         const mdx = p.x - mouse.x;
         const mdy = p.y - mouse.y;
         const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
-        if (mDist < CFG.mouseRadius && mDist > 0.1) {
+
+        // Hero repulsion (diminishes with blend)
+        if (blend < 1 && mDist < CFG.mouseRadius && mDist > 0.1) {
           const str = 1 - mDist / CFG.mouseRadius;
-          const force = str * str * str * CFG.mouseForce;
+          const force = str * str * str * CFG.mouseForce * (1 - blend);
           p.vx += (mdx / mDist) * force;
           p.vy += (mdy / mDist) * force;
         }
 
-        // Damping
-        p.vx *= CFG.damping;
-        p.vy *= CFG.damping;
+        // Flow vortex (spiral around cursor)
+        if (blend > 0 && mDist < CFG.flowVortexRadius && mDist > 1) {
+          const vStr = 1 - mDist / CFG.flowVortexRadius;
+          const vForce = vStr * vStr * CFG.flowVortexForce * blend;
+          const tanX = -mdy / mDist;
+          const tanY = mdx / mDist;
+          const radX = -mdx / mDist;
+          const radY = -mdy / mDist;
+          p.vx += (tanX * 0.85 + radX * 0.15) * vForce;
+          p.vy += (tanY * 0.85 + radY * 0.15) * vForce;
+        }
+
+        // ── Damping (blend hero → flow) ──
+        p.vx *= CFG.damping + (CFG.flowDamping - CFG.damping) * blend;
+        p.vy *= CFG.damping + (CFG.flowDamping - CFG.damping) * blend;
+
+        // Mobile dissolve drift
+        if (mobileDissolve > 0) p.vy += mobileDissolve * 0.4;
+
+        // ── Position update ──
         p.x += p.vx;
         p.y += p.vy;
 
-        // Fade in + breathing
-        p.alpha = Math.min(p.baseAlpha, p.alpha + CFG.fadeInRate);
-        const alpha = Math.max(0.08, Math.min(1, p.alpha + breathe));
+        // ── Edge wrapping (Flow mode) ──
+        if (blend > 0.3) {
+          const m = 10;
+          if (p.x < -m) p.x = w + m;
+          else if (p.x > w + m) p.x = -m;
+          if (p.y < -m) p.y = h + m;
+          else if (p.y > h + m) p.y = -m;
+        }
 
-        // Glow layer
-        if (p.hasGlow) {
+        // ── Alpha (smooth blend hero ↔ flow) ──
+        p.alpha = Math.min(p.baseAlpha, p.alpha + CFG.fadeInRate);
+        let alpha: number;
+
+        if (blend < 0.01) {
+          // Pure Hero + mobile dissolve
+          const dissolveAlpha = 1 - mobileDissolve * 0.85;
+          alpha = Math.max(0.02, Math.min(1, (p.alpha + breathe) * dissolveAlpha));
+        } else {
+          // Transition / Flow
+          const heroAlpha = Math.max(0.02, Math.min(1, p.alpha + breathe));
+          const flowAlpha = 0.07 + (i % 10) * 0.08; // 0.05-0.14
+          alpha = heroAlpha * (1 - blend) + flowAlpha * blend;
+
+          // Illumination: brighten near cursor
+          if (mDist < CFG.flowIllumRadius) {
+            const illum = 1 - mDist / CFG.flowIllumRadius;
+            alpha += illum * illum * blend * CFG.flowIllumBoost;
+          }
+
+          alpha = Math.max(0, Math.min(1, alpha * deepFade));
+        }
+
+        if (alpha < 0.01) continue;
+
+        const color = p.customColor ?? pal.main[p.colorIdx];
+
+        // ── Draw (always pixel rect — never lines) ──
+        if (p.hasGlow && alpha > 0.1) {
           c.globalAlpha = alpha * 0.35;
           c.fillStyle = pal.glow;
           const gs = p.size * 3;
           c.fillRect(p.x - gs / 2, p.y - gs / 2, gs, gs);
         }
 
-        // Main particle
         c.globalAlpha = alpha;
-        c.fillStyle = p.customColor ?? pal.main[p.colorIdx];
+        c.fillStyle = color;
         c.fillRect(p.x - p.size / 2 | 0, p.y - p.size / 2 | 0, p.size, p.size);
+      }
+
+      // Cursor glow in Flow mode
+      if (blend > 0.5 && mouse.x > 0 && deepFade > 0.1) {
+        const glow = c.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 150);
+        const accentBase = themeRef.current === 'light' ? '180,110,55' : '212,165,116';
+        glow.addColorStop(0, `rgba(${accentBase},${0.04 * deepFade})`);
+        glow.addColorStop(1, `rgba(${accentBase},0)`);
+        c.fillStyle = glow;
+        c.globalAlpha = 1;
+        c.fillRect(mouse.x - 150, mouse.y - 150, 300, 300);
       }
 
       c.globalAlpha = 1;
@@ -506,7 +677,7 @@ export default function HeroParticles() {
   return (
     <canvas
       ref={canvasRef}
-      className="pointer-events-none absolute inset-0 z-[2]"
+      className="pointer-events-none fixed inset-0 z-0"
     />
   );
 }
