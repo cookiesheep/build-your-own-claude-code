@@ -172,111 +172,116 @@ Lab 5  ── 上下文压缩 ──
 
 ---
 
-### Section 4: 代码预览 Demo（新增，最重要）★ ScrambleText
+### Section 4: Agent Loop 体验（新增，最重要）★ ScrambleText
 
 **位置**：Skill Tree 之后
 
 **这是整个页面最核心的差异化内容。用户必须在这里产生 "Wow, I want to try this." 的冲动。**
 
-**设计方案：点击揭示模式（Progressive Reveal）**
+**设计原则**：
+- 展示**学习方式**，不展示具体 Lab 内容
+- 展示**代码→Agent行为的变化**，不展示答案
+- 零 Lab 耦合——Lab 怎么改都不影响首页
+- 不泄露答案——学习者还没开始就看到答案会破坏体验
 
-不是左右分栏，而是**一个编辑器窗口**。骨架代码中每个 TODO 区域是一个可点击的高亮块。点击后，那个 TODO 动画替换为完成代码，像填空一样一个一个点亮。
+**设计方案：Agent Loop 体验**
+
+一个编辑器窗口 + 终端面板的组合。用户点击代码中的空白步骤，看到概念性的代码填入，最终看到 Agent 真正运行起来。
 
 **交互流程**：
 
 ```
-初始状态（一个编辑器窗口）：
+初始状态（编辑器）：
 ┌──────────────────────────────────────────┐
-│  Lab 3: Agent Loop    [Lab 1][Lab 2][Lab 3★][Lab 4][Lab 5] │
+│  agent.ts                                │
 ├──────────────────────────────────────────┤
-│  async function query(messages) {        │
-│  ┌─── TODO 1: 初始化消息历史 ──────┐    │  ← 可点击高亮块
-│  │  // 你的代码...                  │    │
-│  └──────────────────────────────────┘    │
-│    while (true) {                         │
-│  ┌─── TODO 2: 调用 LLM ────────────┐    │  ← 可点击高亮块
-│  │  // 你的代码...                  │    │
-│  └──────────────────────────────────┘    │
-│  ┌─── TODO 3: 处理工具调用 ────────┐    │  ← 可点击高亮块
-│  │  // 你的代码...                  │    │
-│  └──────────────────────────────────┘    │
-│    }                                      │
-│  }                                        │
+│  async function runAgent(task) {         │
 │                                          │
-│  💡 点击每个 TODO 查看答案               │
+│  ┌── ▸ Step 1: 理解用户意图 ────────┐   │  ← 可点击
+│  └──────────────────────────────────┘   │
+│                                          │
+│    while (running) {                     │
+│  ┌── ▸ Step 2: 思考下一步 ──────────┐   │  ← 可点击
+│  └──────────────────────────────────┘   │
+│  ┌── ▸ Step 3: 执行动作 ────────────┐   │  ← 可点击
+│  └──────────────────────────────────┘   │
+│    }                                     │
+│  }                                       │
+│                                          │
+│  💡 点击每个步骤，看 Agent 如何思考      │
 └──────────────────────────────────────────┘
 
-点击 TODO 1 后：
-│  async function query(messages) {        │
-│  ✓ const history = [userMsg];    ← 已揭示，绿色标记 + 琥珀色代码
-│    while (true) {                         │
-│  ┌─── TODO 2: 调用 LLM ────────────┐    │  ← 待点击
-│  │  // 你的代码...                  │    │
-│  └──────────────────────────────────┘    │
+点击 Step 1 后：
+│  async function runAgent(task) {         │
+│                                          │
+│  ✓ const goal = await analyze(task);    │  ← 概念性代码，不是真实 Lab 代码
+│                                          │
+│    while (running) {                     │
+│  ┌── ▸ Step 2 ...                    ┐   │
+│  └──────────────────────────────────┘   │
+│  ┌── ▸ Step 3 ...                    ┐   │
+│  └──────────────────────────────────┘   │
+│    }                                     │
+│  }                                       │
 
-全部揭示后：
-│  async function query(messages) {        │
-│  ✓ const history = [userMsg];            │
-│    while (true) {                         │
-│  ✓ const response = await llm.chat(...); │
-│  ✓ if (response.tool_calls) { ... }      │
-│      else { return response.content; }   │
-│    }                                      │
-│  }                                        │
-│  ✨ 全部揭示！这就是你将要写的代码。     │
-│  [开始 Lab 3 →]                          │
-```
-
-**为什么比左右分栏好**：
-1. **交互性强** — 用户主动探索，不是被动阅读
-2. **教学隐喻精准** — "填空"就是 BYOCC 的核心模式
-3. **空间利用更好** — 不需要并排两个编辑器，移动端友好
-4. **悬念感** — 每点一个 TODO 就多揭示一点，驱动用户继续点击
-
-**每个 Lab 的 TODO 和完成代码**：
-
-**Lab 1 消息协议**：
-```
-TODO 1: 调用 LLM API → return await anthropic.messages.create({model, messages})
+全部完成后，终端面板弹出：
+┌──────────────────────────────────────────┐
+│  $ ./agent                               │
+│  > Agent initialized ✓                   │
+│  > Analyzing task: "Fix the bug..."      │
+│  > Reading source files...               │
+│  > Tool call: read_file("src/main.ts")   │
+│  > Bug identified at line 42             │
+│  > Fixing...                             │
+│  > Tool call: write_file(...)            │
+│  > Task completed ✓                      │
+│                                          │
+│  几行代码，一个能思考、会行动的 Agent。  │
+│                          [开始实验 →]     │
+└──────────────────────────────────────────┘
 ```
 
-**Lab 2 工具系统**：
+**与旧方案的关键区别**：
+1. **不绑定 Lab** — 通用 Agent Loop 示例，非任何 Lab 的代码
+2. **不泄露答案** — 展示的是概念和形式，不是真实 Lab 内容
+3. **展示行为** — 终端输出展示 Agent 实际行为，比纯代码更直观
+4. **更简洁** — 去掉 Lab 标签页，一个编辑器专注一个体验
+
+**代码骨架**：
 ```
-TODO 1: 注册工具 → const tools = { read_file, write_file, bash }
-TODO 2: 分发执行 → switch(name) { case 'read_file': return fs.readFile(args.path) ... }
+async function runAgent(task) {
+  // Step 1: 理解用户意图 → const goal = await analyze(task);
+  while (running) {
+    // Step 2: 思考下一步 → const plan = await model.think(context);
+    // Step 3: 执行动作   → const result = await execute(plan);
+  }
+}
 ```
 
-**Lab 3 Agent Loop**（默认展示）：
+**终端输出**：
 ```
-TODO 1: 初始化消息历史 → const history = [userMsg]
-TODO 2: 调用 LLM     → const response = await llm.chat(messages)
-TODO 3: 处理工具调用  → if (response.tool_calls) { executeTools(...); } else { return; }
-```
-
-**Lab 4 规划能力**：
-```
-TODO 1: 分解任务 → const subtasks = await llm.decompose(tasks)
-TODO 2: 执行子任务 → for (const t of subtasks) await execute(t)
-```
-
-**Lab 5 上下文压缩**：
-```
-TODO 1: 摘要历史消息 → const summary = summarize(messages.slice(0, -10))
-TODO 2: 合并上下文 → return [summary, ...recent]
+> Agent initialized ✓
+> Analyzing task: "Fix the bug in main.ts"
+> Reading source files...
+> Tool call: read_file("src/main.ts")
+> Bug identified at line 42
+> Fixing...
+> Tool call: write_file("src/main.ts", ...)
+> Task completed ✓
 ```
 
 **动效**：
-- TODO 块 hover 时边框琥珀色脉冲
-- 点击揭示时：旧代码向上淡出，新代码从下方淡入，带 0.4s 过渡
-- 揭示后 TODO 区域左侧出现绿色 ✓ 标记
-- 切换 Lab 标签时整体代码区做 tab switch 过渡
-- 全部揭示后底部出现 CTA 按钮 + 微光效果
+- Step 块 hover 琥珀色脉冲
+- 点击后代码行淡入 + ✓ 弹跳出现
+- 全部完成后终端面板从下方滑入
+- 终端行逐行出现（stagger 250ms）
+- CTA 按钮脉冲发光
 
 **技术**：
-- 新建 `src/components/CodePreview.tsx`（client component）
-- 用 `<pre><code>` + CSS 语法高亮（手动 span 着色，不用 Monaco）
-- useState 管理 TODO 揭示状态
-- 不需要第三方代码编辑器
+- 重写 `src/components/CodePreview.tsx`
+- 无 Lab 数据，无标签页
+- useState 管理 Step 状态
+- 终端面板用 max-height + opacity 过渡
 
 ---
 
@@ -585,3 +590,125 @@ platform/src/components/HeroParticles.tsx   — 粒子溶解（Phase 3）
 | ScrambleText 范围 | 3 处 | 全部标题 | 第 4 次后新鲜感变噪音 |
 | 开发顺序 | Code Preview 优先 | 按编号顺序 | 最高差异化+最高技术风险，早验证 |
 | Footer 磁吸文字 | 不做 | 做 | 过度设计，用户不关注 Footer |
+
+---
+
+## 十一、开发日志
+
+### Phase 1 实施记录（2026-04-20）
+
+**已完成**：
+- ✅ CSS 变量和动画（syntax highlighting, 5 keyframes, utility classes）
+- ✅ ScrambleText 组件（IntersectionObserver + 字符逐个揭示 + 随机乱码过渡）
+- ✅ CodePreview 组件（5 Lab 数据 + 正则语法高亮 + 点击揭示 + 进度追踪 + CTA）
+- ✅ SkillTreeSection（纵向路径 + 节点逐个激活 + 难度条动画 + ScrambleText 标题）
+- ✅ DifferenceSection（icon 卡片 + 轻量对比表 + 社区链接）
+- ✅ FAQSection（6 问答手风琴 + 展开/收起动画）
+- ✅ SellingPointsSection 增强（hover 代码 peek-through）
+- ✅ page.tsx 重排为 7 section
+
+**开发中发现的优化点**：
+
+1. **ScrambleText 目前只在 SkillTree 标题使用**，Hero 副标题和 Code Preview 标题需要在后续手动加上。当前 Code Preview section 的 h2 用的是静态文字。
+2. **CodePreview 的 Lab 3 默认高亮星标**效果不错，但可以考虑 Lab 3 tab 默认有微妙的 pulse 动画引导用户注意。
+3. **SkillTree 难度条动画**用了 `transform: scaleX(0→1)` + 延迟，比液态灌入更简单但效果也够好。
+4. **对比表的 hover 效果**：左侧变暗 + 右侧放大，通过 CSS group-hover 实现，简洁有效。
+5. **FAQ 手风琴**：使用 `maxHeight` 过渡而非 `display: none`，动画更流畅。
+6. **CodePreview 语法高亮**：使用正则逐字符解析器，比预格式化 JSX 更易维护。但模板字符串内的 `${}` 插值不单独高亮（作为整体字符串处理）。
+7. **GitHub stars count-up 动画**暂未实现（需要真实 API 数据或静态值），留到有实际数据时再加。
+
+**潜在改进（Phase 3 时考虑）**：
+- CodePreview 添加"一键揭示全部"按钮
+- Skill Tree 的连接线添加电流脉冲动画（小光点沿线移动）✅ 已做
+- DifferenceSection 的 icon 卡片添加 hover 微动效（轻微旋转或缩放）
+- Code Preview section 标题改用 ScrambleText ✅ 已做（改用 typewriter 模式）
+
+---
+
+## 十二、粒子溢出「金色溪流」方案（待实现）
+
+> 创建：2026-04-20 | 状态：设计确认，待开发
+
+### 核心概念
+
+Hero 粒子不随 Hero 消失，而是滚动时切换为**流场模式**——金色丝线在内容间有序流动，像溪水。灵感来自登录页的 Perlin 噪声流场，但参数不同（更低调、更背景化）。
+
+### 两种模式
+
+```
+Hero 模式 (scrollY < 30% heroH)           Flow 模式 (scrollY > 70% heroH)
+─────────────────────────────────          ─────────────────────────────────
+Phase 状态机循环                           粒子跟随 Perlin 噪声流场
+文字形成 / 爆炸 / 重组                     丝线流动，像金色溪水
+完整的鼠标排斥（立方衰减）                  鼠标排斥（但力度不同，更柔和）
+全部粒子可见                               ~150 条可见（其余隐去）
+alpha 0.4-1.0                              alpha 0.10-0.20
+Canvas clearRect 完全清除                   Canvas 低 alpha 覆盖 → 产生拖尾
+固定在 hero section                        fixed 全屏覆盖
+```
+
+### 和登录页流场的区别
+
+| 维度 | 登录页流场 | 溢出流场 |
+|------|-----------|---------|
+| 粒子数 | 700 | ~150 |
+| 透明度 | 0.4-0.6 | 0.10-0.20 |
+| 线宽 | 1.2-1.4px | 0.8-1.0px |
+| 鼠标交互 | 引力井 + 冲击波 | **柔和排斥**（和 Hero 区不同） |
+| 角色 | 页面核心视觉 | 背景氛围层 |
+| 拖尾 | trailAlpha 0.04 | trailAlpha 0.08（更短） |
+
+### 鼠标交互设计（Flow 模式专用）
+
+Flow 模式有鼠标交互，但和 Hero 模式不同：
+- **Hero 模式**：强排斥，立方衰减，明显偏移
+- **Flow 模式**：柔和排斥，力度更小（约 Hero 的 30%），影响范围更大但位移更小
+- 效果：鼠标附近的丝线微微弯曲避让，像水遇到石头分流，不是"被推开"
+- 不需要引力井或冲击波，只需要简单的距离衰减排斥
+
+### 过渡动画
+
+```
+scrollY 0-30% heroH:   纯 Hero 模式（phase 循环 + 文字形成）
+scrollY 30-70% heroH:  混合过渡
+  - phase 循环暂停
+  - 粒子逐渐从目标位置脱离，开始跟随噪声角度
+  - alpha 从 0.4-1.0 降到 0.10-0.20
+  - 约 70% 粒子逐渐隐去
+  - 渲染方式从 clearRect 切换到低 alpha 覆盖
+scrollY 70%+ heroH:    纯 Flow 模式
+  - ~150 粒子可见，其余 alpha = 0
+  - 噪声驱动角度 + 拖尾渲染
+  - 鼠标柔和排斥
+  - 越往下 alpha 越低，最终消失
+
+滚回顶部: 粒子平滑回归编队（spring 物理天然支持）
+```
+
+### 技术实现
+
+**改动范围**：只改 `HeroParticles.tsx` 一个文件
+
+| 步骤 | 说明 |
+|------|------|
+| 1. Canvas 改为 `fixed inset-0 z-0` | 全屏覆盖 |
+| 2. 复制 `makeNoise` 函数 | 从 LoginFlowField 移植（~50 行，零依赖） |
+| 3. 添加 scroll 模式判断 | hero/transition/flow 三段 |
+| 4. flow 模式下粒子行为 | 噪声驱动角度 + 拖尾渲染 |
+| 5. flow 模式鼠标交互 | 柔和排斥（力度 = Hero × 0.3，范围更大） |
+| 6. 粒子穿越视口边界时回绕 | 从对侧重新出现 |
+| 7. 滚回顶部时粒子回归编队 | spring 物理天然支持 |
+
+### 性能
+
+- 不变。流场计算只是三角函数，和 spring 物理同级别
+- 拖尾渲染是低 alpha fillRect，已有先例（登录页）
+- Flow 模式只有 ~150 粒子活跃，CPU 更低
+
+### 不做的事
+
+- 不在移动端启用（保持现状）
+- 不新建组件，只改 HeroParticles.tsx
+- 不在 flow 模式添加冲击波
+- 登录页的流场逻辑不修改
+- Hero 副标题改用 ScrambleText

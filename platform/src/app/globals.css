@@ -33,6 +33,26 @@
   --particle-color: #D4A574;
   --particle-glow: rgba(212, 165, 116, 0.4);
 
+  /* Syntax highlighting */
+  --syn-keyword: #C792EA;
+  --syn-function: #82AAFF;
+  --syn-string: #C3E88D;
+  --syn-comment: #546E7A;
+  --syn-number: #F78C6C;
+  --syn-variable: #EEFFFF;
+  --syn-operator: #89DDFF;
+
+  /* Code editor */
+  --editor-bg: #0D0D0D;
+  --editor-header: #161616;
+  --editor-border: #262626;
+  --editor-gutter: #4A4640;
+  --editor-gutter-border: #1E1E1E;
+  --editor-selection: rgba(212,165,116,0.1);
+  --todo-bg: rgba(212,165,116,0.06);
+  --todo-border: rgba(212,165,116,0.15);
+  --todo-border-hover: rgba(212,165,116,0.4);
+
   --background: var(--bg-page);
   --foreground: var(--text-primary);
 }
@@ -69,6 +89,26 @@
 
   --particle-color: #C17F4E;
   --particle-glow: rgba(193, 127, 78, 0.3);
+
+  /* Syntax highlighting */
+  --syn-keyword: #6B4C9A;
+  --syn-function: #2F5F9F;
+  --syn-string: #4A7A4A;
+  --syn-comment: #9CA3AF;
+  --syn-number: #D97706;
+  --syn-variable: #1F2937;
+  --syn-operator: #1F2937;
+
+  /* Code editor */
+  --editor-bg: #FFFFFF;
+  --editor-header: #FAF8F5;
+  --editor-border: #E8E4DD;
+  --editor-gutter: #D1D5DB;
+  --editor-gutter-border: #E8E4DD;
+  --editor-selection: rgba(193,127,78,0.08);
+  --todo-bg: rgba(193,127,78,0.05);
+  --todo-border: rgba(193,127,78,0.15);
+  --todo-border-hover: rgba(193,127,78,0.35);
 
   --background: var(--bg-page);
   --foreground: var(--text-primary);
@@ -200,6 +240,44 @@ a {
   10% { opacity: 1; }
   90% { opacity: 1; }
   100% { transform: translateY(28px); opacity: 0; }
+}
+
+@keyframes code-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes checkmark-pop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212,165,116,0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(212,165,116,0); }
+}
+
+@keyframes fadeInCode {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes todo-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes flowDown {
+  0% { top: -4px; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: calc(100% + 4px); opacity: 0; }
+}
+
+@keyframes type-line {
+  from { width: 0; }
+  to { width: 100%; }
 }
 
 /* ─── Markdown body (used by Lab pages) ─── */
@@ -338,3 +416,16 @@ a {
   border-color: var(--status-success);
   background: rgba(126, 191, 142, 0.06);
 }
+
+/* ─── Syntax Highlighting ─── */
+.syn-keyword { color: var(--syn-keyword); }
+.syn-function { color: var(--syn-function); }
+.syn-string { color: var(--syn-string); }
+.syn-comment { color: var(--syn-comment); }
+.syn-number { color: var(--syn-number); }
+.syn-variable { color: var(--syn-variable); }
+.syn-operator { color: var(--syn-operator); }
+
+/* ─── Utility ─── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
