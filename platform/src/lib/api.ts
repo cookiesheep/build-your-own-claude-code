@@ -350,7 +350,9 @@ export async function startEnvironment(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to start environment");
+    const body = await response.json().catch(() => null);
+    const serverMessage = body?.message;
+    throw new Error(serverMessage ?? `Failed to start environment (HTTP ${response.status})`);
   }
 
   return (await response.json()) as EnvironmentResponse;

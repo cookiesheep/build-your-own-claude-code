@@ -9,6 +9,18 @@ export interface ApiKeySettings {
   apiBaseUrl?: string | null;
 }
 
+export interface ApiKeyValidationResult {
+  valid: boolean;
+  message?: string;
+  warning?: string;
+}
+
+export interface ApiKeyStatus {
+  source: ApiKeySource;
+  hasKey: boolean;
+  remaining?: number;
+}
+
 function apiUrl(path: string): string {
   if (!API_BASE) {
     return path;
@@ -63,4 +75,28 @@ export async function deleteApiKey(): Promise<ApiKeySettings> {
   });
 
   return readJson<ApiKeySettings>(response);
+}
+
+export async function validateApiKey(
+  apiKey: string,
+  apiBaseUrl?: string,
+): Promise<ApiKeyValidationResult> {
+  const response = await fetch(apiUrl("/api/settings/validate-key"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ apiKey, apiBaseUrl }),
+  });
+
+  return readJson<ApiKeyValidationResult>(response);
+}
+
+export async function getApiKeyStatus(): Promise<ApiKeyStatus> {
+  const response = await fetch(apiUrl("/api/settings/api-key/status"), {
+    credentials: "include",
+  });
+
+  return readJson<ApiKeyStatus>(response);
 }

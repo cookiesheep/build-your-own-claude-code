@@ -20,8 +20,9 @@
  */
 
 import Docker from 'dockerode';
+import { randomBytes } from 'node:crypto';
 import type { Readable } from 'node:stream';
-import { getUserSettings } from '../db/database.js';
+import { getUserSettings, type ApiKeySource } from '../db/database.js';
 import { decrypt } from './encryption.js';
 
 // 自动连接到本地 Docker（Docker Desktop 必须在运行）
@@ -39,6 +40,7 @@ const BUILD_TIMEOUT_SECONDS = 180;
 // 这只是“本进程内缓存”，不是长期真相。
 // 真正需要时，我们仍然会回到 Docker 自己那里做 inspect。
 const sessionContainers = new Map<string, string>();
+const sessionTokenCache = new Map<string, { sessionId: string; userId?: string }>();
 
 type ResolvedContainer = {
   container: Docker.Container;
@@ -49,6 +51,53 @@ type ExecResult = {
   exitCode: number | null;
   output: string;
 };
+
+export type ContainerSessionToken = {
+  sessionId: string;
+  userId?: string;
+};
+
+function generateSessionToken(sessionId: string): string {
+  return `byocc:${sessionId}:${randomBytes(16).toString('hex')}`;
+}
+
+function getProxyBaseUrl(): string {
+  const explicitUrl = process.env.BYOCC_LLM_PROXY_URL?.trim();
+  if (explicitUrl) {
+    return explicitUrl.replace(/\/$/, '');
+  }
+
+  const port = process.env.PORT || '3001';
+  return `http://host.docker.internal:${port}/api/llm`;
+}
+
+function rememberSessionToken(token: string, sessionId: string, userId?: string): void {
+  for (const [cachedToken, cachedSession] of sessionTokenCache.entries()) {
+    if (cachedSession.sessionId === sessionId) {
+      sessionTokenCache.delete(cachedToken);
+    }
+  }
+
+  sessionTokenCache.set(token, { sessionId, userId });
+}
+
+function hasSessionToken(sessionId: string): boolean {
+  for (const cachedSession of sessionTokenCache.values()) {
+    if (cachedSession.sessionId === sessionId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function validateContainerSessionToken(token: string): ContainerSessionToken | null {
+  if (!token.startsWith('byocc:')) {
+    return null;
+  }
+
+  return sessionTokenCache.get(token) ?? null;
+}
 
 function getContainerName(sessionId: string): string {
   if (sessionId.trim() === '') {
@@ -116,19 +165,26 @@ async function ensureLabImageExists(): Promise<void> {
   }
 }
 
-type ContainerApiConfig = {
+export type ContainerApiConfig = {
   apiKey: string;
   apiBaseUrl: string;
+  keySource: ApiKeySource;
+  keyFallback: boolean;
 };
 
 function resolveDefaultApiConfig(): ContainerApiConfig {
   return {
     apiKey: process.env.DEFAULT_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? '',
-    apiBaseUrl: process.env.DEFAULT_API_BASE_URL ?? process.env.ANTHROPIC_BASE_URL ?? '',
+    apiBaseUrl:
+      process.env.DEFAULT_API_BASE_URL ??
+      process.env.ANTHROPIC_BASE_URL ??
+      'https://api.anthropic.com',
+    keySource: 'default',
+    keyFallback: false,
   };
 }
 
-function resolveContainerApiConfig(userId?: string): ContainerApiConfig {
+export function resolveContainerApiConfig(userId?: string): ContainerApiConfig {
   const defaultConfig = resolveDefaultApiConfig();
   if (!userId) {
     return defaultConfig;
@@ -136,10 +192,22 @@ function resolveContainerApiConfig(userId?: string): ContainerApiConfig {
 
   const settings = getUserSettings(userId);
   if (settings?.apiKeyEncrypted && settings.apiKeySource === 'user') {
-    return {
-      apiKey: decrypt(settings.apiKeyEncrypted),
-      apiBaseUrl: settings.apiBaseUrl ?? defaultConfig.apiBaseUrl,
-    };
+    try {
+      return {
+        apiKey: decrypt(settings.apiKeyEncrypted),
+        apiBaseUrl: settings.apiBaseUrl ?? defaultConfig.apiBaseUrl,
+        keySource: 'user',
+        keyFallback: false,
+      };
+    } catch (error) {
+      console.warn(
+        `[container-manager] Failed to decrypt API key for user ${userId}, falling back to default. Error: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return {
+        ...defaultConfig,
+        keyFallback: true,
+      };
+    }
   }
 
   return defaultConfig;
@@ -190,6 +258,10 @@ function sanitizeExecOutput(output: string): string {
   return cleaned.trim();
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
 async function runExecCommand(
   container: Docker.Container,
   command: string[]
@@ -229,22 +301,52 @@ async function runExecCommand(
  *   7. 返回容器 ID
  */
 export async function createContainer(sessionId: string, userId?: string): Promise<string> {
-  const existingContainer = await resolveContainer(sessionId);
+  let existingContainer = await resolveContainer(sessionId);
   if (existingContainer) {
     if (existingContainer.info.State.Status !== 'running') {
       await existingContainer.container.start();
     }
 
-    sessionContainers.set(sessionId, existingContainer.info.Id);
-    return existingContainer.info.Id;
+    if (!hasSessionToken(sessionId)) {
+      const sessionToken = generateSessionToken(sessionId);
+      rememberSessionToken(sessionToken, sessionId, userId);
+      const profilePath = '/etc/profile.d/byocc-env.sh';
+      const { exitCode, output } = await runExecCommand(existingContainer.container, [
+        'bash',
+        '-lc',
+        [
+          `printf '%s\n' ${shellQuote(`export ANTHROPIC_API_KEY=${sessionToken}`)} > ${profilePath}`,
+          `printf '%s\n' ${shellQuote(`export ANTHROPIC_BASE_URL=${getProxyBaseUrl()}`)} >> ${profilePath}`,
+          "sed -i '/^export ANTHROPIC_API_KEY=/d' ~/.bashrc",
+          "sed -i '/^export ANTHROPIC_BASE_URL=/d' ~/.bashrc",
+          `printf '%s\n' ${shellQuote(`export ANTHROPIC_API_KEY=${sessionToken}`)} >> ~/.bashrc`,
+          `printf '%s\n' ${shellQuote(`export ANTHROPIC_BASE_URL=${getProxyBaseUrl()}`)} >> ~/.bashrc`,
+        ].join(' && '),
+      ]);
+
+      if (exitCode !== 0) {
+        sessionTokenCache.delete(sessionToken);
+        console.warn(
+          `[container-manager] Failed to re-inject LLM proxy token for session ${sessionId}; rebuilding container. ${output}`
+        );
+        await removeContainer(sessionId);
+        existingContainer = null;
+      }
+    }
+
+    if (existingContainer) {
+      sessionContainers.set(sessionId, existingContainer.info.Id);
+      return existingContainer.info.Id;
+    }
   }
 
   await ensureLabImageExists();
-  const apiConfig = resolveContainerApiConfig(userId);
-  const env = [`ANTHROPIC_API_KEY=${apiConfig.apiKey}`];
-  if (apiConfig.apiBaseUrl) {
-    env.push(`ANTHROPIC_BASE_URL=${apiConfig.apiBaseUrl}`);
-  }
+  const sessionToken = generateSessionToken(sessionId);
+  rememberSessionToken(sessionToken, sessionId, userId);
+  const env = [
+    `ANTHROPIC_API_KEY=${sessionToken}`,
+    `ANTHROPIC_BASE_URL=${getProxyBaseUrl()}`,
+  ];
 
   const container = await docker.createContainer({
     Image: LAB_IMAGE,
@@ -411,6 +513,11 @@ export async function removeContainer(sessionId: string): Promise<void> {
     }
   } finally {
     sessionContainers.delete(sessionId);
+    for (const [token, cachedSession] of sessionTokenCache.entries()) {
+      if (cachedSession.sessionId === sessionId) {
+        sessionTokenCache.delete(token);
+      }
+    }
   }
 }
 
