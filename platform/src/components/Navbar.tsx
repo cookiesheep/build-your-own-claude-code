@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { LABS, STATUS_COLORS } from "@/lib/labs";
 import { checkAuth, logout, type User } from "@/lib/auth";
+import { getApiKeyStatus, type ApiKeyStatus } from "@/lib/settings";
 import SettingsModal from "./SettingsModal";
 import { useTheme } from "./ThemeProvider";
 
@@ -126,6 +127,7 @@ function LabNav() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
+  const [keyStatus, setKeyStatus] = useState<ApiKeyStatus | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -133,8 +135,21 @@ function LabNav() {
   useEffect(() => {
     void checkAuth().then((auth) => {
       setUser(auth.isAuthenticated ? auth.user : null);
+      if (!auth.isAuthenticated) {
+        setKeyStatus(null);
+      }
     });
   }, [pathname]);
+
+  useEffect(() => {
+    if (!user || settingsOpen) {
+      return;
+    }
+
+    void getApiKeyStatus()
+      .then(setKeyStatus)
+      .catch(() => setKeyStatus(null));
+  }, [settingsOpen, user]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -223,7 +238,13 @@ function LabNav() {
               <span>{user.username}</span>
             </button>
             {showDropdown && (
-              <div className="absolute right-0 top-full mt-1 w-36 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] shadow-lg">
+              <div className="absolute right-0 top-full mt-1 w-48 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] shadow-lg">
+                <div className="border-b border-[var(--border)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                  <div>Key: {keyStatus?.source === "user" ? "自定义" : "平台共享"}</div>
+                  {keyStatus?.source === "default" && keyStatus.remaining !== undefined ? (
+                    <div className="mt-1">剩余 {keyStatus.remaining} 次</div>
+                  ) : null}
+                </div>
                 <button
                   type="button"
                   onClick={() => {

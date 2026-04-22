@@ -143,6 +143,7 @@ environmentRouter.post('/api/environment/start', async (req, res) => {
       terminalUrl: getTerminalUrl(req, sessionId, access.user.id),
     });
   } catch (error) {
+    console.error('[environment/start] Failed to start environment for session', sessionId, error);
     updateSessionEnvironment(sessionId, session.containerId, 'error');
     const message =
       error instanceof Error ? error.message : 'Unknown error while starting environment.';

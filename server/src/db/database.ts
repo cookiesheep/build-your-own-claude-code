@@ -50,6 +50,10 @@ type UserSettingsRow = {
   updated_at: string;
 };
 
+type ApiUsageCountRow = {
+  request_count: number;
+};
+
 const DB_PATH = join(process.cwd(), 'byocc.sqlite');
 let db: DatabaseHandle | undefined;
 
@@ -184,6 +188,24 @@ export function initDatabase(): void {
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS api_usage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      model TEXT,
+      input_tokens INTEGER DEFAULT 0,
+      output_tokens INTEGER DEFAULT 0,
+      key_source TEXT NOT NULL DEFAULT 'default',
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_api_usage_user_date
+      ON api_usage(user_id, date(created_at));
+
+    CREATE INDEX IF NOT EXISTS idx_api_usage_session
+      ON api_usage(session_id);
   `);
 
   const sessionColumns = db
@@ -688,4 +710,77 @@ export function clearUserApiKey(userId: string): UserSettingsRecord {
   }
 
   return savedSettings;
+}
+
+export function recordApiUsage(input: {
+  userId: string;
+  sessionId: string;
+  model: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  keySource: ApiKeySource;
+}): void {
+  const database = getDb();
+
+  database
+    .prepare(
+      `
+        INSERT INTO api_usage (
+          user_id,
+          session_id,
+          model,
+          input_tokens,
+          output_tokens,
+          key_source
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+      `
+    )
+    .run(
+      input.userId,
+      input.sessionId,
+      input.model,
+      Math.max(0, Math.floor(input.inputTokens)),
+      Math.max(0, Math.floor(input.outputTokens)),
+      input.keySource
+    );
+}
+
+export function getTodayUsage(userId: string): number {
+  const database = getDb();
+  const row = database
+    .prepare<[string], ApiUsageCountRow>(
+      `
+        SELECT COUNT(*) AS request_count
+        FROM api_usage
+        WHERE user_id = ?
+          AND date(created_at) = date('now')
+          AND key_source = 'default'
+      `
+    )
+    .get(userId);
+
+  return row?.request_count ?? 0;
+}
+
+export function getSessionUsage(sessionId: string): number {
+  const database = getDb();
+  const row = database
+    .prepare<[string], ApiUsageCountRow>(
+      `
+        SELECT COUNT(*) AS request_count
+        FROM api_usage
+        WHERE session_id = ?
+          AND key_source = 'default'
+      `
+    )
+    .get(sessionId);
+
+  return row?.request_count ?? 0;
+}
+
+export function getUserDailyRemaining(userId: string): number {
+  const dailyLimit = Number.parseInt(process.env.BYOCC_DEFAULT_KEY_DAILY_LIMIT ?? '500', 10);
+  const normalizedDailyLimit = Number.isFinite(dailyLimit) && dailyLimit > 0 ? dailyLimit : 500;
+  return Math.max(0, normalizedDailyLimit - getTodayUsage(userId));
 }

@@ -1611,6 +1611,81 @@
 
 ---
 
+### 2026-04-22（会话 33 / API Key 管理系统重构）
+
+**完成项**：
+- ✅ 在 `codex/api-key-management-refactor` 分支按 `internal/prompt/API密钥管理重构提示词.md` 实现 LLM 代理方案
+- ✅ 新增 `/api/llm/*` 代理路由，容器只持有 session token，真实 API Key 留在后端
+- ✅ 容器 ENV 改为 `ANTHROPIC_API_KEY=byocc:<sessionId>:<random>` 与 `ANTHROPIC_BASE_URL=<LLM proxy>`
+- ✅ 新增 `api_usage` 表、用量记录函数、平台默认 Key 每日/session 限额服务
+- ✅ `resolveContainerApiConfig` 支持自定义 Key 解密失败时降级默认 Key 并打标
+- ✅ 新增 API Key 验证端点与状态端点，前端 `settings.ts` 已接入
+- ✅ 新增 Lab 首次进入的 `ApiKeyGate`，支持平台共享 Key / 自定义 Key 选择与验证
+- ✅ SettingsModal 增加 Key 验证、保存前强制验证，并修复遮罩层级/居中样式
+- ✅ Navbar 下拉菜单展示当前 Key 来源与默认 Key 剩余额度
+- ✅ `.env.example` 新增 `BYOCC_LLM_PROXY_URL`、`BYOCC_DEFAULT_KEY_DAILY_LIMIT`、`BYOCC_DEFAULT_KEY_SESSION_LIMIT`
+- ✅ 新增离线 Vitest 覆盖：AES-GCM/旧 CBC、解密失败降级、默认 Key 限额/BYOK 不限额
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- ⚠️ 本机 C: 与系统 Temp 当前 0 可用空间；验证时需将 `TMP` / `TEMP` 指向项目 `.tmp/`
+- ⚠️ 尚未做真实 Docker 容器内 Claude API 调用代理链路人工验证
+
+**验证**：
+- `cd server && npx tsc --noEmit --project tsconfig.json`
+- `cd platform && npx tsc --noEmit --project tsconfig.json`
+- `cd server && npm test`（使用 `TMP/TEMP=D:\code\build-your-own-claude-code\.tmp\vitest`）
+- `cd server && npm run build`
+- `cd platform && npm run build`
+- `git diff --check`
+
+**下一步**：
+- 浏览器人工验证 `登录 -> Lab -> ApiKeyGate -> 启动环境 -> 容器内 API 调用`
+- 用 `docker inspect` 确认容器 ENV 中不再出现真实 `DEFAULT_API_KEY`
+- 用真实 Anthropic/兼容 Key 验证 `/api/llm/v1/messages` SSE 流式响应
+
+---
+
+### 2026-04-22（会话 34 / API Key 重构 Review 修复）
+
+**完成项**：
+- ✅ 修复 `validate-key` 与 LLM proxy 的 SSRF 风险：新增统一 API Base URL 安全校验，阻止 localhost / 私网 / link-local / metadata 目标，并支持 `BYOCC_ALLOWED_LLM_BASE_URLS` allowlist
+- ✅ LLM proxy 热路径不再重复做 DNS 安全检查，Base URL 在保存/验证入口校验
+- ✅ 按三次 review 补齐 IPv6-mapped IPv4 私网检测与测试
+- ✅ 按三次 review 补齐 validate-key 限流 Map 过期桶清理
+- ✅ 给 `validate-key` 增加内存级频率限制，降低开放代理/出站请求滥用风险
+- ✅ 给外部 fetch 增加 `AbortController` 超时，新增 `BYOCC_LLM_PROXY_TIMEOUT_MS`
+- ✅ 修复 LLM proxy SSE 客户端断连处理：断连时取消 reader / abort 上游请求，并处理 backpressure
+- ✅ LLM proxy 流式响应开始解析 SSE usage，不再总是记录 token=0
+- ✅ 去掉 `createContainer` 缺 token 时递归重建逻辑，改为一次清理后直接创建
+- ✅ 按三次 review 补正 ECONNRESET 根因：已有容器缺 token cache 时通过 docker exec 同时重写 `/etc/profile.d/byocc-env.sh` 与 `~/.bashrc`，失败才重建容器
+- ✅ 补充 `llm-proxy` 与 `api-base-url` 测试，当前 server 测试增加到 5 个文件 / 11 个断言
+- ✅ 整理 SettingsModal 保存前验证逻辑，恢复默认 Key 时清除 `byocc-chose-default-key`
+- ✅ `.env.example` 补充 `BYOCC_LLM_PROXY_TIMEOUT_MS` 与 `BYOCC_ALLOWED_LLM_BASE_URLS`
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- ⚠️ 仍未做真实 Docker + Anthropic/兼容 API 人工联调
+- ⚠️ 本机 C: 与系统 Temp 仍为 0 可用空间，测试/构建需使用项目 `.tmp/`
+
+**验证**：
+- `cd server && npx tsc --noEmit --project tsconfig.json`
+- `cd platform && npx tsc --noEmit --project tsconfig.json`
+- `cd server && npm test`（`TMP/TEMP=D:\code\build-your-own-claude-code\.tmp\vitest`，5 files / 12 tests passed）
+- `cd server && npm run build`
+- `cd platform && npm run build`
+- `git diff --check`
+
+**下一步**：
+- 让另一个 AI 复查本轮 review 修复
+- 之后进行真实浏览器 + Docker + LLM proxy 人工验证
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |

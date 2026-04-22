@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   deleteApiKey,
   getApiKeySettings,
   updateApiKey,
+  validateApiKey,
   type ApiKeySettings,
+  type ApiKeyValidationResult,
 } from "@/lib/settings";
 
 type SettingsModalProps = {
@@ -15,6 +18,7 @@ type SettingsModalProps = {
 };
 
 type RequestState = "idle" | "loading" | "saving" | "error" | "success";
+const CHOSE_DEFAULT_KEY_STORAGE_KEY = "byocc-chose-default-key";
 
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [settings, setSettings] = useState<ApiKeySettings | null>(null);
@@ -23,6 +27,8 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [showKey, setShowKey] = useState(false);
   const [state, setState] = useState<RequestState>("idle");
   const [message, setMessage] = useState("");
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<ApiKeyValidationResult | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -33,6 +39,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     setMessage("");
     setApiKey("");
     setApiBaseUrl("");
+    setValidationResult(null);
     void getApiKeySettings()
       .then((nextSettings) => {
         setSettings(nextSettings);
@@ -48,6 +55,36 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     return null;
   }
 
+  const validateCurrentApiKey = async (): Promise<ApiKeyValidationResult> => {
+    if (apiKey.trim().length <= 10) {
+      return { valid: false, message: "API Key 至少需要 11 个字符。" };
+    }
+
+    const trimmedApiBaseUrl = apiBaseUrl.trim();
+    return validateApiKey(apiKey.trim(), trimmedApiBaseUrl || undefined);
+  };
+
+  const handleValidate = async (): Promise<ApiKeyValidationResult> => {
+    setValidating(true);
+    setMessage("");
+    try {
+      const result = await validateCurrentApiKey();
+      setValidationResult(result);
+      setMessage(result.warning ?? result.message ?? "");
+      return result;
+    } catch (error) {
+      const result = {
+        valid: false,
+        message: error instanceof Error ? error.message : "验证请求失败",
+      };
+      setValidationResult(result);
+      setMessage(result.message);
+      return result;
+    } finally {
+      setValidating(false);
+    }
+  };
+
   const handleSave = async () => {
     if (apiKey.trim().length <= 10) {
       setState("error");
@@ -58,6 +95,14 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     setState("saving");
     setMessage("");
     try {
+      const validation = await validateCurrentApiKey();
+      setValidationResult(validation);
+      if (!validation.valid) {
+        setState("error");
+        setMessage(validation.message ?? "API Key 验证失败，未保存。");
+        return;
+      }
+
       const trimmedApiBaseUrl = apiBaseUrl.trim();
       const nextSettings = await updateApiKey(
         apiKey.trim(),
@@ -81,6 +126,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       const nextSettings = await deleteApiKey();
       setSettings(nextSettings);
       setApiKey("");
+      window.localStorage.removeItem(CHOSE_DEFAULT_KEY_STORAGE_KEY);
       setState("success");
       setMessage("已恢复使用平台共享 Key。重启实验环境后生效。");
     } catch (error) {
@@ -93,8 +139,8 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const usesCustomKey = settings?.source === "user";
   const currentBaseUrl = settings?.apiBaseUrl || "默认 Anthropic endpoint";
 
-  return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+  const modal = (
+    <div className="fixed inset-0 z-[60] flex items-start justify-center pt-24 bg-black/60 px-4 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--bg-panel)] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -135,7 +181,10 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
               id="api-key"
               type={showKey ? "text" : "password"}
               value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
+              onChange={(event) => {
+                setApiKey(event.target.value);
+                setValidationResult(null);
+              }}
               placeholder="sk-ant-..."
               className="min-w-0 flex-1 rounded-xl border border-[var(--border)] bg-transparent px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]"
             />
@@ -166,6 +215,27 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           </p>
         </div>
 
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              void handleValidate();
+            }}
+            disabled={isBusy || validating || apiKey.trim().length <= 10}
+            className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {validating ? "验证中..." : "验证 Key"}
+          </button>
+          {validationResult ? (
+            <span
+              className="text-sm"
+              style={{ color: validationResult.valid ? "var(--status-success)" : "#E57373" }}
+            >
+              {validationResult.valid ? "Key 有效" : validationResult.message ?? "Key 无效"}
+            </span>
+          ) : null}
+        </div>
+
         {message ? (
           <div
             className="mt-4 rounded-xl border px-4 py-3 text-sm"
@@ -183,7 +253,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           <button
             type="button"
             onClick={handleDelete}
-            disabled={isBusy || !usesCustomKey}
+            disabled={isBusy || validating || !usesCustomKey}
             className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-45"
           >
             恢复默认
@@ -191,7 +261,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           <button
             type="button"
             onClick={handleSave}
-            disabled={isBusy}
+            disabled={isBusy || validating}
             className="rounded-xl border border-[var(--accent-border)] bg-[var(--accent-button-bg)] px-4 py-2 text-sm font-medium text-[var(--accent-button-text)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {state === "saving" ? "保存中..." : "保存 Key"}
@@ -200,4 +270,6 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

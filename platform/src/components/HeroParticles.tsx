@@ -66,7 +66,7 @@ const CFG = {
   flowNoiseForce: 0.0015,
   flowDamping: 0.98,
   flowVortexRadius: 200,
-  flowVortexForce: 0.02,
+  flowVortexForce: 0.09,
   flowIllumRadius: 200,
   flowIllumBoost: 1.9,
 };

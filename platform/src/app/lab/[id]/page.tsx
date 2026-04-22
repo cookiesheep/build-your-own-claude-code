@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import ApiKeyGate from "@/components/ApiKeyGate";
 import AuthGuard from "@/components/AuthGuard";
 import LabLayout from "@/components/LabLayout";
 import { LABS } from "@/lib/labs";
@@ -34,9 +35,11 @@ export default async function LabPage({ params }: LabPageProps) {
 
   return (
     <AuthGuard>
-      <div style={{ marginTop: 56 }}>
-        <LabLayout lab={lab} content={content} />
-      </div>
+      <ApiKeyGate labId={lab.id}>
+        <div style={{ marginTop: 56 }}>
+          <LabLayout lab={lab} content={content} />
+        </div>
+      </ApiKeyGate>
     </AuthGuard>
   );
 }
