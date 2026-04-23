@@ -283,6 +283,7 @@ a {
 /* ─── Markdown body (used by Lab pages) ─── */
 .markdown-body {
   line-height: 1.7;
+  font-size: 0.9rem;
 }
 
 .markdown-body h1 {
@@ -290,19 +291,21 @@ a {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .markdown-body h2 {
-  margin: 1.25rem 0 0.5rem;
+  margin: 1.5rem 0 0.5rem;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 0.5rem;
-  font-size: 1.2rem;
+  padding-bottom: 0.4rem;
+  font-size: 1.15rem;
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .markdown-body h3 {
-  margin: 1rem 0 0.4rem;
+  margin: 1.25rem 0 0.4rem;
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -322,12 +325,13 @@ a {
   color: var(--accent);
 }
 
+/* Fenced code blocks — CodeBlock component handles styling */
 .markdown-body pre {
   margin: 0.75rem 0;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--bg-panel);
+  background: var(--editor-bg);
   padding: 1rem;
 }
 
@@ -335,6 +339,7 @@ a {
   background: none;
   padding: 0;
   color: var(--text-primary);
+  font-size: 0.82rem;
 }
 
 .markdown-body ul,
@@ -344,35 +349,46 @@ a {
 }
 
 .markdown-body li {
-  margin: 0.2rem 0;
+  margin: 0.25rem 0;
 }
 
 .markdown-body table {
   margin: 0.75rem 0;
   width: 100%;
   border-collapse: collapse;
+  overflow-x: auto;
+  display: block;
+}
+
+.markdown-body thead {
+  background: var(--bg-card);
 }
 
 .markdown-body th {
   border: 1px solid var(--border);
-  background: var(--bg-card);
   padding: 0.5rem 0.75rem;
   text-align: left;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .markdown-body td {
   border: 1px solid var(--border);
   padding: 0.5rem 0.75rem;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
+}
+
+.markdown-body tbody tr:nth-child(even) {
+  background: var(--surface-hover);
 }
 
 .markdown-body blockquote {
   margin: 0.75rem 0;
   border-left: 3px solid var(--accent);
-  padding-left: 1rem;
+  padding: 0.25rem 0 0.25rem 1rem;
   color: var(--text-secondary);
   font-style: italic;
 }
@@ -384,40 +400,178 @@ a {
 .markdown-body a {
   color: var(--accent);
   text-decoration: none;
+  transition: color 0.15s;
 }
 
 .markdown-body a:hover {
   text-decoration: underline;
+  color: var(--accent-light);
 }
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+/* ─── Admonitions (MkDocs Material style) ─── */
 
 .admonition {
-  margin: 0.75rem 0;
+  margin: 1rem 0;
+  border-radius: 8px;
   border-left: 4px solid;
-  border-radius: 6px;
   padding: 0.75rem 1rem;
+  overflow: hidden;
 }
 
-.admonition.danger {
-  border-color: var(--status-error);
-  background: rgba(199, 80, 80, 0.08);
+.admonition-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  margin-bottom: 0.35rem;
 }
 
-.admonition.warning {
+.admonition-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.admonition-content {
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+
+.admonition-content > *:first-child {
+  margin-top: 0;
+}
+
+.admonition-content > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Tip */
+.admonition-tip {
+  border-color: var(--accent);
+  background: rgba(212, 165, 116, 0.08);
+}
+.admonition-tip .admonition-title {
+  color: var(--accent);
+}
+.admonition-tip .admonition-icon {
+  color: var(--accent);
+}
+
+/* Warning */
+.admonition-warning {
   border-color: var(--status-warning);
   background: rgba(212, 165, 116, 0.08);
 }
-
-.admonition.note {
-  border-color: var(--accent);
-  background: rgba(212, 165, 116, 0.06);
+.admonition-warning .admonition-title {
+  color: var(--status-warning);
+}
+.admonition-warning .admonition-icon {
+  color: var(--status-warning);
 }
 
-.admonition.success {
+/* Danger */
+.admonition-danger {
+  border-color: var(--status-error);
+  background: rgba(199, 80, 80, 0.08);
+}
+.admonition-danger .admonition-title {
+  color: var(--status-error);
+}
+.admonition-danger .admonition-icon {
+  color: var(--status-error);
+}
+
+/* Success */
+.admonition-success {
   border-color: var(--status-success);
-  background: rgba(126, 191, 142, 0.06);
+  background: rgba(126, 191, 142, 0.08);
+}
+.admonition-success .admonition-title {
+  color: var(--status-success);
+}
+.admonition-success .admonition-icon {
+  color: var(--status-success);
 }
 
-/* ─── Syntax Highlighting ─── */
+/* Note */
+.admonition-note {
+  border-color: var(--aux-blue);
+  background: rgba(139, 157, 175, 0.08);
+}
+.admonition-note .admonition-title {
+  color: var(--aux-blue);
+}
+.admonition-note .admonition-icon {
+  color: var(--aux-blue);
+}
+
+/* ─── CodeBlock component ─── */
+
+.code-block-wrapper {
+  margin: 0.75rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.75rem;
+  background: var(--surface-hover);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-block-lang {
+  font-family: var(--font-jetbrains-mono), "Fira Code", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.code-block-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.code-block-copy:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.markdown-body-pre {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--editor-bg);
+  padding: 1rem;
+  font-family: var(--font-jetbrains-mono), "Fira Code", monospace;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+/* ─── Syntax Highlighting (landing page tokenizer) ─── */
 .syn-keyword { color: var(--syn-keyword); }
 .syn-function { color: var(--syn-function); }
 .syn-string { color: var(--syn-string); }
