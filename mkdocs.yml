@@ -5,19 +5,20 @@ repo_name: build-your-own-claude-code
 
 theme:
   name: material
+  custom_dir: overrides
   language: zh
   palette:
     - media: '(prefers-color-scheme: light)'
       scheme: default
-      primary: teal
-      accent: cyan
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: 切换到深色模式
     - media: '(prefers-color-scheme: dark)'
       scheme: slate
-      primary: teal
-      accent: cyan
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: 切换到浅色模式
@@ -30,18 +31,31 @@ theme:
     - navigation.tracking
     - navigation.instant
     - navigation.instant.progress
+    - navigation.sections
+    - header.autohide
     - content.code.copy
     - content.code.select
+    - content.code.annotate
     - content.tabs.link
     - toc.follow
+    - search.suggest
+    - search.highlight
   font:
     code: JetBrains Mono
   icon:
     repo: fontawesome/brands/github
 
+extra_css:
+  - stylesheets/extra.css
+  - stylesheets/home.css
+
+extra_javascript:
+  - javascripts/extra.js
+
 nav:
+  - 首页: index.md
   - 主页:
-      - index.md
+      - about/welcome.md
       - 项目背景: about/background.md
       - 常见问题: about/faq.md
   - 实验指南:
@@ -75,14 +89,19 @@ nav:
 
 markdown_extensions:
   - attr_list:
+  - md_in_html:
   - pymdownx.highlight:
       linenums: true
       use_pygments: true
       pygments_lang_class: true
   - pymdownx.superfences:
+      preserve_tabs: true
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.details:
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.keys:
   - admonition:
   - toc:
       permalink: true

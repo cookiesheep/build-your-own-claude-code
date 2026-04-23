@@ -1,8 +1,6 @@
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-
 import { LABS } from "@/lib/labs";
 
+import MarkdownRenderer from "./MarkdownRenderer";
 import ProgressTracker from "./ProgressTracker";
 
 type LabSidebarProps = {
@@ -36,7 +34,7 @@ export default function LabSidebar({ labId, content }: LabSidebarProps) {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         <div className="markdown-body">
-          <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+          <MarkdownRenderer content={content} />
         </div>
       </div>
 

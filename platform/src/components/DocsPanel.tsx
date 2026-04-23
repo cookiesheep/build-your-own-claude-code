@@ -1,7 +1,6 @@
 "use client";
 
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 type DocsPanelProps = {
   labId?: number;
@@ -18,7 +17,7 @@ export default function DocsPanel({ content }: DocsPanelProps) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         <div className="markdown-body">
-          <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+          <MarkdownRenderer content={content} />
         </div>
       </div>
     </div>

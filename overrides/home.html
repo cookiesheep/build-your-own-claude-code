@@ -1,0 +1,68 @@
+{% extends "main.html" %}
+{% block tabs %}
+{{ super() }}
+<style>
+  .md-header {
+    position: initial;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-bottom: none !important;
+  }
+  .md-header--shadow { box-shadow: none !important }
+  .md-header__topic { color: #fff !important }
+  .md-header__button { color: rgba(255,255,255,0.7) !important }
+  .md-header__button:hover { color: #fff !important }
+  .md-tabs {
+    background: transparent !important;
+    position: initial !important;
+  }
+  .md-tabs__link { color: rgba(255,255,255,0.7) !important }
+  .md-tabs__link--active, .md-tabs__link:hover { color: #fff !important }
+  .md-main__inner { margin: 0 }
+  .md-content { display: none }
+  @media screen and (min-width: 60em) {
+    .md-sidebar--secondary { display: none }
+  }
+  @media screen and (min-width: 76.25em) {
+    .md-sidebar--primary { display: none }
+  }
+</style>
+
+<section class="byocc-hero" id="byocc-hero">
+  <div class="byocc-hero-gif"></div>
+  <div class="byocc-hero-overlay"></div>
+  <div class="md-grid md-typeset byocc-hero-content">
+    <div class="byocc-hero-text">
+      <h1>Build Your Own<br/><span class="accent">Claude Code</span></h1>
+      <p>从零构建 Claude Code 的核心引擎 — 你写的代码，驱动真实的 Claude Code。<br/>
+      6 个渐进式 Lab，亲手实现 Agent Harness。</p>
+      <div class="byocc-hero-actions">
+        <a href="{{ 'labs/lab-00/' | url }}" class="md-button md-button--primary">
+          开始学习 →
+        </a>
+        <a href="https://github.com/cookiesheep/build-your-own-claude-code" target="_blank" class="md-button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="byocc-hero-scroll">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 5v14M5 12l7 7 7-7"/>
+    </svg>
+  </div>
+</section>
+
+<div class="byocc-hero-reflection" aria-hidden="true"></div>
+
+<div class="byocc-home-body">
+  <div class="md-grid md-typeset">
+  {{ page.content }}
+  </div>
+</div>
+{% endblock %}
+{% block content %}{% endblock %}
+{% block footer %}{% endblock %}
