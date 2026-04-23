@@ -38,7 +38,7 @@ interface FloatingCodeBlocksProps {
 }
 
 export default function FloatingCodeBlocks({
-  maxBlocks = 26,
+  maxBlocks: maxBlocksProp,
   baseOpacity = 0.25,
   hoverOpacity = 0.8,
   speedMultiplier = 1,
@@ -50,6 +50,7 @@ export default function FloatingCodeBlocks({
   const hoveredIdRef = useRef<number>(-1);
   const [hoveredId, setHoveredId] = useState(-1);
   const [mounted, setMounted] = useState(false);
+  const [resizeKey, setResizeKey] = useState(0);
   const { theme } = useTheme();
   const blockElsRef = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -63,6 +64,8 @@ export default function FloatingCodeBlocks({
 
     // Don't render floating code on narrow/mobile screens
     if (w < 768) return;
+
+    const maxBlocks = maxBlocksProp ?? Math.max(26, Math.floor(w * h / 50000));
 
     const used = new Set<number>();
     const blocks: BlockState[] = [];
@@ -122,7 +125,7 @@ export default function FloatingCodeBlocks({
         vy: (Math.random() - 0.5) * 0.012 * speedMultiplier,
         phase: 'entering',
         enterProgress: 0,
-        enterDelay: id * 100 + Math.random() * 100,
+        enterDelay: Math.random() * 400,
         targetX: tx,
         targetY: ty,
       });
@@ -133,7 +136,21 @@ export default function FloatingCodeBlocks({
 
     blocksRef.current = blocks;
     setMounted(true);
-  }, [maxBlocks, speedMultiplier]);
+  }, [maxBlocksProp, speedMultiplier, resizeKey]);
+
+  // Reinitialize on resize (debounced)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const onResize = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setResizeKey((k) => k + 1), 300);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      clearTimeout(timer);
+    };
+  }, []);
 
   // Animation loop
   useEffect(() => {
@@ -155,7 +172,7 @@ export default function FloatingCodeBlocks({
         // Enter: staggered fade-in (position already set)
         if (block.phase === 'entering') {
           if (elapsed < block.enterDelay) return;
-          block.enterProgress = Math.min(1, block.enterProgress + 0.03);
+          block.enterProgress = Math.min(1, block.enterProgress + 0.06);
           if (block.enterProgress >= 1) block.phase = 'floating';
         }
 

@@ -7,9 +7,10 @@ import LabDetailPanel from './LabDetailPanel';
 
 interface PlatformClientLayoutProps {
   labs: LabMeta[];
+  labContents?: Record<number, string>;
 }
 
-export default function PlatformClientLayout({ labs }: PlatformClientLayoutProps) {
+export default function PlatformClientLayout({ labs, labContents }: PlatformClientLayoutProps) {
   const [selectedId, setSelectedId] = useState(() => {
     const active = labs.find((l) => l.status === 'in_progress');
     return active ? active.id : labs[0]?.id ?? 0;
@@ -32,7 +33,7 @@ export default function PlatformClientLayout({ labs }: PlatformClientLayoutProps
 
       {/* Right: Detail panel */}
       <div className="min-w-0 flex-1">
-        <LabDetailPanel lab={selectedLab} />
+        <LabDetailPanel lab={selectedLab} markdownContent={labContents?.[selectedLab.id]} />
       </div>
 
       {/* Mobile: horizontal lab selector */}
