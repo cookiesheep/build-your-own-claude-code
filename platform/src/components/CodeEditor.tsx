@@ -16,28 +16,66 @@ const Editor = dynamic(() => import("@monaco-editor/react"), {
 type CodeEditorProps = {
   code: string;
   fileName: string;
+  language?: string;
+  readOnly?: boolean;
+  loading?: boolean;
+  loadingMessage?: string;
   onChange: (value: string) => void;
 };
 
 export default function CodeEditor({
   code,
   fileName,
+  language = "typescript",
+  readOnly = false,
+  loading = false,
+  loadingMessage = "正在加载文件...",
   onChange,
 }: CodeEditorProps) {
   const { theme } = useTheme();
 
+  if (loading) {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden border-b border-[var(--border)] bg-[var(--bg-panel)]">
+        <div className="flex h-9 items-center gap-2 border-b border-[var(--border)] bg-[var(--bg-panel)] px-4">
+          <span className="text-[0.7rem] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            {language.slice(0, 2).toUpperCase()}
+          </span>
+          <span className="text-sm text-[var(--text-primary)]">
+            {readOnly ? "🔒 " : ""}
+            {fileName}
+          </span>
+        </div>
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-[var(--bg-panel)] text-sm text-[var(--text-secondary)]">
+          {loadingMessage}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden border-b border-[var(--border)] bg-[var(--bg-panel)]">
+    <div
+      className="flex h-full min-h-0 flex-col overflow-hidden border-b border-[var(--border)]"
+      style={{
+        background: readOnly
+          ? "color-mix(in srgb, var(--bg-panel) 86%, var(--surface-hover))"
+          : "var(--bg-panel)",
+      }}
+    >
       <div className="flex h-9 items-center gap-2 border-b border-[var(--border)] bg-[var(--bg-panel)] px-4">
         <span className="text-[0.7rem] uppercase tracking-[0.18em] text-[var(--text-muted)]">
-          TS
+          {language.slice(0, 2).toUpperCase()}
         </span>
-        <span className="text-sm text-[var(--text-primary)]">{fileName}</span>
+        <span className="text-sm text-[var(--text-primary)]">
+          {readOnly ? "🔒 " : ""}
+          {fileName}
+        </span>
       </div>
       <div className="min-h-0 flex-1">
         <Editor
           height="100%"
-          defaultLanguage="typescript"
+          defaultLanguage={language}
+          language={language}
           theme={theme === "light" ? "light" : "vs-dark"}
           value={code}
           onChange={(value) => {
@@ -53,6 +91,7 @@ export default function CodeEditor({
             wordWrap: "on",
             tabSize: 2,
             smoothScrolling: true,
+            readOnly,
           }}
         />
       </div>

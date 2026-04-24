@@ -132,7 +132,7 @@ async function inspectContainerByHandle(handle: string): Promise<ResolvedContain
   }
 }
 
-async function resolveContainer(sessionId: string): Promise<ResolvedContainer | null> {
+export async function resolveContainer(sessionId: string): Promise<ResolvedContainer | null> {
   const cachedContainerId = sessionContainers.get(sessionId);
   if (cachedContainerId) {
     const cachedContainer = await inspectContainerByHandle(cachedContainerId);
@@ -262,9 +262,12 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-async function runExecCommand(
+export async function runExecCommand(
   container: Docker.Container,
-  command: string[]
+  command: string[],
+  options: {
+    sanitizeOutput?: boolean;
+  } = {}
 ): Promise<ExecResult> {
   const exec = await container.exec({
     Cmd: command,
@@ -276,7 +279,10 @@ async function runExecCommand(
   });
 
   const stream = (await exec.start({})) as Readable;
-  const output = sanitizeExecOutput(await readStreamToString(stream));
+  const rawOutput = await readStreamToString(stream);
+  const output = options.sanitizeOutput === false
+    ? rawOutput
+    : sanitizeExecOutput(rawOutput);
   const execInfo = await exec.inspect();
 
   return {
@@ -414,6 +420,35 @@ export async function injectCode(
         output || 'No container output was captured.',
       ].join('\n')
     );
+  }
+}
+
+export async function injectFiles(
+  sessionId: string,
+  files: Record<string, string>
+): Promise<void> {
+  const { container } = await getContainerOrThrow(sessionId);
+
+  for (const [filePath, code] of Object.entries(files)) {
+    if (!filePath || typeof code !== 'string') {
+      continue;
+    }
+
+    if (filePath.includes('..') || filePath.startsWith('/')) {
+      throw new Error(`Invalid file path: ${filePath}`);
+    }
+
+    const targetFile = `/workspace/${filePath}`;
+    const encodedCode = Buffer.from(code, 'utf8').toString('base64');
+    const { exitCode, output } = await runExecCommand(container, [
+      'bash',
+      '-c',
+      `mkdir -p $(dirname ${shellQuote(targetFile)}) && printf '%s' '${encodedCode}' | base64 -d > ${shellQuote(targetFile)}`,
+    ]);
+
+    if (exitCode !== 0) {
+      throw new Error(`Failed to inject ${filePath}: ${output || 'No output'}`);
+    }
   }
 }
 

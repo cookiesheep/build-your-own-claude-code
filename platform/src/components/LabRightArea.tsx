@@ -3,11 +3,17 @@
 import { useCallback, useState } from "react";
 import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 
-import { LAB_FILE_NAMES, LAB_SKELETONS, STATUS_LABELS, type LabMeta } from "@/lib/labs";
+import { fetchFileContent } from "@/lib/file-reader";
+import {
+  getLabInitialFiles,
+  getPrimaryEditableLabFile,
+} from "@/lib/file-tree-data";
+import { STATUS_LABELS, type LabMeta } from "@/lib/labs";
 import {
   createSession,
   ensurePlatformIdentity,
   getEnvironmentStatus,
+  getTerminalWebSocketUrl,
   getWorkspace,
   resetEnvironment,
   saveWorkspace,
@@ -50,13 +56,29 @@ type LabRightAreaProps = {
 type BuildState = "idle" | "building" | "success" | "error";
 type SaveState = "idle" | "loading" | "dirty" | "saving" | "saved" | "error";
 
+function rewriteTerminalUrl(backendUrl: string, sessionId: string): string {
+  if (!backendUrl) return "";
+  try {
+    const token = new URL(backendUrl).searchParams.get("token");
+    const base = getTerminalWebSocketUrl(sessionId);
+    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+  } catch {
+    return backendUrl;
+  }
+}
+
 export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRightAreaProps) {
   // Panel refs
   const fileTreePanelRef = usePanelRef();
   const [fileTreeCollapsed, setFileTreeCollapsed] = useReactState(false);
 
   // Workspace state
-  const [code, setCode] = useReactState<string>(LAB_SKELETONS[lab.id] ?? "");
+  const [workspaceFiles, setWorkspaceFiles] = useReactState<Record<string, string>>(
+    getLabInitialFiles(lab.id),
+  );
+  const [activeEditableFile, setActiveEditableFile] = useReactState<string | null>(
+    getPrimaryEditableLabFile(lab.id),
+  );
   const [userId, setUserId] = useReactState<string>("");
   const [sessionId, setSessionId] = useReactState<string>("");
   const [environmentStatus, setEnvironmentStatus] = useReactState<EnvironmentStatus>("not_started");
@@ -67,7 +89,13 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
   const [buildState, setBuildState] = useReactState<BuildState>("idle");
   const [saveState, setSaveState] = useReactState<SaveState>("loading");
   const [lastSavedAt, setLastSavedAt] = useReactState<string | null>(null);
+  const [viewingFile, setViewingFile] = useReactState<string | null>(null);
+  const [readOnlyContent, setReadOnlyContent] = useReactState<string | null>(null);
+  const [readOnlyLanguage, setReadOnlyLanguage] = useReactState("typescript");
+  const [readOnlyLoading, setReadOnlyLoading] = useReactState(false);
+  const [readOnlyError, setReadOnlyError] = useReactState<string | null>(null);
   const saveRequestIdRef = useRef(0);
+  const readOnlyRequestIdRef = useRef(0);
 
   // Bootstrap session
   useEffect(() => {
@@ -76,7 +104,14 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
     async function bootstrap() {
       try {
         setSaveState("loading");
-        setCode(LAB_SKELETONS[lab.id] ?? "");
+        const initialFiles = getLabInitialFiles(lab.id);
+        setWorkspaceFiles(initialFiles);
+        setActiveEditableFile(getPrimaryEditableLabFile(lab.id));
+        readOnlyRequestIdRef.current += 1;
+        setViewingFile(null);
+        setReadOnlyContent(null);
+        setReadOnlyError(null);
+        setReadOnlyLoading(false);
         await ensurePlatformIdentity();
         const existingSessionId = window.localStorage.getItem(SESSION_STORAGE_KEY) ?? undefined;
         const session = await createSession(existingSessionId);
@@ -92,18 +127,19 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
           const environment = await getEnvironmentStatus(session.sessionId);
           if (!cancelled) {
             setEnvironmentStatus(environment.environmentStatus);
-            setTerminalUrl(environment.success ? (environment.terminalUrl ?? "") : "");
+            setTerminalUrl(environment.success ? rewriteTerminalUrl(environment.terminalUrl ?? "", session.sessionId) : "");
             setEnvironmentMessage(environment.message ?? "");
           }
         }
 
         const workspace = await getWorkspace(lab.id);
         if (!cancelled) {
-          if (workspace.code !== null) {
-            setCode(workspace.code);
-          } else {
-            setCode(LAB_SKELETONS[lab.id] ?? "");
-          }
+          const mergedFiles = {
+            ...initialFiles,
+            ...workspace.files,
+          };
+          setWorkspaceFiles(mergedFiles);
+          setActiveEditableFile((current) => current ?? Object.keys(mergedFiles)[0] ?? null);
           setLastSavedAt(workspace.updatedAt);
           setSaveState(workspace.updatedAt ? "saved" : "idle");
         }
@@ -129,7 +165,7 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
       const requestId = saveRequestIdRef.current + 1;
       saveRequestIdRef.current = requestId;
       setSaveState("saving");
-      void saveWorkspace(lab.id, code)
+      void saveWorkspace(lab.id, workspaceFiles)
         .then((workspace) => {
           if (saveRequestIdRef.current === requestId) {
             setLastSavedAt(workspace.updatedAt);
@@ -144,12 +180,59 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
     }, 1500);
 
     return () => { window.clearTimeout(timer); };
-  }, [code, lab.id, saveState]);
+  }, [lab.id, saveState, workspaceFiles]);
 
   const handleCodeChange = (value: string) => {
+    if (!activeEditableFile) {
+      return;
+    }
+
     saveRequestIdRef.current += 1;
-    setCode(value);
+    setWorkspaceFiles((current) => ({
+      ...current,
+      [activeEditableFile]: value,
+    }));
     setSaveState("dirty");
+  };
+
+  const handleFileSelect = async (path: string, isEditable: boolean) => {
+    if (isEditable) {
+      setActiveEditableFile(path);
+      setViewingFile(null);
+      setReadOnlyContent(null);
+      setReadOnlyError(null);
+      setReadOnlyLoading(false);
+      return;
+    }
+
+    if (environmentStatus !== "running") {
+      setReadOnlyError("请先启动实验环境再查看文件");
+      return;
+    }
+
+    setViewingFile(path);
+    const requestId = readOnlyRequestIdRef.current + 1;
+    readOnlyRequestIdRef.current = requestId;
+    setReadOnlyLoading(true);
+    setReadOnlyError(null);
+    setReadOnlyContent(null);
+    try {
+      const result = await fetchFileContent(path, sessionId);
+      if (readOnlyRequestIdRef.current !== requestId) {
+        return;
+      }
+      setReadOnlyContent(result.content);
+      setReadOnlyLanguage(result.language);
+    } catch (error) {
+      if (readOnlyRequestIdRef.current !== requestId) {
+        return;
+      }
+      setReadOnlyError(error instanceof Error ? error.message : "读取文件失败");
+    } finally {
+      if (readOnlyRequestIdRef.current === requestId) {
+        setReadOnlyLoading(false);
+      }
+    }
   };
 
   const saveCurrentWorkspace = async () => {
@@ -157,7 +240,7 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
     saveRequestIdRef.current = requestId;
     setSaveState("saving");
     try {
-      const workspace = await saveWorkspace(lab.id, code);
+      const workspace = await saveWorkspace(lab.id, workspaceFiles);
       if (saveRequestIdRef.current === requestId) {
         setLastSavedAt(workspace.updatedAt);
         setSaveState("saved");
@@ -181,7 +264,7 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
       setEnvironmentMessage("正在启动实验环境...");
       const environment = await startEnvironment(sessionId);
       setEnvironmentStatus(environment.success ? environment.environmentStatus : "error");
-      setTerminalUrl(environment.success ? (environment.terminalUrl ?? "") : "");
+      setTerminalUrl(environment.success ? rewriteTerminalUrl(environment.terminalUrl ?? "", sessionId) : "");
       setEnvironmentMessage(environment.message ?? "");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown environment error";
@@ -203,7 +286,7 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
     try {
       setBuildState("building");
       await saveCurrentWorkspace();
-      const result = await submitCode(sessionId, code, lab.id);
+      const result = await submitCode(sessionId, workspaceFiles, lab.id);
       setBuildLog(result.buildLog);
       setBuildState(result.success ? "success" : "error");
     } catch (error) {
@@ -225,7 +308,7 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
       setEnvironmentMessage("正在重置实验环境...");
       const environment = await resetEnvironment(sessionId);
       setEnvironmentStatus(environment.success ? environment.environmentStatus : "error");
-      setTerminalUrl(environment.success ? (environment.terminalUrl ?? "") : "");
+      setTerminalUrl(environment.success ? rewriteTerminalUrl(environment.terminalUrl ?? "", sessionId) : "");
       setEnvironmentMessage(environment.message ?? "");
       setBuildLog("↺ 实验环境已重置，当前草稿已保留，请重新提交代码。");
       setBuildState("idle");
@@ -263,6 +346,11 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
       : buildState === "success" ? "✅ 构建成功"
       : buildState === "error" ? "❌ 构建失败"
       : `状态: ${STATUS_LABELS[lab.status]}`;
+  const editorFileName = viewingFile ?? activeEditableFile ?? "main.ts";
+  const editorCode = viewingFile
+    ? (readOnlyContent ?? "")
+    : (activeEditableFile ? (workspaceFiles[activeEditableFile] ?? "") : "");
+  const isReadOnlyView = Boolean(viewingFile);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[var(--bg-page)]">
@@ -314,7 +402,11 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
                   }}
                 >
                   <div className="h-full overflow-hidden border-r border-[var(--border)] bg-[var(--bg-panel)]">
-                    <FileTree labId={lab.id} onFileSelect={() => {}} />
+                    <FileTree
+                      labId={lab.id}
+                      activeFilePath={viewingFile ?? activeEditableFile}
+                      onFileSelect={handleFileSelect}
+                    />
                   </div>
                 </Panel>
 
@@ -332,9 +424,13 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
 
                 <Panel defaultSize="82%" minSize="40%">
                   <CodeEditor
-                    code={code}
-                    fileName={LAB_FILE_NAMES[lab.id] ?? "main.ts"}
-                    onChange={handleCodeChange}
+                    code={editorCode}
+                    fileName={editorFileName}
+                    language={isReadOnlyView ? readOnlyLanguage : "typescript"}
+                    readOnly={isReadOnlyView}
+                    loading={readOnlyLoading}
+                    loadingMessage="正在读取容器内文件..."
+                    onChange={isReadOnlyView ? () => {} : handleCodeChange}
                   />
                 </Panel>
               </Group>
@@ -343,6 +439,36 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
             {/* ActionBar */}
             <div className="flex h-11 shrink-0 items-center justify-between border-t border-[var(--border)] bg-[var(--bg-panel)] px-4">
               <div className="flex items-center gap-3">
+                {isReadOnlyView ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewingFile(null);
+                        readOnlyRequestIdRef.current += 1;
+                        setReadOnlyContent(null);
+                        setReadOnlyError(null);
+                        setReadOnlyLoading(false);
+                      }}
+                      className="rounded-full border border-[color:rgba(34,211,238,0.35)] bg-[color:rgba(34,211,238,0.08)] px-3 py-1 text-xs text-[var(--accent)]"
+                    >
+                      只读: {editorFileName}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewingFile(null);
+                        readOnlyRequestIdRef.current += 1;
+                        setReadOnlyContent(null);
+                        setReadOnlyError(null);
+                        setReadOnlyLoading(false);
+                      }}
+                      className="rounded-xl border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                    >
+                      返回编辑
+                    </button>
+                  </>
+                ) : null}
                 <SubmitButton onSubmit={handleSubmit} />
                 <button
                   type="button"
@@ -362,6 +488,22 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
               </div>
 
               <div className="flex items-center gap-3 text-sm">
+                {readOnlyError ? (
+                  <div className="flex items-center gap-2 text-[var(--status-warning)]">
+                    <span>{readOnlyError}</span>
+                    {viewingFile ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleFileSelect(viewingFile, false);
+                        }}
+                        className="rounded border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                      >
+                        重试
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
                 <span className={canSubmit ? "text-[var(--status-success)]" : "text-[var(--text-secondary)]"}>
                   {environmentStatusText}
                 </span>

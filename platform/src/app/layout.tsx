@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 
 import Navbar from "@/components/Navbar";
 import ThemeProvider from "@/components/ThemeProvider";
@@ -36,11 +37,10 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
     >
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('byocc-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`,
-          }}
-        />
+        <link rel="icon" type="image/png" href="/icon.png" />
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem('byocc-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`}
+        </Script>
       </head>
       <body className="min-h-full bg-[var(--bg-page)]">
         <ThemeProvider>

@@ -12,18 +12,19 @@ import { Router } from 'express';
 import {
   createSession,
   getSession,
+  saveWorkspaceSnapshot,
   touchSessionActivity,
   updateProgress,
   updateUserProgress,
-  upsertCodeSnapshot,
 } from '../db/database.js';
 import { requireSessionAccess } from '../middleware/auth.js';
-import { buildInContainer, injectCode } from '../services/container-manager.js';
+import { buildInContainer, injectFiles } from '../services/container-manager.js';
+import { getPrimaryLabFilePath, normalizeWorkspaceFiles } from '../services/lab-workspace.js';
 
 export const submitRouter = Router();
 
 submitRouter.post('/api/submit', async (req, res) => {
-  const { sessionId, code, labNumber } = req.body ?? {};
+  const { sessionId, code, files, labNumber } = req.body ?? {};
 
   if (typeof sessionId !== 'string' || sessionId.trim() === '') {
     res.status(400).json({
@@ -33,10 +34,11 @@ submitRouter.post('/api/submit', async (req, res) => {
     return;
   }
 
-  if (typeof code !== 'string') {
+  const fileMap = files ?? (typeof code === 'string' ? { [getPrimaryLabFilePath(labNumber)]: code } : null);
+  if (!fileMap || Object.keys(fileMap).length === 0) {
     res.status(400).json({
       success: false,
-      buildLog: 'Invalid request: code must be a string.',
+      buildLog: 'Invalid request: must provide code or files.',
     });
     return;
   }
@@ -74,12 +76,11 @@ submitRouter.post('/api/submit', async (req, res) => {
       createSession(sessionId, session.containerId, session.environmentStatus, access.user.id);
     }
 
-    // submit 本身仍然以 session 为入口，保持旧链路兼容。
-    // 如果请求带了有效 user token，就顺手保存一份代码快照。
-    upsertCodeSnapshot(access.user.id, labNumber, code);
+    const normalizedFiles = normalizeWorkspaceFiles(labNumber, fileMap);
+    saveWorkspaceSnapshot(access.user.id, labNumber, normalizedFiles);
 
     touchSessionActivity(sessionId);
-    await injectCode(sessionId, code, labNumber);
+    await injectFiles(sessionId, normalizedFiles);
     const buildResult = await buildInContainer(sessionId, labNumber);
     touchSessionActivity(sessionId);
 

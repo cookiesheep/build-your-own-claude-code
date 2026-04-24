@@ -2,12 +2,13 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { FILE_TREE, LAB_EDITABLE_FILES } from "@/lib/file-tree-data";
+import { buildLabFileTree, LAB_EDITABLE_FILES } from "@/lib/file-tree-data";
 import type { FileTreeNode } from "@/lib/file-tree-data";
 
 type FileTreeProps = {
   labId: number;
-  onFileSelect: (path: string) => void;
+  activeFilePath?: string | null;
+  onFileSelect: (path: string, isEditable: boolean) => void;
 };
 
 function getEditableSet(labId: number): Set<string> {
@@ -40,16 +41,19 @@ function FileTreeNodeRow({
   expandedDirs,
   toggleDir,
   onFileSelect,
+  activeFilePath,
 }: {
   node: FileTreeNode;
   depth: number;
   editableSet: Set<string>;
   expandedDirs: Set<string>;
   toggleDir: (path: string) => void;
-  onFileSelect: (path: string) => void;
+  activeFilePath?: string | null;
+  onFileSelect: (path: string, isEditable: boolean) => void;
 }) {
   const isEditable = editableSet.has(node.path);
   const isExpanded = expandedDirs.has(node.path);
+  const isActive = activeFilePath === node.path;
 
   if (node.type === "directory") {
     return (
@@ -85,14 +89,14 @@ function FileTreeNodeRow({
     <button
       type="button"
       onClick={() => {
-        if (isEditable) {
-          onFileSelect(node.path);
-        }
+        onFileSelect(node.path, isEditable);
       }}
       title={node.path}
       className={`flex w-full items-center gap-1.5 rounded px-2 py-0.5 text-left transition-colors duration-100 ${
         isEditable
-          ? "bg-[color:rgba(245,158,11,0.08)] font-semibold text-[color:rgb(245,158,11)] hover:bg-[color:rgba(245,158,11,0.15)]"
+          ? isActive
+            ? "bg-[color:rgba(245,158,11,0.18)] font-semibold text-[color:rgb(245,158,11)]"
+            : "bg-[color:rgba(245,158,11,0.08)] font-semibold text-[color:rgb(245,158,11)] hover:bg-[color:rgba(245,158,11,0.15)]"
           : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
       }`}
       style={{ paddingLeft: `${depth * 16 + 8}px`, lineHeight: "28px", fontSize: "13px" }}
@@ -105,8 +109,9 @@ function FileTreeNodeRow({
   );
 }
 
-export default function FileTree({ labId, onFileSelect }: FileTreeProps) {
+export default function FileTree({ labId, activeFilePath, onFileSelect }: FileTreeProps) {
   const editableSet = useMemo(() => getEditableSet(labId), [labId]);
+  const fileTree = useMemo(() => buildLabFileTree(labId), [labId]);
 
   const defaultExpandedDirs = useMemo(() => {
     const editableFiles = LAB_EDITABLE_FILES[labId] ?? [];
@@ -135,7 +140,7 @@ export default function FileTree({ labId, onFileSelect }: FileTreeProps) {
         </span>
       </div>
       <div className="flex-1 overflow-y-auto py-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-        {FILE_TREE.map((node) => (
+        {fileTree.map((node) => (
           <FileTreeNodeRow
             key={node.path}
             node={node}
@@ -143,6 +148,7 @@ export default function FileTree({ labId, onFileSelect }: FileTreeProps) {
             editableSet={editableSet}
             expandedDirs={expandedDirs}
             toggleDir={toggleDir}
+            activeFilePath={activeFilePath}
             onFileSelect={onFileSelect}
           />
         ))}
