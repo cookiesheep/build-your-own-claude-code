@@ -542,6 +542,12 @@ export async function saveWorkspace(
 }
 
 export function getTerminalWebSocketUrl(sessionId: string): string {
+  // In browser: use current origin (works behind Cloudflare Tunnel / any proxy)
+  if (typeof window !== "undefined") {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.host}/api/terminal/${sessionId}`;
+  }
+  // Server-side fallback
   const base = API_BASE.replace(/^http/, "ws");
   return `${base}/api/terminal/${sessionId}`;
 }

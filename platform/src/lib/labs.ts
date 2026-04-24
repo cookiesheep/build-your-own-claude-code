@@ -8,7 +8,15 @@ export type LabMeta = {
   tag: string;
   status: LabStatus;
   highlight?: boolean;
+  difficulty: "easy" | "medium" | "hard";
+  estimatedTime: string;
+  /** false = 面板可见但按钮显示"开发中"，用户无法进入 */
+  enabled: boolean;
 };
+
+/** Lab 文档站基础 URL（MkDocs 部署地址） */
+export const DOCS_BASE_URL =
+  "https://cookiesheep.github.io/build-your-own-claude-code/labs";
 
 export const LABS: LabMeta[] = [
   {
@@ -17,7 +25,10 @@ export const LABS: LabMeta[] = [
     name: "环境与体验",
     desc: "安装运行完整 Claude Code，看到你最终要驱动的东西",
     tag: "准备",
-    status: "completed",
+    status: "not_started",
+    difficulty: "easy",
+    estimatedTime: "< 5 min",
+    enabled: true,
   },
   {
     id: 1,
@@ -25,7 +36,10 @@ export const LABS: LabMeta[] = [
     name: "消息协议",
     desc: "理解 LLM 对话的数据结构，建立 Agent 的输入输出语言",
     tag: "Lab 1",
-    status: "completed",
+    status: "not_started",
+    difficulty: "easy",
+    estimatedTime: "10-20 min",
+    enabled: false,
   },
   {
     id: 2,
@@ -33,7 +47,10 @@ export const LABS: LabMeta[] = [
     name: "工具系统",
     desc: "实现 read_file / write_file / bash，给 Agent 装上手脚",
     tag: "Lab 2",
-    status: "in_progress",
+    status: "not_started",
+    difficulty: "easy",
+    estimatedTime: "20-30 min",
+    enabled: false,
   },
   {
     id: 3,
@@ -41,8 +58,11 @@ export const LABS: LabMeta[] = [
     name: "Agent Loop",
     desc: "while(true) 循环，chatbot 变成 agent 的那一行代码",
     tag: "★ 核心",
-    status: "in_progress",
+    status: "not_started",
     highlight: true,
+    difficulty: "hard",
+    estimatedTime: "1-2 hr",
+    enabled: false,
   },
   {
     id: 4,
@@ -51,6 +71,9 @@ export const LABS: LabMeta[] = [
     desc: "让 Agent 先想再做，TodoWrite 为复杂任务建立节奏",
     tag: "Lab 4",
     status: "not_started",
+    difficulty: "medium",
+    estimatedTime: "30-45 min",
+    enabled: false,
   },
   {
     id: 5,
@@ -59,6 +82,9 @@ export const LABS: LabMeta[] = [
     desc: "三层压缩策略，让 Agent 处理长任务时更稳",
     tag: "Lab 5",
     status: "not_started",
+    difficulty: "medium",
+    estimatedTime: "30-45 min",
+    enabled: false,
   },
 ];
 
