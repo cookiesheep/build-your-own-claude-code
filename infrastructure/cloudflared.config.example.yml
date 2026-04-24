@@ -1,0 +1,10 @@
+tunnel: <tunnel-id>
+credentials-file: C:\Users\<user>\.cloudflared\<tunnel-id>.json
+
+ingress:
+  - hostname: byocc.cc
+    path: ^/api/terminal/.*
+    service: http://localhost:3001
+  - hostname: byocc.cc
+    service: http://localhost:3000
+  - service: http_status:404

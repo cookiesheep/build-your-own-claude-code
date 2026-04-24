@@ -151,6 +151,15 @@ function estimateTerminalSize(host: HTMLDivElement) {
   return { cols, rows };
 }
 
+function resolveWebSocketUrl(wsUrl: string): string {
+  if (wsUrl.startsWith("/")) {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.host}${wsUrl}`;
+  }
+
+  return wsUrl;
+}
+
 function ConnectedTerminal({
   wsUrl,
   buildLog,
@@ -162,6 +171,7 @@ function ConnectedTerminal({
   const lastBuildLogRef = useRef<string>("");
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const { theme } = useTheme();
+  const resolvedWsUrl = resolveWebSocketUrl(wsUrl);
 
   const disposeSocketDisposables = () => {
     socketDisposablesRef.current.forEach((disposable) => disposable.dispose());
@@ -195,9 +205,9 @@ function ConnectedTerminal({
       terminalRef.current = terminal;
       terminal.open(host);
       terminal.writeln("BYOCC Terminal");
-      terminal.writeln(`> Connecting to ${wsUrl}`);
+      terminal.writeln(`> Connecting to ${resolvedWsUrl}`);
 
-      const socket = new WebSocket(wsUrl, ["tty"]);
+      const socket = new WebSocket(resolvedWsUrl, ["tty"]);
       socket.binaryType = "arraybuffer";
       socketRef.current = socket;
 
@@ -326,7 +336,7 @@ function ConnectedTerminal({
       terminalRef.current?.dispose();
       terminalRef.current = null;
     };
-  }, [wsUrl, theme]);
+  }, [resolvedWsUrl, theme]);
 
   useEffect(() => {
     const terminal = terminalRef.current;

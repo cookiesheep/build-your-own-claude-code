@@ -17,6 +17,7 @@ import { authRouter } from './routes/auth.js';
 import { sessionRouter } from './routes/session.js';
 import { environmentRouter } from './routes/environment.js';
 import { workspaceRouter } from './routes/workspace.js';
+import { filesRouter } from './routes/files.js';
 import { submitRouter } from './routes/submit.js';
 import { progressRouter } from './routes/progress.js';
 import { resetRouter } from './routes/reset.js';
@@ -68,6 +69,7 @@ app.use(authRouter);
 app.use(sessionRouter);
 app.use(environmentRouter);
 app.use(workspaceRouter);
+app.use(filesRouter);
 app.use(submitRouter);
 app.use(progressRouter);
 app.use(resetRouter);
@@ -90,5 +92,22 @@ setupWebSocketProxy(server);
 
 // 启动容器 TTL 后台回收。
 startContainerCleanupScheduler();
+
+// 优雅关闭：收到 SIGTERM/SIGINT 时更新 DB 状态，避免容器变孤儿。
+function gracefulShutdown(signal: string) {
+  console.log(`\nReceived ${signal}, shutting down gracefully...`);
+  server.close(() => {
+    console.log('HTTP server closed.');
+    process.exit(0);
+  });
+  // 给 10 秒完成进行中的请求，超时强制退出。
+  setTimeout(() => {
+    console.warn('Forcing exit after 10s timeout.');
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;

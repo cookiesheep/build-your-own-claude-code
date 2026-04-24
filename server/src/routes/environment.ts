@@ -31,14 +31,12 @@ function getRequestProtocol(req: { protocol: string; get(name: string): string |
 }
 
 function getTerminalUrl(
-  req: { protocol: string; get(name: string): string | undefined },
+  _req: { protocol: string; get(name: string): string | undefined },
   sessionId: string,
   userId: string
 ): string {
-  const host = req.get('host') ?? '127.0.0.1:3001';
-  const wsProtocol = getRequestProtocol(req) === 'https' ? 'wss' : 'ws';
   const terminalToken = createTerminalToken({ sessionId, userId });
-  return `${wsProtocol}://${host}/api/terminal/${encodeURIComponent(sessionId)}?token=${encodeURIComponent(terminalToken)}`;
+  return `/api/terminal/${encodeURIComponent(sessionId)}?token=${encodeURIComponent(terminalToken)}`;
 }
 
 function readSessionId(body: unknown): string | null {

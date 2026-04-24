@@ -1686,6 +1686,107 @@
 
 ---
 
+### 2026-04-24（会话 35 / File Read API）
+
+**完成项**：
+- ✅ 在 `feat/file-read-api` 分支新增 [server/src/routes/files.ts](D:/code/build-your-own-claude-code/server/src/routes/files.ts)，实现 `GET /api/files/:path(*)?sessionId=xxx`
+- ✅ 新增路径校验、session 归属校验、容器运行校验、100KB 文件大小限制和语言推断
+- ✅ 文件读取使用 `realpath -e` + `/workspace/*` 边界校验，避免 symlink 越界读取
+- ✅ 修改 [server/src/services/container-manager.ts](D:/code/build-your-own-claude-code/server/src/services/container-manager.ts)，导出 `resolveContainer` / `runExecCommand`，并支持 `sanitizeOutput: false` 保留文件原始空白与结尾换行
+- ✅ 新增 [platform/src/lib/file-reader.ts](D:/code/build-your-own-claude-code/platform/src/lib/file-reader.ts)，文件读取请求支持 cookie 优先、401 时 bearer token 回退
+- ✅ 修改 [platform/src/components/CodeEditor.tsx](D:/code/build-your-own-claude-code/platform/src/components/CodeEditor.tsx)，支持 `readOnly` / `language` / `loading`
+- ✅ 修改 [platform/src/components/FileTree.tsx](D:/code/build-your-own-claude-code/platform/src/components/FileTree.tsx)，所有文件都可点击，统一回调 `(path, isEditable)`
+- ✅ 修改 [platform/src/components/LabRightArea.tsx](D:/code/build-your-own-claude-code/platform/src/components/LabRightArea.tsx)，实现只读文件查看、只读/可编辑模式切换、错误提示、重试和请求竞态保护
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- ⚠️ 未做真实浏览器 + Docker 容器手工验证（点击锁文件、未启动环境、路径穿越 curl）
+- ⚠️ `npx tsc --noEmit --project platform/tsconfig.json` 在某些时刻会被 Next 16 的 `.next/types/routes.d.ts` 生成状态影响；本轮以 `next build` 成功作为最终平台编译验证
+
+**验证**：
+- `cd server && npx tsc --noEmit --project tsconfig.json`
+- `cd server && npm test`
+- `cd server && npm run build`
+- `cd platform && npm run build`
+- `git diff --check`
+
+**下一步**：
+- 浏览器人工验证：启动环境后点击 🔒 文件应以只读模式显示内容；点击可编辑文件应切回编辑模式
+- curl 手测：正常读取 / 路径穿越 / 未登录 / 容器未运行
+
+---
+
+### 2026-04-24（会话 36 / Multi-file Editing System）
+
+**完成项**：
+- ✅ 在 `feat/multi-file-edit-system` 分支建立 `LAB_FILES` 作为多文件编辑唯一配置源
+- ✅ `LAB_EDITABLE_FILES` 改为从 `LAB_FILES` 自动派生，文件树改为按路径自动生成嵌套结构
+- ✅ 删除 `labs.ts` 中的 `LAB_SKELETONS` / `LAB_FILE_NAMES`
+- ✅ 新增 server 侧 [lab-workspace.ts](D:/code/build-your-own-claude-code/server/src/services/lab-workspace.ts)，统一处理旧单文件兼容和 Lab 主文件路径
+- ✅ Workspace API 改为返回/保存 `files: Record<string,string>`，并兼容旧 `{ code: string }`
+- ✅ Submit API 改为支持旧 `{ code }` 和新 `{ files }` 两种格式
+- ✅ 新增 `injectFiles()`，支持多文件注入和路径安全校验
+- ✅ 前端 `api.ts` 改为支持多文件 workspace 与多文件 submit
+- ✅ `LabRightArea` 改为多文件工作区状态：`workspaceFiles + activeEditableFile`
+- ✅ `FileTree` 支持 active 文件高亮；`LabWorkspace` 退化为 `LabRightArea` 包装器避免旧实现继续分叉
+- ✅ `.tmp/lab-image-context/runtime/build.mjs` 已本地通用化：自动发现并替换所有 `*-lab{N}.*` 文件（不在 git 追踪范围内）
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- ⚠️ `.tmp/lab-image-context/runtime/build.mjs` 位于 `.tmp/`，当前默认不会进入 git 提交，需要后续决定是否迁移到可追踪路径
+- ⚠️ 尚未做真实容器内 `build.mjs --lab N` 手工验证
+
+**验证**：
+- `cd server && npx tsc --noEmit --project tsconfig.json`
+- `cd platform && npx tsc --noEmit --project tsconfig.json`
+- `cd server && npm test`（6 files / 14 tests passed）
+- `cd server && npm run build`
+- `cd platform && npm run build`
+- `git diff --check`
+- `node --check D:\code\build-your-own-claude-code\.tmp\lab-image-context\runtime\build.mjs`
+
+**下一步**：
+- 让另一个 AI review 多文件编辑系统实现
+- 决定 `build.mjs` 的改动是否要迁移到可提交的正式位置
+- 做真实容器/浏览器手测：多文件保存、提交、构建替换
+
+---
+
+### 2026-04-24（会话 37 / Multi-file Editing Review Fixes）
+
+**完成项**：
+- ✅ 修复多文件编辑系统 review 的 HIGH：前后端两份 Lab 文件路径配置漂移，统一收敛到 [platform/src/lib/lab-files.json](D:/code/build-your-own-claude-code/platform/src/lib/lab-files.json)
+- ✅ 后端 [lab-workspace.ts](D:/code/build-your-own-claude-code/server/src/services/lab-workspace.ts) 改为读取共享 JSON，不再维护独立路径常量
+- ✅ 前端 `api.ts#getWorkspace()` 旧 `{ code }` 兼容改为映射到当前 Lab 主编辑文件，而不是硬编码 `src/query-lab.ts`
+- ✅ `submit.ts` 改为只 normalize 一次后复用
+- ✅ 新增 `lab-workspace.test.ts` 覆盖旧格式兼容与路径过滤，当前 server 测试变为 6 files / 14 tests passed
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- ⚠️ `build.mjs` 的通用化仍在 `.tmp/lab-image-context/runtime/build.mjs`，当前不在 git 追踪内
+- ⚠️ 尚未做真实容器/浏览器手测验证多文件保存与 `build.mjs --lab N` 自动替换
+
+**验证**：
+- `cd server && npx tsc --noEmit --project tsconfig.json`
+- `cd platform && npx tsc --noEmit --project tsconfig.json`
+- `cd server && npm run build`
+- `cd platform && npm run build`
+- `cd server && npm test`（6 files / 14 tests passed）
+- `git diff --check`
+- `node --check D:\code\build-your-own-claude-code\.tmp\lab-image-context\runtime\build.mjs`
+
+**下一步**：
+- 让另一个 AI 对 `feat/multi-file-edit-system` 做第二轮 review
+- 决定 `build.mjs` 通用化改动的正式归位方案（仓库内可追踪路径或 sister repo）
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |

@@ -8,8 +8,9 @@
  */
 
 import { Router } from 'express';
-import { getCodeSnapshot, upsertCodeSnapshot } from '../db/database.js';
+import { getWorkspaceSnapshot, saveWorkspaceSnapshot } from '../db/database.js';
 import { getOptionalAuthUser } from '../middleware/auth.js';
+import { normalizeWorkspaceFiles } from '../services/lab-workspace.js';
 
 export const workspaceRouter = Router();
 
@@ -48,12 +49,12 @@ workspaceRouter.get('/api/labs/:id/workspace', (req, res) => {
     return;
   }
 
-  const snapshot = getCodeSnapshot(user.id, labNumber);
+  const snapshot = getWorkspaceSnapshot(user.id, labNumber);
 
   res.json({
     labNumber,
-    code: snapshot?.code ?? null,
-    updatedAt: snapshot?.updatedAt ?? null,
+    files: snapshot.files,
+    updatedAt: snapshot.updatedAt,
   });
 });
 
@@ -74,19 +75,24 @@ workspaceRouter.put('/api/labs/:id/workspace', (req, res) => {
     return;
   }
 
-  const { code } = req.body ?? {};
-  if (typeof code !== 'string') {
+  const { files: bodyFiles, code } = req.body ?? {};
+  const files = bodyFiles ?? (typeof code === 'string' ? code : null);
+  if (!files) {
     res.status(400).json({
-      message: 'code must be a string.',
+      message: 'files must be a file map or code must be a string.',
     });
     return;
   }
 
-  const snapshot = upsertCodeSnapshot(user.id, labNumber, code);
+  const snapshot = saveWorkspaceSnapshot(
+    user.id,
+    labNumber,
+    normalizeWorkspaceFiles(labNumber, files)
+  );
 
   res.json({
-    labNumber: snapshot.labNumber,
-    code: snapshot.code,
+    labNumber,
+    files: snapshot.files,
     updatedAt: snapshot.updatedAt,
   });
 });

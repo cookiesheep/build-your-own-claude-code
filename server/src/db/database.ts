@@ -8,6 +8,7 @@
 import BetterSqlite3 from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
+import { normalizeWorkspaceFiles } from '../services/lab-workspace.js';
 
 type DatabaseHandle = BetterSqlite3.Database;
 
@@ -100,6 +101,11 @@ export type CodeSnapshotRecord = {
   updatedAt: string;
 };
 
+export type WorkspaceSnapshotRecord = {
+  files: Record<string, string>;
+  updatedAt: string | null;
+};
+
 export type ApiKeySource = 'default' | 'user';
 
 export type UserSettingsRecord = {
@@ -130,6 +136,8 @@ export function initDatabase(): void {
 
   db = new BetterSqlite3(DB_PATH);
   db.pragma('journal_mode = WAL');
+  db.pragma('busy_timeout = 5000');
+  db.pragma('foreign_keys = ON');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -632,6 +640,45 @@ export function getCodeSnapshot(
     .get(userId, labNumber);
 
   return row ? mapCodeSnapshot(row) : null;
+}
+
+export function getWorkspaceSnapshot(
+  userId: string,
+  labNumber: number
+): WorkspaceSnapshotRecord {
+  const snapshot = getCodeSnapshot(userId, labNumber);
+  if (!snapshot) {
+    return {
+      files: {},
+      updatedAt: null,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(snapshot.code);
+    return {
+      files: normalizeWorkspaceFiles(labNumber, parsed),
+      updatedAt: snapshot.updatedAt,
+    };
+  } catch {
+    return {
+      files: normalizeWorkspaceFiles(labNumber, snapshot.code),
+      updatedAt: snapshot.updatedAt,
+    };
+  }
+}
+
+export function saveWorkspaceSnapshot(
+  userId: string,
+  labNumber: number,
+  files: Record<string, string>
+): WorkspaceSnapshotRecord {
+  const sanitizedFiles = normalizeWorkspaceFiles(labNumber, files);
+  const snapshot = upsertCodeSnapshot(userId, labNumber, JSON.stringify(sanitizedFiles));
+  return {
+    files: sanitizedFiles,
+    updatedAt: snapshot.updatedAt,
+  };
 }
 
 export function getUserSettings(userId: string): UserSettingsRecord | null {

@@ -1,4 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
+import { getPrimaryEditableLabFile } from "./file-tree-data";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 // 进入后端联调阶段后，默认应该优先走真实后端。
 // 如果你只是单独调前端，也可以手动设置 NEXT_PUBLIC_MOCK_MODE=true 切回 mock。
 const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
@@ -58,6 +60,12 @@ export type ProgressResponse = {
 };
 
 export type WorkspaceResponse = {
+  labNumber: number;
+  files: Record<string, string>;
+  updatedAt: string | null;
+};
+
+type LegacyWorkspaceResponse = {
   labNumber: number;
   code: string | null;
   updatedAt: string | null;
@@ -414,7 +422,7 @@ export async function resetEnvironment(
 
 export async function submitCode(
   sessionId: string,
-  code: string,
+  code: string | Record<string, string>,
   labNumber: number,
 ): Promise<SubmitResponse> {
   if (MOCK_MODE) {
@@ -430,7 +438,11 @@ export async function submitCode(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ sessionId, code, labNumber }),
+    body: JSON.stringify(
+      typeof code === "string"
+        ? { sessionId, code, labNumber }
+        : { sessionId, files: code, labNumber },
+    ),
   });
 
   if (!response.ok) {
@@ -497,7 +509,7 @@ export async function getWorkspace(labNumber: number): Promise<WorkspaceResponse
     await delay(250);
     return {
       labNumber,
-      code: null,
+      files: {},
       updatedAt: null,
     };
   }
@@ -510,18 +522,29 @@ export async function getWorkspace(labNumber: number): Promise<WorkspaceResponse
     throw new Error("Failed to fetch workspace");
   }
 
-  return (await response.json()) as WorkspaceResponse;
+  const data = (await response.json()) as WorkspaceResponse | LegacyWorkspaceResponse;
+  if ("files" in data) {
+    return data;
+  }
+
+  return {
+    labNumber: data.labNumber,
+    files: typeof data.code === "string"
+      ? { [getPrimaryEditableLabFile(data.labNumber) ?? "src/query-lab.ts"]: data.code }
+      : {},
+    updatedAt: data.updatedAt,
+  };
 }
 
 export async function saveWorkspace(
   labNumber: number,
-  code: string,
+  files: Record<string, string>,
 ): Promise<WorkspaceResponse> {
   if (MOCK_MODE) {
     await delay(350);
     return {
       labNumber,
-      code,
+      files,
       updatedAt: new Date().toISOString(),
     };
   }
@@ -531,7 +554,7 @@ export async function saveWorkspace(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ files }),
   });
 
   if (!response.ok) {
@@ -542,12 +565,5 @@ export async function saveWorkspace(
 }
 
 export function getTerminalWebSocketUrl(sessionId: string): string {
-  // In browser: use current origin (works behind Cloudflare Tunnel / any proxy)
-  if (typeof window !== "undefined") {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${window.location.host}/api/terminal/${sessionId}`;
-  }
-  // Server-side fallback
-  const base = API_BASE.replace(/^http/, "ws");
-  return `${base}/api/terminal/${sessionId}`;
+  return `/api/terminal/${sessionId}`;
 }
