@@ -61,13 +61,13 @@ function FileTreeNodeRow({
         <button
           type="button"
           onClick={() => toggleDir(node.path)}
-          className="flex w-full items-center gap-1.5 rounded px-2 py-0.5 text-left hover:bg-[var(--surface-hover)]"
+          className="flex w-full min-w-0 items-center gap-1.5 rounded px-2 py-0.5 text-left hover:bg-[var(--surface-hover)]"
           style={{ paddingLeft: `${depth * 16 + 8}px` }}
         >
-          <span className="inline-block w-3 text-center text-[10px] text-[var(--text-muted)]">
-            {isExpanded ? "\u25BC" : "\u25B6"}
+          <span className="inline-block w-3 shrink-0 text-center text-[10px] text-[var(--text-muted)]">
+            {isExpanded ? "▼" : "▶"}
           </span>
-          <span className="text-[13px] text-[var(--text-secondary)]">{node.name}</span>
+          <span className="truncate text-[13px] text-[var(--text-secondary)]">{node.name}</span>
         </button>
         {isExpanded &&
           node.children?.map((child) => (
@@ -92,7 +92,7 @@ function FileTreeNodeRow({
         onFileSelect(node.path, isEditable);
       }}
       title={node.path}
-      className={`flex w-full items-center gap-1.5 rounded px-2 py-0.5 text-left transition-colors duration-100 ${
+      className={`flex w-full min-w-0 items-center gap-1.5 rounded px-2 py-0.5 text-left transition-colors duration-100 ${
         isEditable
           ? isActive
             ? "bg-[color:rgba(245,158,11,0.18)] font-semibold text-[color:rgb(245,158,11)]"
@@ -101,10 +101,10 @@ function FileTreeNodeRow({
       }`}
       style={{ paddingLeft: `${depth * 16 + 8}px`, lineHeight: "28px", fontSize: "13px" }}
     >
-      <span className="inline-block w-3 text-center text-[11px]">
-        {isEditable ? "\u2B50" : "\u{1F512}"}
+      <span className="inline-block w-3 shrink-0 text-center text-[11px]">
+        {isEditable ? "⭐" : "\u{1F512}"}
       </span>
-      <span>{node.name}</span>
+      <span className="truncate">{node.name}</span>
     </button>
   );
 }
