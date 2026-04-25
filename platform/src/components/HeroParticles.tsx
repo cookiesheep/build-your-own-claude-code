@@ -165,11 +165,37 @@ function sampleImageToPoints(
   oc.drawImage(img, drawX, drawY, drawW, drawH);
 
   const imgData = oc.getImageData(0, 0, canvasW, canvasH);
-  const gap = canvasW < 768 ? 6 : 4;
-  const pts: Target[] = [];
 
-  for (let py = 0; py < canvasH; py += gap) {
-    for (let px = 0; px < canvasW; px += gap) {
+  // First pass: scan with fine gap to estimate valid pixel density in image region
+  const scanGap = canvasW < 768 ? 6 : 3;
+  let validCount = 0;
+  for (let py = Math.floor(drawY); py < Math.ceil(drawY + drawH); py += scanGap) {
+    for (let px = Math.floor(drawX); px < Math.ceil(drawX + drawW); px += scanGap) {
+      const idx = (py * canvasW + px) * 4;
+      const a = imgData.data[idx + 3];
+      const r = imgData.data[idx];
+      const g = imgData.data[idx + 1];
+      const b = imgData.data[idx + 2];
+      if (a >= 64 && (r + g + b) >= 50) validCount++;
+    }
+  }
+
+  if (validCount === 0) return [];
+
+  // Calculate scan coverage area to estimate total valid pixels
+  const scanCols = Math.floor(drawW / scanGap);
+  const scanRows = Math.floor(drawH / scanGap);
+  const totalScanned = scanCols * scanRows;
+  const validRatio = validCount / totalScanned;
+
+  // Compute adaptive gap to produce ~maxPoints from the image region
+  const imageArea = drawW * drawH;
+  const targetGap = Math.max(2, Math.round(Math.sqrt(imageArea * validRatio / maxPoints)));
+
+  // Second pass: sample with adaptive gap for uniform coverage
+  const pts: Target[] = [];
+  for (let py = Math.floor(drawY); py < Math.ceil(drawY + drawH); py += targetGap) {
+    for (let px = Math.floor(drawX); px < Math.ceil(drawX + drawW); px += targetGap) {
       const idx = (py * canvasW + px) * 4;
       const r = imgData.data[idx];
       const g = imgData.data[idx + 1];
