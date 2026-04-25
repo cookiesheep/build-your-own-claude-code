@@ -31,7 +31,7 @@ const docker = new Docker();
 // Lab 容器使用的镜像名称
 const LAB_IMAGE = 'byocc-lab';
 const TTYD_PORT_KEY = '7681/tcp';
-const CONTAINER_MEMORY_LIMIT = 512 * 1024 * 1024;
+const CONTAINER_MEMORY_LIMIT = 2 * 1024 * 1024 * 1024;
 const CPU_PERIOD = 100000;
 const CPU_QUOTA = 50000;
 const BUILD_TIMEOUT_SECONDS = 180;
