@@ -71,6 +71,9 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
   // Panel refs
   const fileTreePanelRef = usePanelRef();
   const [fileTreeCollapsed, setFileTreeCollapsed] = useReactState(false);
+  const [overflowOpen, setOverflowOpen] = useReactState(false);
+  const actionBarRef = useRef<HTMLDivElement>(null);
+  const [actionBarCompact, setActionBarCompact] = useReactState(false);
 
   // Workspace state
   const [workspaceFiles, setWorkspaceFiles] = useReactState<Record<string, string>>(
@@ -333,6 +336,25 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
     }
   }, [fileTreePanelRef]);
 
+  useEffect(() => {
+    const el = actionBarRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setActionBarCompact(entry.contentRect.width < 480);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!overflowOpen) return;
+    const handler = () => setOverflowOpen(false);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [overflowOpen]);
+
   const canSubmit = environmentStatus === "running";
   const environmentStatusText =
     environmentStatus === "not_started" ? "实验环境未启动"
@@ -437,86 +459,99 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
             </div>
 
             {/* ActionBar */}
-            <div className="flex h-11 shrink-0 items-center justify-between border-t border-[var(--border)] bg-[var(--bg-panel)] px-4">
-              <div className="flex items-center gap-3">
+            <div
+              ref={actionBarRef}
+              className="flex h-11 shrink-0 items-center justify-between overflow-hidden border-t border-[var(--border)] bg-[var(--bg-panel)] px-3"
+            >
+              <div className="flex min-w-0 items-center gap-1.5">
                 {isReadOnlyView ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewingFile(null);
-                        readOnlyRequestIdRef.current += 1;
-                        setReadOnlyContent(null);
-                        setReadOnlyError(null);
-                        setReadOnlyLoading(false);
-                      }}
-                      className="rounded-full border border-[color:rgba(34,211,238,0.35)] bg-[color:rgba(34,211,238,0.08)] px-3 py-1 text-xs text-[var(--accent)]"
-                    >
-                      只读: {editorFileName}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewingFile(null);
-                        readOnlyRequestIdRef.current += 1;
-                        setReadOnlyContent(null);
-                        setReadOnlyError(null);
-                        setReadOnlyLoading(false);
-                      }}
-                      className="rounded-xl border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-                    >
-                      返回编辑
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewingFile(null);
+                      readOnlyRequestIdRef.current += 1;
+                      setReadOnlyContent(null);
+                      setReadOnlyError(null);
+                      setReadOnlyLoading(false);
+                    }}
+                    className="shrink-0 truncate rounded-md border border-[color:rgba(34,211,238,0.35)] bg-[color:rgba(34,211,238,0.08)] px-2 py-1 text-xs text-[var(--accent)]"
+                    title={"只读: " + editorFileName}
+                  >
+                    {actionBarCompact ? "只读" : "只读: " + editorFileName}
+                  </button>
                 ) : null}
-                <SubmitButton onSubmit={handleSubmit} />
+                <SubmitButton onSubmit={handleSubmit} compact={actionBarCompact} />
                 <button
                   type="button"
                   disabled={!sessionId || isStartingEnvironment || environmentStatus === "running"}
                   onClick={() => { void handleStartEnvironment(); }}
-                  className="rounded-xl border border-[color:rgba(34,211,238,0.35)] bg-[color:rgba(34,211,238,0.08)] px-3 py-1.5 text-sm text-[var(--accent)] transition-colors duration-150 hover:bg-[color:rgba(34,211,238,0.14)] disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-transparent disabled:text-[var(--text-disabled)]"
+                  className="shrink-0 whitespace-nowrap rounded-lg border border-[color:rgba(34,211,238,0.35)] bg-[color:rgba(34,211,238,0.08)] px-2.5 py-1.5 text-sm text-[var(--accent)] transition-colors duration-150 hover:bg-[color:rgba(34,211,238,0.14)] disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-transparent disabled:text-[var(--text-disabled)]"
                 >
-                  {isStartingEnvironment ? "启动中..." : environmentStatus === "running" ? "环境已启动" : "启动实验环境"}
+                  {isStartingEnvironment ? "启动中..." : environmentStatus === "running" ? "已启动" : actionBarCompact ? "启动" : "启动环境"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { void handleReset(); }}
-                  className="rounded-xl border border-transparent px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors duration-150 hover:border-[var(--border)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-                >
-                  重置环境
-                </button>
+                {isReadOnlyView ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewingFile(null);
+                      readOnlyRequestIdRef.current += 1;
+                      setReadOnlyContent(null);
+                      setReadOnlyError(null);
+                      setReadOnlyLoading(false);
+                    }}
+                    className="shrink-0 whitespace-nowrap rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    返回
+                  </button>
+                ) : null}
+                {actionBarCompact ? (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setOverflowOpen(!overflowOpen); }}
+                      className="shrink-0 rounded-lg px-2 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                      title="更多操作"
+                    >
+                      ⋯
+                    </button>
+                    {overflowOpen && (
+                      <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[120px] rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] py-1 shadow-lg">
+                        <button
+                          type="button"
+                          onClick={() => { setOverflowOpen(false); void handleReset(); }}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                        >
+                          重置环境
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { void handleReset(); }}
+                    className="shrink-0 whitespace-nowrap rounded-lg border border-transparent px-2.5 py-1.5 text-sm text-[var(--text-muted)] transition-colors duration-150 hover:border-[var(--border)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                  >
+                    重置
+                  </button>
+                )}
               </div>
 
-              <div className="flex items-center gap-3 text-sm">
+              <div className="flex shrink-0 items-center gap-2 text-xs">
                 {readOnlyError ? (
-                  <div className="flex items-center gap-2 text-[var(--status-warning)]">
-                    <span>{readOnlyError}</span>
-                    {viewingFile ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void handleFileSelect(viewingFile, false);
-                        }}
-                        className="rounded border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
-                      >
-                        重试
-                      </button>
-                    ) : null}
-                  </div>
+                  <span className="truncate text-[var(--status-warning)]">{readOnlyError}</span>
                 ) : null}
                 <span className={canSubmit ? "text-[var(--status-success)]" : "text-[var(--text-secondary)]"}>
-                  {environmentStatusText}
+                  {actionBarCompact ? (environmentStatus === "running" ? "运行中" : environmentStatus === "not_started" ? "未启动" : environmentStatusText) : environmentStatusText}
                 </span>
-                <span className="text-[var(--text-secondary)]">{statusText}</span>
-                <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2 py-0.5 text-[10px] text-[var(--text-muted)]">
-                  {sessionId || "pending"}
-                </span>
+                {!actionBarCompact && (
+                  <span className="text-[var(--text-secondary)]">{statusText}</span>
+                )}
               </div>
             </div>
-          </div>
+            </div>
         </Panel>
-
-        <Separator style={{ height: 2, background: "var(--border)" }} />
+        <Separator />
 
         <Panel defaultSize="45%" minSize="15%">
           <Terminal
