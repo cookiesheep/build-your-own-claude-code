@@ -1,5 +1,12 @@
 $ErrorActionPreference = "Stop"
 
+# Initialize fnm (Fast Node Manager) if available
+if (Get-Command "fnm" -ErrorAction SilentlyContinue) {
+    if (-not (Get-Command "node" -ErrorAction SilentlyContinue)) {
+        Invoke-Expression (fnm env --shell powershell | Out-String)
+    }
+}
+
 $repoRoot = $PSScriptRoot
 $serverDir = Join-Path $repoRoot "server"
 $platformDir = Join-Path $repoRoot "platform"
@@ -86,17 +93,33 @@ Start-Sleep -Seconds 2
 Wait-ForHttpOk -Url "http://127.0.0.1:3000" -ServiceName "Platform"
 
 Write-Host "Checking cloudflared..." -ForegroundColor Yellow
-$cloudflaredConfig = Join-Path $repoRoot "infrastructure" "cloudflared-config.yml"
+$cloudflaredConfig = Join-Path (Join-Path $repoRoot "infrastructure") "cloudflared-config.yml"
+
+# Find cloudflared: check PATH first, then common Windows install locations
+$cloudflaredExe = $null
 if (Get-Command "cloudflared" -ErrorAction SilentlyContinue) {
+    $cloudflaredExe = "cloudflared"
+} else {
+    $wingetPaths = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Directory -Filter "Cloudflare.cloudflared*" -ErrorAction SilentlyContinue
+    foreach ($dir in $wingetPaths) {
+        $candidate = Join-Path $dir.FullName "cloudflared.exe"
+        if (Test-Path $candidate) {
+            $cloudflaredExe = $candidate
+            break
+        }
+    }
+}
+
+if ($cloudflaredExe) {
     if (Test-Path $cloudflaredConfig) {
-        Start-Process -FilePath "cloudflared" -ArgumentList "tunnel", "--config", $cloudflaredConfig, "run", "byocc"
+        Start-Process -FilePath $cloudflaredExe -ArgumentList "tunnel", "--config", $cloudflaredConfig, "run", "byocc"
         Write-Host "Cloudflare Tunnel started (with WebSocket routing config)." -ForegroundColor Green
     } else {
-        Start-Process -FilePath "cloudflared" -ArgumentList "tunnel", "run", "byocc"
+        Start-Process -FilePath $cloudflaredExe -ArgumentList "tunnel", "run", "byocc"
         Write-Host "Cloudflare Tunnel started (WARNING: no cloudflared-config.yml found, terminal WebSocket may not work)." -ForegroundColor Yellow
     }
 } else {
-    Write-Host "cloudflared is not in PATH. Start the tunnel manually if needed." -ForegroundColor Yellow
+    Write-Host "cloudflared not found. Install via: winget install Cloudflare.cloudflared" -ForegroundColor Yellow
 }
 
 Write-Host ""
