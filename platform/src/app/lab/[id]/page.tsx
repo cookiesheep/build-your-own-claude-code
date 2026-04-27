@@ -10,20 +10,23 @@ type LabPageProps = {
   params: Promise<{ id: string }>;
 };
 
-async function readLabMarkdown(labId: number): Promise<string> {
+async function readLabMarkdown(
+  labId: number,
+  filename: string,
+): Promise<string> {
   const filePath = path.resolve(
     process.cwd(),
     "..",
     "docs",
     "labs",
     `lab-${String(labId).padStart(2, "0")}`,
-    "index.md",
+    filename,
   );
 
   try {
     return await fs.readFile(filePath, "utf8");
   } catch {
-    return `# Lab ${labId}\n\n文档暂未准备好，后续会在这里渲染对应的知识讲解。`;
+    return "";
   }
 }
 
@@ -31,13 +34,14 @@ export default async function LabPage({ params }: LabPageProps) {
   const { id } = await params;
   const labId = Number(id);
   const lab = LABS.find((item) => item.id === labId) ?? LABS[0];
-  const content = await readLabMarkdown(lab.id);
+  const indexContent = await readLabMarkdown(lab.id, "index.md");
+  const tasksContent = await readLabMarkdown(lab.id, "tasks.md");
 
   return (
     <AuthGuard>
       <ApiKeyGate labId={lab.id}>
         <div style={{ marginTop: 56 }}>
-          <LabLayout lab={lab} content={content} />
+          <LabLayout lab={lab} indexContent={indexContent || `# Lab ${lab.id}\n\n文档暂未准备好。`} tasksContent={tasksContent} />
         </div>
       </ApiKeyGate>
     </AuthGuard>

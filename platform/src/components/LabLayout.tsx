@@ -9,10 +9,11 @@ import LabRightArea from "./LabRightArea";
 
 type LabLayoutProps = {
   lab: LabMeta;
-  content: string;
+  indexContent: string;
+  tasksContent: string;
 };
 
-export default function LabLayout({ lab, content }: LabLayoutProps) {
+export default function LabLayout({ lab, indexContent, tasksContent }: LabLayoutProps) {
   const docsPanelRef = usePanelRef();
   const [docsCollapsed, setDocsCollapsed] = useState(false);
 
@@ -54,7 +55,7 @@ export default function LabLayout({ lab, content }: LabLayoutProps) {
             setDocsCollapsed(size.asPercentage === 0);
           }}
         >
-          <DocsPanel content={content} />
+          <DocsPanel indexContent={indexContent} tasksContent={tasksContent} />
         </Panel>
 
         <Separator style={{ width: 2, background: "var(--border)" }} />
