@@ -8,10 +8,11 @@ import FileTree from "./FileTree";
 
 type LabLeftPanelProps = {
   labId: number;
-  content: string;
+  indexContent: string;
+  tasksContent: string;
 };
 
-export default function LabLeftPanel({ labId, content }: LabLeftPanelProps) {
+export default function LabLeftPanel({ labId, indexContent, tasksContent }: LabLeftPanelProps) {
   const panelRef = usePanelRef();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -57,7 +58,7 @@ export default function LabLeftPanel({ labId, content }: LabLeftPanelProps) {
           </Panel>
           <Separator style={{ height: 1, background: "var(--border)" }} />
           <Panel defaultSize="55%" minSize="20%">
-            <DocsPanel labId={labId} content={content} />
+            <DocsPanel indexContent={indexContent} tasksContent={tasksContent} />
           </Panel>
         </Group>
       </div>
