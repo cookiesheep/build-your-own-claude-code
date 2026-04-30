@@ -97,6 +97,11 @@ submitRouter.post('/api/submit', async (req, res) => {
     const message =
       error instanceof Error ? error.message : 'Unknown error while submitting code.';
 
+    console.error('[submit] Error:', message);
+    if (error instanceof Error && error.stack) {
+      console.error('[submit] Stack:', error.stack);
+    }
+
     const statusCode = message.includes('No container found for session') ? 400 : 500;
 
     res.status(statusCode).json({

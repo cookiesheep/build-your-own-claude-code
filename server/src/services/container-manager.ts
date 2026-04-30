@@ -21,7 +21,7 @@
 
 import Docker from 'dockerode';
 import { randomBytes } from 'node:crypto';
-import type { Readable } from 'node:stream';
+import { Readable } from 'node:stream';
 import { getUserSettings, type ApiKeySource } from '../db/database.js';
 import { decrypt } from './encryption.js';
 
@@ -439,17 +439,64 @@ export async function injectFiles(
     }
 
     const targetFile = `/workspace/${filePath}`;
-    const encodedCode = Buffer.from(code, 'utf8').toString('base64');
-    const { exitCode, output } = await runExecCommand(container, [
-      'bash',
-      '-c',
-      `mkdir -p $(dirname ${shellQuote(targetFile)}) && printf '%s' '${encodedCode}' | base64 -d > ${shellQuote(targetFile)}`,
-    ]);
+    const content = Buffer.from(code, 'utf8');
+    const lastSlash = targetFile.lastIndexOf('/');
+    const dirPath = targetFile.substring(0, lastSlash);
+    const fileName = targetFile.substring(lastSlash + 1);
 
-    if (exitCode !== 0) {
-      throw new Error(`Failed to inject ${filePath}: ${output || 'No output'}`);
+    // Ensure parent directory exists
+    const { exitCode: mkdirExit } = await runExecCommand(container, [
+      'bash', '-c', `mkdir -p ${shellQuote(dirPath)}`,
+    ]);
+    if (mkdirExit !== 0) {
+      throw new Error(`Failed to create directory for ${filePath}`);
     }
+
+    // Use putArchive to avoid ARG_MAX limit on large files
+    const tarBuffer = createSingleFileTar(fileName, content);
+    await container.putArchive(Readable.from(tarBuffer), { path: dirPath });
   }
+}
+
+/**
+ * Create a minimal USTAR tar archive containing a single file.
+ * Avoids the need for external tar libraries.
+ */
+function createSingleFileTar(fileName: string, content: Buffer): Buffer {
+  const header = Buffer.alloc(512, 0);
+  // name (100 bytes)
+  header.write(fileName.substring(0, 99), 0, 'utf8');
+  // mode (8 bytes, octal + null)
+  header.write('0000644\0', 100, 'utf8');
+  // uid (8 bytes)
+  header.write('0001750\0', 108, 'utf8');
+  // gid (8 bytes)
+  header.write('0001750\0', 116, 'utf8');
+  // size (12 bytes, octal + null)
+  header.write(content.length.toString(8).padStart(11, '0') + '\0', 124, 'utf8');
+  // mtime (12 bytes, octal + null)
+  header.write(Math.floor(Date.now() / 1000).toString(8).padStart(11, '0') + '\0', 136, 'utf8');
+  // checksum placeholder (8 bytes of spaces)
+  header.write('        ', 148, 'utf8');
+  // typeflag '0' = regular file
+  header[156] = 0x30;
+  // magic "ustar"
+  header.write('ustar', 257, 'utf8');
+  // version "00"
+  header.write('00', 263, 'utf8');
+
+  // Compute checksum (sum of all header bytes, treating checksum field as spaces)
+  let checksum = 0;
+  for (let i = 0; i < 512; i++) checksum += header[i];
+  header.write(checksum.toString(8).padStart(6, '0') + '\0 ', 148, 'utf8');
+
+  // Pad content to 512-byte boundary
+  const padding = content.length % 512 === 0 ? 0 : 512 - (content.length % 512);
+
+  // Two 512-byte zero blocks as end-of-archive marker
+  const endBlocks = Buffer.alloc(1024, 0);
+
+  return Buffer.concat([header, content, Buffer.alloc(padding, 0), endBlocks]);
 }
 
 /**
