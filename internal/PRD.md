@@ -2,10 +2,11 @@
 
 ## build-your-own-claude-code — 从零构建 Coding Agent 教学项目
 
-**Version**: 0.1 (MVP)
-**Date**: 2026-04-01
+**Version**: 0.2 (MVP)
+**Date**: 2026-04-30
 **Author**: cookiesheep & team
-**Status**: Draft
+**Status**: In Progress
+**Last updated**: 2026-04-30 — 部分内容已过时（部署方案、技术栈描述），需结合 HANDOFF.md 和 CLAUDE.md 阅读最新状态
 
 ---
 

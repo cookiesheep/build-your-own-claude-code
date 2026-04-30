@@ -1785,6 +1785,39 @@
 - 让另一个 AI 对 `feat/multi-file-edit-system` 做第二轮 review
 - 决定 `build.mjs` 通用化改动的正式归位方案（仓库内可追踪路径或 sister repo）
 
+### 2026-04-30（会话 38 / 竞品分析 + Lab 评测设计 + 文档清理）
+
+**完成项**：
+- ✅ 完成 CodeCrafters 竞品深度调研：6 个 stage、10 种语言、$30/月订阅、Beta 状态 15% 完成度、$5M 年营收
+- ✅ 完成全赛道竞品对比：learn-claude-code（51.2K star）、claude-code-from-scratch（844）、how-to-build-coding-agent（5.5K）
+- ✅ 商业化分析：短期不建议收费，中长期可选开源+托管增值 / B2B教育授权 / 内容付费
+- ✅ 竞品分析报告保存到 `internal/prompt/BYOCC竞品分析与商业化调研-2026-04-30.md` 和 `D:/桌面2.0/`
+- ✅ 平台 UX 评估：确认终端区改为 Tab 切换方案（[终端] | [评测]），不新增第四面板
+- ✅ 识别 LAB_DESIGN.md 过时问题：该文档描述的"独立模块+DI"架构与实际使用的"变体文件机制"不符
+- ✅ 创建待决问题文档 `internal/Lab设计与评测机制-待决问题-2026-04-30.md`，记录三条技术路线（变体文件/独立模块/混合）和评测三层设计
+- ✅ 为 LAB_DESIGN.md 添加过时警告，更新 PRD.md 状态
+
+**进行中**：
+- 🔄 Lab 设计机制尚未最终确定（变体文件 vs 独立模块 vs 混合）
+- 🔄 评测方案待设计（需要先验证 `--print` 模式是否可用）
+- 🔄 平台"评测"Tab 的前端实现（方案已定，待开发）
+
+**阻塞项**：
+- ⚠️ Lab 1-3 的机制选择影响评测方案、平台前端、Docker 镜像构建全链路，需要团队讨论
+- ⚠️ `--print` 模式在 claude-code-diy 中是否可用尚未验证，这是行为评测的技术基础
+- ⚠️ Lab 0 开发指南写的变体文件机制已在用，但 Lab 1+ 如何设计还没想清楚
+
+**验证**：
+- 竞品数据来自 CodeCrafters GitHub 仓库、Y Combinator 公司页、TechCrunch 报道
+- 平台 UX 分析基于实际阅读 platform/src/components/ 所有组件代码
+- 后端 submit 流程分析基于实际阅读 server/src/routes/submit.ts 和 container-manager.ts
+
+**下一步**：
+- 验证 `--print` 模式在 claude-code-diy 中是否工作
+- 深度设计 Lab 1-3 的技术路线（变体文件 vs 独立模块）
+- 设计评测方案（Mock API + 行为测试）
+- 修复 owner 提到的平台 bug
+
 ---
 
 ## 关键资源
@@ -1799,6 +1832,9 @@
 | 交接文档 | `HANDOFF.md` |
 | 完整调研 | `HANDOFF.md` 第一至八节 |
 | 第三方 API 配置 | `docs/guide/api-setup.md` |
+| Lab 设计待决问题 | `internal/Lab设计与评测机制-待决问题-2026-04-30.md` |
+| 竞品分析报告 | `internal/prompt/BYOCC竞品分析与商业化调研-2026-04-30.md` |
+| Lab 0 开发指南 | `D:/桌面2.0/BYOCC-Lab0-开发指南.md` |
 
 ---
 

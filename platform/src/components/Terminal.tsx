@@ -197,7 +197,7 @@ function ConnectedTerminal({
         rows: size.rows,
         convertEol: true,
         cursorBlink: true,
-        fontSize: 13,
+        fontSize: 14,
         fontFamily: "JetBrains Mono, Fira Code, monospace",
         theme: theme === "light" ? LIGHT_THEME : DARK_THEME,
       });
