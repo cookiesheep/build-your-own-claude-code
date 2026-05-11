@@ -118,9 +118,9 @@ Sprint 2（Lab skeleton）：
 ### 验证 Codex 输出的方法
 
 Codex 实现完成后，Claude 做以下验证：
-1. 运行 `npx vitest run` — 确认测试通过
+1. 运行 `build.mjs --lab=N` — 确认编译通过（exit code 0）
 2. 检查类型 `npx tsc --noEmit` — 确认无类型错误
-3. 手动测试核心路径（如 `node cli.js -p --bare "hello"`）
+3. 编译成功后启动 TUI，观察 Agent 行为是否符合渐进式能力设计
 4. 审查 Lab skeleton 的教学质量（TODO 是否清晰、难度是否合适）
 
 ## 开发规范
@@ -128,6 +128,6 @@ Codex 实现完成后，Claude 做以下验证：
 - 分支: `feat/lab-01`, `fix/lab-03-loop`
 - 提交: conventional commits
 - 代码: TypeScript strict, ESM
-- 测试: Mock-first, 所有测试离线可跑
+- 测试: 纯变体文件注入 + 编译验证 + TUI 观察（无 Mock LLM，无测试框架）
 - Lab 3 是核心，获得 80% 精力
 - **成本意识**：实现类任务优先考虑 Codex/omx，Claude 专注设计和审查

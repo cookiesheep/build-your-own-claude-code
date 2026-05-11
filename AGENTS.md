@@ -9,24 +9,21 @@ A progressive teaching project based on real Claude Code source code (416,500 li
 
 | File | Description |
 |------|-------------|
-| `CLAUDE.md` | Project overview, tech stack, Codex cost optimization guidelines |
+| `CLAUDE.md` | Project overview, Lab design, tech stack, Codex cost optimization guidelines |
 | `HANDOFF.md` | Complete context handoff: research, PoC results, design decisions, priorities |
-| `SESSION_STARTER.md` | Prompt template for new AI sessions |
-| `package.json` | TypeScript project with Anthropic SDK, Vitest, ESLint |
-| `vitest.config.ts` | Test configuration |
-| `tsconfig.json` | TypeScript strict mode configuration |
-| `mkdocs.yml` | Documentation site configuration (Material for MkDocs) |
-| `.env.example` | Environment variable template (API keys) |
+| `SECOND_BRAIN_PROMPT.md` | Prompt for the "second brain" session (project coordinator) |
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
 | `docs/` | MkDocs documentation site source (see `docs/AGENTS.md`) |
-| `labs/` | Lab skeleton code and tests — learner workspace (see `labs/AGENTS.md`) |
+| `labs/` | Lab skeleton code (see `labs/AGENTS.md`) |
 | `shared/` | Shared TypeScript type definitions (see `shared/AGENTS.md`) |
-| `internal/` | Internal design docs, team progress, architecture (see `internal/AGENTS.md`) |
-| `src/` | Platform source code (to be implemented) |
+| `internal/` | Internal design docs, prompts, architecture (see `internal/AGENTS.md`) |
+| `platform/` | Next.js 16 Web platform — Monaco Editor + xterm.js terminal (see `platform/AGENTS.md`) |
+| `server/` | Express backend — Docker management + LLM proxy + auth + SQLite |
+| `infrastructure/` | Dockerfile, docker-compose, Cloudflare Tunnel config |
 
 ## For AI Agents
 
@@ -46,9 +43,9 @@ A progressive teaching project based on real Claude Code source code (416,500 li
 - Cost-conscious: implementation tasks → Codex/omx; design/review → Claude
 
 ### Testing Requirements
-- `npm test` runs Vitest with Mock LLM (offline, deterministic)
+- Lab evaluation: `build.mjs --lab=N` compilation + TUI observation (NO Mock LLM, NO test framework)
+- Server tests: `npx vitest run` for backend unit tests
 - `npx tsc --noEmit` for type checking
-- All tests must work without API keys
 
 ### Key Relationships
 - **Sister repo**: `claude-code-diy` at `D:\test-claude-code\claude-code` — the full runnable Claude Code source
@@ -58,14 +55,14 @@ A progressive teaching project based on real Claude Code source code (416,500 li
 ### Architecture Overview
 ```
 claude-code-diy (416K lines, full Claude Code)
-  └── src/query.ts → replaced by query-lab-XX.ts (learner's code)
-  └── build.mjs --lab → injects learner implementation
+  └── src/services/agent/query.ts → replaced by query-labN.ts (learner's code)
+  └── build.mjs --lab=N → injects variant file, compiles full system
 
 build-your-own-claude-code (this repo)
-  └── docs/ → teaching content (MkDocs)
-  └── labs/ → skeleton code + tests
-  └── shared/ → type definitions
-  └── src/ → web platform (Next.js + Docker)
+  └── platform/ → Next.js Web Editor + xterm.js terminal
+  └── server/   → Express + Docker + LLM proxy + SQLite
+  └── docs/     → teaching content (MkDocs)
+  └── labs/     → skeleton code + reference implementations
 ```
 
 <!-- MANUAL: -->
