@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import LoginFlowField from "@/components/LoginFlowField";
 import { useTheme } from "@/components/ThemeProvider";
-import { login as loginApi } from "@/lib/auth";
+import { login as loginApi, startGithubLogin } from "@/lib/auth";
 
 function SunIcon() {
   return (
@@ -38,11 +38,25 @@ function LoginContent() {
   const [shockwave, setShockwave] = useState<{ x: number; y: number; t: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [githubLoading, setGithubLoading] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
   const submitBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    const oauthError = searchParams.get("oauth_error");
+    if (oauthError) {
+      const message =
+        oauthError === "invalid_state" ? "GitHub 登录状态校验失败，请重试。"
+          : oauthError === "state_expired" ? "GitHub 登录链接已过期，请重新发起。"
+          : oauthError === "github_exchange_failed" ? "GitHub 授权交换失败，请稍后重试。"
+          : `GitHub 登录失败：${oauthError}`;
+      setErrorMsg(message);
+      setFormState("error");
+    }
+  }, [searchParams]);
 
   // Shockwave animation tick
   useEffect(() => {
@@ -96,6 +110,21 @@ function LoginContent() {
     },
     [username, password, searchParams, router, triggerShockwave],
   );
+
+  const handleGithubLogin = useCallback(async () => {
+    if (githubLoading) return;
+    setGithubLoading(true);
+    setErrorMsg("");
+    try {
+      const redirect = searchParams.get("redirect") || "/platform";
+      await startGithubLogin(redirect);
+    } catch (error) {
+      setGithubLoading(false);
+      setFormState("error");
+      setErrorMsg(error instanceof Error ? error.message : "GitHub 登录失败");
+      triggerShockwave();
+    }
+  }, [githubLoading, searchParams, triggerShockwave]);
 
   if (!mounted) return null;
 
@@ -310,6 +339,30 @@ function LoginContent() {
             ) : (
               <span className="relative">登录</span>
             )}
+          </button>
+
+          {/* Divider */}
+          <div className="relative my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-[var(--border)]" />
+            <span className="text-xs uppercase tracking-wider text-[var(--text-muted)]/70">或</span>
+            <div className="h-px flex-1 bg-[var(--border)]" />
+          </div>
+
+          {/* GitHub login */}
+          <button
+            type="button"
+            onClick={handleGithubLogin}
+            disabled={githubLoading || formState === "submitting" || formState === "success"}
+            className="group relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-panel)] font-medium text-[var(--text-primary)] transition-all duration-300 hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {githubLoading ? (
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.55 0-.27-.01-1.16-.02-2.1-3.2.69-3.87-1.37-3.87-1.37-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.73-1.53-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.97 10.97 0 015.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.35.78 1.05.78 2.12 0 1.53-.01 2.76-.01 3.13 0 .3.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z" />
+              </svg>
+            )}
+            <span>使用 GitHub 登录</span>
           </button>
 
           {/* Decorative footer */}

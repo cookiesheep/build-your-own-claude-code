@@ -374,6 +374,158 @@ export function getPasswordUserByUsername(username: string): PasswordUserRecord 
   };
 }
 
+export function getGithubUser(githubId: string): UserRecord | null {
+  const database = getDb();
+  const row = database
+    .prepare<[string], UserRow>(
+      `
+        SELECT id, kind, github_id, username, password_hash, role, nickname, avatar_url
+        FROM users
+        WHERE github_id = ?
+      `
+    )
+    .get(githubId);
+
+  return row ? mapUser(row) : null;
+}
+
+export function createGithubUser(input: {
+  id?: string;
+  githubId: string;
+  username: string;
+  nickname: string | null;
+  avatarUrl: string | null;
+}): UserRecord {
+  const database = getDb();
+  const userId = input.id ?? randomUUID();
+
+  database
+    .prepare(
+      `
+        INSERT INTO users (id, kind, github_id, username, role, nickname, avatar_url)
+        VALUES (?, 'github', ?, ?, 'user', ?, ?)
+      `
+    )
+    .run(userId, input.githubId, input.username, input.nickname, input.avatarUrl);
+
+  const user = getUser(userId);
+  if (!user) {
+    throw new Error(`Failed to create GitHub user "${input.githubId}"`);
+  }
+
+  return user;
+}
+
+export function updateGithubUserProfile(
+  userId: string,
+  input: {
+    username: string;
+    nickname: string | null;
+    avatarUrl: string | null;
+  }
+): UserRecord {
+  const database = getDb();
+
+  database
+    .prepare(
+      `
+        UPDATE users
+        SET username = ?,
+            nickname = ?,
+            avatar_url = ?
+        WHERE id = ? AND kind = 'github'
+      `
+    )
+    .run(input.username, input.nickname, input.avatarUrl, userId);
+
+  const user = getUser(userId);
+  if (!user) {
+    throw new Error(`Failed to update GitHub user "${userId}"`);
+  }
+
+  return user;
+}
+
+/**
+ * 把 fromUserId 的所有数据搬到 toUserId 名下，最后删掉 fromUserId。
+ *
+ * 主要用途：匿名用户首次通过 GitHub 登录时，把匿名期间积累的 progress/workspace
+ * 接到 GitHub user 名下。整段必须在事务里执行——任何一步失败都不应该留下半边数据。
+ *
+ * `code_snapshots` 和 `user_progress` 主键是 (user_id, lab_number)：双方都有同一个 lab
+ * 时直接 UPDATE 会触发 UNIQUE 冲突。这里走 INSERT OR REPLACE，让匿名期间最新的草稿/进度
+ * 覆盖 GitHub 用户原有的同 lab 记录——常见场景里 GitHub 用户是新建的，根本没有冲突；
+ * 真正发生冲突时（多次登录），匿名期间的工作通常更新，让它胜出更符合直觉。
+ */
+export function migrateUserData(fromUserId: string, toUserId: string): void {
+  if (fromUserId === toUserId) {
+    return;
+  }
+
+  const database = getDb();
+  const migrate = database.transaction(() => {
+    const target = database
+      .prepare<[string], { id: string }>('SELECT id FROM users WHERE id = ?')
+      .get(toUserId);
+    if (!target) {
+      throw new Error(`Target user "${toUserId}" not found`);
+    }
+
+    const source = database
+      .prepare<[string], { id: string }>('SELECT id FROM users WHERE id = ?')
+      .get(fromUserId);
+    if (!source) {
+      return;
+    }
+
+    database
+      .prepare(
+        `
+          INSERT OR REPLACE INTO code_snapshots (user_id, lab_number, code, updated_at)
+          SELECT ?, lab_number, code, updated_at
+          FROM code_snapshots WHERE user_id = ?
+        `
+      )
+      .run(toUserId, fromUserId);
+    database.prepare('DELETE FROM code_snapshots WHERE user_id = ?').run(fromUserId);
+
+    database
+      .prepare(
+        `
+          INSERT OR REPLACE INTO user_progress (user_id, lab_number, completed, completed_at)
+          SELECT ?, lab_number, completed, completed_at
+          FROM user_progress WHERE user_id = ?
+        `
+      )
+      .run(toUserId, fromUserId);
+    database.prepare('DELETE FROM user_progress WHERE user_id = ?').run(fromUserId);
+
+    // user_settings: PK 仅 user_id。target 已有时不覆盖（API key 这种敏感配置以 target 为准）。
+    const targetHasSettings = database
+      .prepare<[string], { user_id: string }>('SELECT user_id FROM user_settings WHERE user_id = ?')
+      .get(toUserId);
+    if (targetHasSettings) {
+      database.prepare('DELETE FROM user_settings WHERE user_id = ?').run(fromUserId);
+    } else {
+      database
+        .prepare('UPDATE user_settings SET user_id = ? WHERE user_id = ?')
+        .run(toUserId, fromUserId);
+    }
+
+    // sessions / api_usage 没有 (user_id, X) 的复合 UNIQUE，直接改归属即可。
+    database
+      .prepare('UPDATE sessions SET user_id = ? WHERE user_id = ?')
+      .run(toUserId, fromUserId);
+    database
+      .prepare('UPDATE api_usage SET user_id = ? WHERE user_id = ?')
+      .run(toUserId, fromUserId);
+
+    database.prepare('DELETE FROM users WHERE id = ?').run(fromUserId);
+  });
+
+  migrate();
+}
+
 export function createPasswordUser(input: {
   id: string;
   username: string;

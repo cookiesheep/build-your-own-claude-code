@@ -14,6 +14,7 @@
 import express from 'express';
 import cors from 'cors';
 import { authRouter } from './routes/auth.js';
+import { githubAuthRouter } from './routes/github.js';
 import { sessionRouter } from './routes/session.js';
 import { environmentRouter } from './routes/environment.js';
 import { workspaceRouter } from './routes/workspace.js';
@@ -66,6 +67,7 @@ assertEncryptionConfig();
 
 // API 路由
 app.use(authRouter);
+app.use(githubAuthRouter);
 app.use(sessionRouter);
 app.use(environmentRouter);
 app.use(workspaceRouter);
