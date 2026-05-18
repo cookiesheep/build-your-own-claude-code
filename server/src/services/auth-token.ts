@@ -103,7 +103,7 @@ export function verifyUserToken(token: string): TokenPayload | null {
     return null;
   }
 
-  if (payload.kind !== 'anonymous') {
+  if (payload.kind !== 'anonymous' && payload.kind !== 'github') {
     return null;
   }
 

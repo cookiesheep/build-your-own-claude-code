@@ -1,18 +1,20 @@
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { getUser, type UserRecord } from '../db/database.js';
+import { getUser, type UserKind, type UserRecord } from '../db/database.js';
 import { getRuntimeSecret } from './runtime-security.js';
 
 export type SessionUser = {
   id: string;
   username: string;
   role: string;
+  kind?: UserKind;
 };
 
 type SessionPayload = {
   sub: string;
   username: string;
   role: string;
+  kind?: UserKind;
 };
 
 export const SESSION_COOKIE_NAME = 'byocc_session';
@@ -58,6 +60,7 @@ export function toSessionUser(user: UserRecord): SessionUser | null {
     id: user.id,
     username: user.username,
     role: user.role,
+    kind: user.kind,
   };
 }
 
@@ -66,6 +69,7 @@ export function createSessionToken(user: SessionUser): string {
     {
       username: user.username,
       role: user.role,
+      kind: user.kind,
     } satisfies Omit<SessionPayload, 'sub'>,
     SESSION_SECRET,
     {
@@ -107,7 +111,11 @@ export function getSessionUserFromRequest(req: Request): UserRecord | null {
     }
 
     const user = getUser(payload.sub);
-    return user?.kind === 'password' ? user : null;
+    if (!user) {
+      return null;
+    }
+
+    return user.kind === 'password' || user.kind === 'github' ? user : null;
   } catch {
     return null;
   }

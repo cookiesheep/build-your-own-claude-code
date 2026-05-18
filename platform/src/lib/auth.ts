@@ -2,6 +2,7 @@ export interface User {
   id: string;
   username: string;
   role: string;
+  kind?: string;
 }
 
 export interface AuthState {
@@ -76,4 +77,46 @@ export async function logout(): Promise<void> {
   } catch {
     // ignore
   }
+}
+
+const AUTH_TOKEN_STORAGE_KEY = "byocc-auth-token";
+
+function getStoredAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+}
+
+/**
+ * 触发 GitHub OAuth：拿匿名 Bearer token 调后端，让后端把 fromUserId 记进 state，
+ * 拿到 GitHub authorize URL 后做 top-level navigation。
+ */
+export async function startGithubLogin(redirect?: string): Promise<void> {
+  if (typeof window === "undefined") return;
+
+  const bearer = getStoredAuthToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (bearer) {
+    headers["Authorization"] = `Bearer ${bearer}`;
+  }
+
+  const response = await fetch(apiUrl("/api/auth/github/start"), {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: JSON.stringify(redirect ? { redirect } : {}),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.message ?? `GitHub 登录暂不可用（HTTP ${response.status}）`);
+  }
+
+  const data = (await response.json()) as { url?: string };
+  if (!data.url) {
+    throw new Error("GitHub 登录响应不完整");
+  }
+
+  window.location.href = data.url;
 }

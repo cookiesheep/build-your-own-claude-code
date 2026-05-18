@@ -105,11 +105,15 @@ function toSettingsResponse(input: {
   };
 }
 
+function isLoggedInUser(kind: string | undefined): boolean {
+  return kind === 'password' || kind === 'github';
+}
+
 settingsRouter.use('/api/settings', requireAuth);
 
 settingsRouter.get('/api/settings/api-key', (req, res) => {
   const user = (req as AuthenticatedRequest).user;
-  if (user.kind !== 'password') {
+  if (!isLoggedInUser(user.kind)) {
     res.status(401).json({
       message: 'Please log in to manage API keys.',
     });
@@ -132,7 +136,7 @@ settingsRouter.get('/api/settings/api-key', (req, res) => {
 
 settingsRouter.get('/api/settings/api-key/status', (req, res) => {
   const user = (req as AuthenticatedRequest).user;
-  if (user.kind !== 'password') {
+  if (!isLoggedInUser(user.kind)) {
     res.status(401).json({
       message: 'Please log in to read API key status.',
     });
@@ -150,7 +154,7 @@ settingsRouter.get('/api/settings/api-key/status', (req, res) => {
 
 settingsRouter.post('/api/settings/validate-key', async (req, res) => {
   const user = (req as AuthenticatedRequest).user;
-  if (user.kind !== 'password') {
+  if (!isLoggedInUser(user.kind)) {
     res.status(401).json({ message: 'Please log in.' });
     return;
   }
@@ -233,7 +237,7 @@ settingsRouter.post('/api/settings/validate-key', async (req, res) => {
 settingsRouter.put('/api/settings/api-key', async (req, res) => {
   try {
     const user = (req as AuthenticatedRequest).user;
-    if (user.kind !== 'password') {
+    if (!isLoggedInUser(user.kind)) {
       res.status(401).json({
         message: 'Please log in to manage API keys.',
       });
@@ -277,7 +281,7 @@ settingsRouter.put('/api/settings/api-key', async (req, res) => {
 settingsRouter.delete('/api/settings/api-key', (req, res) => {
   try {
     const user = (req as AuthenticatedRequest).user;
-    if (user.kind !== 'password') {
+    if (!isLoggedInUser(user.kind)) {
       res.status(401).json({
         message: 'Please log in to manage API keys.',
       });
