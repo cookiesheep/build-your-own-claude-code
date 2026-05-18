@@ -160,10 +160,11 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
     return () => { cancelled = true; };
   }, [lab.id]);
 
-  // Auto-save
+  // Auto-save (with retry on error after a longer delay)
   useEffect(() => {
-    if (saveState !== "dirty") return;
+    if (saveState !== "dirty" && saveState !== "error") return;
 
+    const delay = saveState === "error" ? 5000 : 1500;
     const timer = window.setTimeout(() => {
       const requestId = saveRequestIdRef.current + 1;
       saveRequestIdRef.current = requestId;
@@ -180,7 +181,7 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
             setSaveState("error");
           }
         });
-    }, 1500);
+    }, delay);
 
     return () => { window.clearTimeout(timer); };
   }, [lab.id, saveState, workspaceFiles]);

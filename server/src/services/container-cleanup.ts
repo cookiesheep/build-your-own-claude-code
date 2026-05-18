@@ -14,6 +14,7 @@
 
 import Docker from 'dockerode';
 import { getSession, updateSessionEnvironment } from '../db/database.js';
+import { clearContainerCache } from './container-manager.js';
 
 const docker = new Docker();
 const BYOCC_MANAGED_LABEL = 'byocc.managed=true';
@@ -247,6 +248,7 @@ export async function cleanupContainers(options: CleanupOptions): Promise<Cleanu
       const container = docker.getContainer(candidate.id);
       await container.remove({ force: true });
       if (candidate.sessionId) {
+        clearContainerCache(candidate.sessionId);
         updateSessionEnvironment(candidate.sessionId, null, 'expired');
       }
       removed.push(candidate);

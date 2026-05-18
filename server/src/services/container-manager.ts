@@ -42,6 +42,11 @@ const BUILD_TIMEOUT_SECONDS = 180;
 const sessionContainers = new Map<string, string>();
 const sessionTokenCache = new Map<string, { sessionId: string; userId?: string }>();
 
+// 容器创建互斥锁：同一 session 在 Docker 真正完成 create 之前，
+// 后续 createContainer 调用直接复用同一个 in-flight Promise，
+// 防止用户双击“启动环境”时产生孤儿容器和 sessionContainers 覆盖。
+const containerCreationLocks = new Map<string, Promise<string>>();
+
 type ResolvedContainer = {
   container: Docker.Container;
   info: Docker.ContainerInspectInfo;
@@ -97,6 +102,21 @@ export function validateContainerSessionToken(token: string): ContainerSessionTo
   }
 
   return sessionTokenCache.get(token) ?? null;
+}
+
+/**
+ * 清掉本进程内缓存的 sessionId → containerId 映射 + 该 session 签发过的所有 token。
+ *
+ * cleanup 路径会绕过 removeContainer（它只想删容器，不想触发 stop 等 side effect），
+ * 所以容器一被回收，这两个 Map 必须在外面被显式清掉，否则会变成永远不会释放的“幽灵条目”。
+ */
+export function clearContainerCache(sessionId: string): void {
+  sessionContainers.delete(sessionId);
+  for (const [token, cachedSession] of sessionTokenCache.entries()) {
+    if (cachedSession.sessionId === sessionId) {
+      sessionTokenCache.delete(token);
+    }
+  }
 }
 
 function getContainerName(sessionId: string): string {
@@ -306,7 +326,21 @@ export async function runExecCommand(
  *   6. 记录到 sessionContainers Map
  *   7. 返回容器 ID
  */
-export async function createContainer(sessionId: string, userId?: string): Promise<string> {
+export function createContainer(sessionId: string, userId?: string): Promise<string> {
+  // 同一 session 已经有创建中的请求时，直接复用它，避免并发创建出双容器。
+  const existingLock = containerCreationLocks.get(sessionId);
+  if (existingLock) {
+    return existingLock;
+  }
+
+  const creation = createContainerInternal(sessionId, userId).finally(() => {
+    containerCreationLocks.delete(sessionId);
+  });
+  containerCreationLocks.set(sessionId, creation);
+  return creation;
+}
+
+async function createContainerInternal(sessionId: string, userId?: string): Promise<string> {
   let existingContainer = await resolveContainer(sessionId);
   if (existingContainer) {
     if (existingContainer.info.State.Status !== 'running') {
