@@ -1,0 +1,131 @@
+/* ─── BYOCC custom MkDocs Material overrides ─── */
+/* Bright gold/amber nav bar + warm accents */
+
+:root {
+  /* Nav bar: bright warm amber */
+  --md-primary-fg-color:             #D4975E;
+  --md-primary-fg-color--light:      #E8B878;
+  --md-primary-fg-color--dark:       #B87A42;
+  /* Links & accents */
+  --md-accent-fg-color:              #D4975E;
+  --md-accent-fg-color--transparent: rgba(212, 151, 94, 0.1);
+  /* Page */
+  --md-default-bg-color:             #F7F4EF;
+  --md-default-fg-color:             #1A1A1A;
+  --md-default-fg-color--light:      #6B7280;
+  --md-default-fg-color--lighter:    #9CA3AF;
+}
+
+[data-md-color-scheme="slate"] {
+  /* Nav bar: bright gold */
+  --md-primary-fg-color:             #E8BE8A;
+  --md-primary-fg-color--light:      #F0D0A0;
+  --md-primary-fg-color--dark:       #C9A068;
+  /* Links & accents */
+  --md-accent-fg-color:              #E8C49A;
+  --md-accent-fg-color--transparent: rgba(232, 196, 154, 0.1);
+  /* Page: warm dark brown (not pure black) */
+  --md-default-bg-color:             #1a1816;
+  --md-default-fg-color:             #e8e4dd;
+  --md-default-fg-color--light:      #a09890;
+  --md-default-fg-color--lighter:    #706860;
+  --md-hue: 30;
+}
+
+/* ─── Navigation: GIF background + overlay ─── */
+/*
+  可调参数：
+  ┌─────────────────────────────────────────────────────┐
+  │  center 25%    → GIF 截取位置（0%=顶，50%=中，100%=底）│
+  │  rgba(R,G,B,A) → 遮罩颜色，A=不透明度（0=全透，1=全遮）│
+  │  A=0.7~0.85    → GIF 清晰可见                        │
+  │  A=0.85~0.95   → GIF 若隐若现（推荐）                 │
+  │  A=1.0         → 完全遮住 GIF                        │
+  └─────────────────────────────────────────────────────┘
+*/
+.md-header {
+  background:
+    linear-gradient(180deg, rgba(98,15,14,0.68), rgba(63,31,22,0.72)),
+    url('../assets/images/hero.gif') center 25% / cover no-repeat !important;
+}
+.md-tabs {
+  background:
+    linear-gradient(180deg, rgba(63,31,22,0.2), rgba(49,24,16,0.2)),
+    url('../assets/images/hero.gif') center 28% / cover no-repeat !important;
+}
+.md-header--shadow {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+/* Dark mode: overlay with warm dark brown base */
+[data-md-color-scheme="slate"] .md-header {
+  background:
+    linear-gradient(180deg, rgba(26,24,22,0.75), rgba(49,24,16,0.78)),
+    url('../assets/images/hero.gif') center 25% / cover no-repeat !important;
+}
+[data-md-color-scheme="slate"] .md-tabs {
+  background:
+    linear-gradient(180deg, rgba(49,24,16,0.3), rgba(26,24,22,0.35)),
+    url('../assets/images/hero.gif') center 28% / cover no-repeat !important;
+}
+
+/* Nav bar text: white on gold */
+.md-header__topic {
+  color: #fff !important;
+}
+.md-header__button {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+.md-header__button:hover {
+  color: #fff !important;
+}
+.md-tabs__link {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+.md-tabs__link--active,
+.md-tabs__link:hover {
+  color: #fff !important;
+}
+
+/* Selection */
+::selection {
+  background: rgba(212, 165, 116, 0.25);
+}
+
+/* Code blocks */
+.md-typeset code {
+  border-radius: 4px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* Admonitions */
+.md-typeset .admonition,
+.md-typeset details {
+  border-left-color: #D4A574;
+}
+.md-typeset .admonition.tip {
+  border-left-color: #D4A574;
+}
+.md-typeset .admonition.warning {
+  border-left-color: #D4A574;
+}
+.md-typeset .admonition.danger {
+  border-left-color: #C75050;
+}
+.md-typeset .admonition.success {
+  border-left-color: #7EBF8E;
+}
+
+/* Links */
+.md-typeset a {
+  color: #C17F4E;
+}
+.md-typeset a:hover {
+  color: #D4975E;
+}
+[data-md-color-scheme="slate"] .md-typeset a {
+  color: #E8C49A;
+}
+[data-md-color-scheme="slate"] .md-typeset a:hover {
+  color: #F0D0A0;
+}

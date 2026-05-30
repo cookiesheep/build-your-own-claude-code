@@ -1,0 +1,2109 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://cookiesheep.github.io/build-your-own-claude-code/labs/lab-00/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="tasks/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Lab 0：改出你的 Claude Code - Build Your Own Claude Code</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/home.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#lab-0-claude-code" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="Build Your Own Claude Code" class="md-header__button md-logo" aria-label="Build Your Own Claude Code" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Build Your Own Claude Code
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Lab 0：改出你的 Claude Code
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="切换到深色模式"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换到深色模式" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="切换到浅色模式"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换到浅色模式" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cookiesheep/build-your-own-claude-code" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    build-your-own-claude-code
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="标签" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  首页
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../about/welcome/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  主页
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  实验指南
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  参考资料
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Build Your Own Claude Code" class="md-nav__button md-logo" aria-label="Build Your Own Claude Code" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    Build Your Own Claude Code
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cookiesheep/build-your-own-claude-code" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    build-your-own-claude-code
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    主页
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    主页
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/welcome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目介绍
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/background/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目背景
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    常见问题
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    实验指南
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    实验指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="./" class="md-nav__link md-nav__link--active">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lab 0：环境与体验
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link md-nav__link--active" for="__nav_3_2" id="__nav_3_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Lab 0：环境与体验
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    实验任务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../lab-01/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lab 1：让 Agent 会说话
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_3" id="__nav_3_3_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Lab 1：让 Agent 会说话
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab-01/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    实验任务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../lab-02/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lab 2：给 Agent 一双手
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_4" id="__nav_3_4_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Lab 2：给 Agent 一双手
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab-02/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    实验任务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../lab-03/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lab 3：Agent Loop（核心）
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Lab 3：Agent Loop（核心）
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab-03/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    实验任务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../lab-04/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lab 4：规划与子 Agent
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_6" id="__nav_3_6_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Lab 4：规划与子 Agent
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab-04/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    实验任务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../lab-05/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lab 5：上下文压缩
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_7" id="__nav_3_7_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Lab 5：上下文压缩
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab-05/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    实验任务
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参考资料
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    参考资料
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/api-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配置第三方 API（必读）
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/typescript/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript 基础
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/messages-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anthropic Messages API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/tool-calling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool Calling 原理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/agent-loop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Loop 详解
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/claude-code-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code 架构分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        实验目的
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#harness-claude-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        开始前先知道：什么是 Harness，什么是 Claude Code？
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="开始前先知道：什么是 Harness，什么是 Claude Code？">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lab-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        为什么 Lab 0 要先讲这几个词
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        先分清"模型"和"产品"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        什么是 Harness
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#claude-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Code 到底是什么
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Loop 为什么是核心
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        这门课真正需要的前置知识地图
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        先读哪些 Guide，取决于你卡在哪里
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lab-0-queryts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        为什么 Lab 0 不先讲 query.ts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#labs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        后续 Labs 学什么
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lab-0-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        为什么 Lab 0 要改 UI？
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        这次 Lab 真正在改什么？
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lab-0_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lab 0 要填哪些文件？
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        实验任务
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="lab-0-claude-code">Lab 0：改出你的 Claude Code<a class="headerlink" href="#lab-0-claude-code" title="Permanent link">&para;</a></h1>
+<div class="admonition tip">
+<p class="admonition-title">第一步先改一个看得见的东西。<br/>代码变了，终端里的小动物也跟着变，这就是最直接的反馈。</p>
+</div>
+<h2 id="_1">实验目的<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<ol>
+<li>搭建 Node.js + TypeScript 开发环境</li>
+<li>运行完整的 Claude Code TUI，体验最终效果</li>
+<li>通过填写 <code>*-lab0</code> 骨架文件定制自己的品牌与小动物</li>
+<li>理解本项目的核心学习方式：写代码、重新构建、看到真实 TUI 变化</li>
+</ol>
+<h2 id="harness-claude-code">开始前先知道：什么是 Harness，什么是 Claude Code？<a class="headerlink" href="#harness-claude-code" title="Permanent link">&para;</a></h2>
+<h3 id="lab-0">为什么 Lab 0 要先讲这几个词<a class="headerlink" href="#lab-0" title="Permanent link">&para;</a></h3>
+<p>Lab 0 表面上是在改品牌文字和小动物，但它真正承担的任务是：先帮你建立一张正确的地图。后面你会不断看到这些词：模型、工具、Harness、Agent Loop、Claude Code。如果一开始这些概念就混在一起，后面读源码、看测试、补 TODO 时会一直有一种"每个词都好像懂，但连不成一张图"的感觉。</p>
+<p>所以在真正动手之前，你先只带走三个最重要的结论：</p>
+<ul>
+<li><strong>模型负责判断</strong>：它理解需求、阅读上下文、决定下一步做什么。</li>
+<li><strong>Harness 负责闭环</strong>：它把模型的判断变成真实动作，再把结果送回模型。</li>
+<li><strong>Claude Code 是完整产品</strong>：它不是单独的模型，也不是单独的 Harness，而是两者再加上终端界面、权限、上下文管理、会话机制组成的系统。</li>
+</ul>
+<p>只要这三句话先站稳，后面的 Lab 就会顺很多。</p>
+<h3 id="_2">先分清"模型"和"产品"<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>第一次接触 coding agent，最容易混淆的是"模型会不会想"和"产品能不能做事"。</p>
+<p>大模型像大脑，负责理解你的目标、读懂你给的上下文、判断下一步应该搜索什么、修改什么、验证什么。它当然很重要，因为没有它，系统就不知道该往哪走。</p>
+<p>但光有模型还不够。因为对真实世界来说，模型本身并不会直接去读你硬盘上的文件、修改仓库里的代码、执行终端命令、或者判断某个危险操作是不是应该先征得你的同意。模型能做的，首先只是输出文本，或者输出一种结构化的"我想调用这个工具"的意图。</p>
+<p>举个最简单的例子：你对一个裸 LLM 说"帮我修一下这个 TypeScript 报错"，它也许能给你一段看起来很像修复方案的代码，但它并不知道你的项目目录长什么样，也不知道真正的报错出在哪个文件，更不可能自动跑 <code>npm test</code> 看改完有没有坏掉。也就是说，它能<strong>建议</strong>，但还不能<strong>行动</strong>。</p>
+<p>这也是为什么一个好用的 coding agent，绝对不只是"更聪明的模型"，而是"模型外面还有一层能让行动真正发生的系统"。</p>
+<h3 id="harness">什么是 Harness<a class="headerlink" href="#harness" title="Permanent link">&para;</a></h3>
+<p>这层让行动发生的系统，通常就叫 <strong>Harness</strong>。如果直译，它有点像"马具"或"驾驭装置"；放在这里，你可以把它理解成：让模型在真实环境里<strong>看得见、动得了、并且动得有边界</strong>的一层运行机制。</p>
+<div class="admonition info">
+<p class="admonition-title">四个先记住的词</p>
+<ul>
+<li><strong>模型</strong>：负责理解任务、做判断、决定下一步。</li>
+<li><strong>Harness</strong>：负责把判断变成真实动作，并管理边界。</li>
+<li><strong>Tool</strong>：Harness 提供给模型使用的具体能力，比如读文件、改文件、跑命令。</li>
+<li><strong>Agent Loop</strong>：模型判断 -&gt; 调工具 -&gt; 读取结果 -&gt; 再判断 的循环。</li>
+</ul>
+</div>
+<p>你可以把 Harness 想成模型和真实工作环境之间的桥。模型在桥的一头做决策，仓库、终端、测试、网络、权限机制在桥的另一头。Harness 的工作，就是把这两头接起来，而且接得稳定、清晰、可控。</p>
+<p>一个面向编程场景的 Harness，通常至少要负责这些事：</p>
+<ul>
+<li><strong>提供工具</strong>：例如读文件、搜索代码、编辑文件、执行 Shell 命令。</li>
+<li><strong>组织上下文</strong>：把项目文件、历史消息、系统规则、用户目标整理给模型。</li>
+<li><strong>处理权限</strong>：决定哪些动作可以直接做，哪些动作必须先征得用户确认。</li>
+<li><strong>维护记忆</strong>：把规则、偏好、任务状态、会话信息在多轮交互里保留下来。</li>
+<li><strong>连接执行环境</strong>：让命令在正确的目录里运行，让结果再回到对话里。</li>
+</ul>
+<p>所以，如果把模型比作司机，Harness 更像整辆车、仪表盘、方向盘和交通规则。司机决定方向，但是否能转弯、能不能刹车、有没有拿到路况反馈，不是司机一个人说了算。</p>
+<h3 id="claude-code">Claude Code 到底是什么<a class="headerlink" href="#claude-code" title="Permanent link">&para;</a></h3>
+<p>理解了模型和 Harness 的分工之后，再来看 Claude Code 就清楚很多了。</p>
+<p>Claude Code 不是"输入一句话，吐一段建议"的补全工具，也不是一个只会回答问题的聊天框。更准确地说，它是一个运行在终端里的 <strong>agentic coding system</strong>。这里的重点不在"终端"三个字，而在"system"这个词：Claude Code 不是某一个点功能，而是一整套持续工作的机制。</p>
+<p>在这套机制里：</p>
+<ul>
+<li>模型负责思考和决策；</li>
+<li>Harness 负责提供工具、组织上下文、控制权限、执行动作；</li>
+<li>TUI/CLI 负责把整个过程以可见、可交互的方式呈现给你。</li>
+</ul>
+<p>所以当你给 Claude Code 一个目标时，它往往不会像普通聊天机器人那样立刻吐一段话然后结束，而是会进入一个持续迭代的工作过程：先理解问题，再读仓库、搜代码、改文件、跑测试、看结果、继续调整，直到它判断"现在可以交付了"。</p>
+<p>你可以先把这个过程记成一句极简总图：</p>
+<div class="language-text highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>用户目标 -&gt; 模型判断 -&gt; harness 调工具 -&gt; 结果回流 -&gt; 再判断
+</code></pre></div></td></tr></table></div>
+<p>这张图很短，但后面几乎所有概念都能往里面放：</p>
+<ul>
+<li>工具系统，属于"harness 调工具"这一步；</li>
+<li>Agent Loop，描述的是这几步如何不断循环；</li>
+<li>规划、子 Agent、上下文压缩，本质上是在让这个循环跑得更稳、更长、更复杂；</li>
+<li>权限和执行环境，是为了保证这套循环在真实机器上依然可控。</li>
+</ul>
+<p>也就是说，Claude Code 和普通聊天机器人的差别，不是"回答得更像工程师"，而是"它真的在工程环境里持续行动，并根据结果继续行动"。</p>
+<h3 id="agent-loop">Agent Loop 为什么是核心<a class="headerlink" href="#agent-loop" title="Permanent link">&para;</a></h3>
+<p>到这里，你会发现还有一个词反复出现：<strong>Agent Loop</strong>。它之所以重要，是因为它描述了 coding agent 最核心的工作方式。</p>
+<p>普通聊天系统常常是一问一答：用户发一句，模型回一句，结束。Agent 系统不一样。Agent 系统的关键不是一次回答多精彩，而是能不能在多轮行动里保持目标不丢、信息不断、结果能回流。</p>
+<p>一个最小的 Agent Loop，通常就是这样：</p>
+<ol>
+<li>用户给出目标。</li>
+<li>模型判断下一步需要做什么。</li>
+<li>如果需要工具，Harness 去执行工具。</li>
+<li>工具结果回到上下文里。</li>
+<li>模型基于新结果继续判断下一步。</li>
+<li>当模型认为任务完成时，才真正结束。</li>
+</ol>
+<p>你可以把它理解成一个"边做边看、边看边改"的循环。没有这个循环，模型只能停留在"我建议你这样做"；有了这个循环，系统才真正进入"我先做一部分，再根据结果继续做"的状态。</p>
+<p>这也是为什么后面的 Lab 里，最核心的是 Lab 3。因为一旦 Agent Loop 立住了，聊天机器人和真正 coding agent 之间的分界线就出现了。</p>
+<h3 id="_3">这门课真正需要的前置知识地图<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<p>现在可以把前面这些概念排成一张更完整的学习地图。它不是"学完所有理论再动手"的意思，而是告诉你：后面每个 Lab 不是孤立技巧，而是在补这张图里的某一层。</p>
+<div class="language-text highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code>工程地基
+Terminal / Git / Node.js / TypeScript
+        |
+        v
+模型通信
+Messages API：把一次对话表示成 request / response
+        |
+        v
+行动接口
+Tool Calling：模型提出工具请求，Harness 执行并返回结果
+        |
+        v
+循环机制
+Agent Loop：工具结果回流，模型继续判断下一步
+        |
+        v
+产品系统
+Claude Code：TUI、权限、上下文、会话、构建和真实开发环境
+</code></pre></div></td></tr></table></div>
+<p>这张图从上到下，是一个 coding agent 从工程地基到完整产品的能力叠加过程。Lab 0 先让你站在最完整的产品层观察整体，确认"我的代码能影响 Claude Code"；Lab 1-3 再逐步拆出通信、工具和循环；Lab 4-5 继续补规划、子 Agent 和上下文管理。</p>
+<p>这里的 <strong>TypeScript</strong> 也不是无关的背景知识。Claude Code 本身是 TypeScript/Node.js 项目，本课程的骨架代码、测试和 <code>AsyncGenerator</code> 流式输出也都围绕 TypeScript 展开。你不需要先成为 TypeScript 专家，但至少要知道类型、联合类型、<code>async/await</code>、<code>for await</code> 这些概念，因为它们会直接出现在后面的 Agent Loop 代码里。API Key、Base URL、模型名称这些配置也不是"杂事"，它们决定 Claude Code 能不能真的连上模型，只是 Lab 0 的 UI 反馈阶段暂时不强依赖它们。</p>
+<h3 id="guide">先读哪些 Guide，取决于你卡在哪里<a class="headerlink" href="#guide" title="Permanent link">&para;</a></h3>
+<p>你不需要在 Lab 0 之前把所有参考资料都读完。更好的方式是：先动手，遇到概念卡点时再回来看对应 guide。</p>
+<table>
+<thead>
+<tr>
+<th>如果你卡在...</th>
+<th>先读这篇</th>
+<th>它会帮你理解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>不知道 Claude Code 怎么连模型</td>
+<td><a href="../../guide/api-setup/">配置第三方 API（必读）</a></td>
+<td>API Key、Base URL、模型配置怎么影响运行</td>
+</tr>
+<tr>
+<td>看不懂 TypeScript 类型、<code>async</code>、<code>yield</code></td>
+<td><a href="../../guide/typescript/">TypeScript 基础</a></td>
+<td>后面 skeleton 为什么这样写</td>
+</tr>
+<tr>
+<td>不知道一次模型调用长什么样</td>
+<td><a href="../../guide/messages-api/">Anthropic Messages API</a></td>
+<td>Lab 1 的输入、输出和消息结构</td>
+</tr>
+<tr>
+<td>不理解模型为什么能"用工具"</td>
+<td><a href="../../guide/tool-calling/">Tool Calling 原理</a></td>
+<td>Lab 2 的工具定义、<code>tool_use</code>、<code>tool_result</code></td>
+</tr>
+<tr>
+<td>不知道 Agent 如何连续行动</td>
+<td><a href="../../guide/agent-loop/">Agent Loop 详解</a></td>
+<td>Lab 3 的核心 <code>while</code> 循环</td>
+</tr>
+<tr>
+<td>想知道真实 Claude Code 为什么这么大</td>
+<td><a href="../../guide/claude-code-architecture/">Claude Code 架构分析</a></td>
+<td>本课程为什么只抽核心 Harness 来学</td>
+</tr>
+</tbody>
+</table>
+<p>这张表也解释了为什么优秀的 Claude Code 入门材料通常不会一开始就讲源码细节：它们会先让你理解终端、项目目录、工具权限、上下文和循环，再逐步进入实现。源码是答案的一部分，但不是读者第一眼最需要抓住的东西。</p>
+<h3 id="lab-0-queryts">为什么 Lab 0 不先讲 <code>query.ts</code><a class="headerlink" href="#lab-0-queryts" title="Permanent link">&para;</a></h3>
+<p>看到这里，很多人会自然冒出一个问题：既然 Agent Loop 这么重要，为什么 Lab 0 不直接从 <code>query.ts</code> 开始？</p>
+<p>答案很简单：因为课程设计讲究顺序。对第一次接触这类系统的人来说，最先需要建立的不是源码细节，而是<strong>反馈感</strong>和<strong>整体感</strong>。</p>
+<p>如果你一上来就钻进 <code>query.ts</code>、消息协议、工具路由和状态分支，脑子里很容易只剩下一堆局部实现：这里是 stop reason，那里是 tool result，这里为什么又 continue 了。但你还没有真正感受到"我写的代码，会进入一个真实产品，并改变那个产品的行为"。</p>
+<p>Lab 0 故意先不碰最难的部分，而是先让你去填写 <code>*-lab0</code> 骨架文件，修改最直观、最容易观察到的那层外观。你会经历一次非常完整的闭环：</p>
+<div class="language-text highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>改代码 -&gt; 构建 -&gt; 启动真实 Claude Code -&gt; 亲眼看到变化
+</code></pre></div></td></tr></table></div>
+<p>这个闭环对教学非常重要。它会把后面所有更抽象的知识都钉在一个具体事实上：我们不是在空讲 Agent，我们是在逐步接管一个真实运行中的 Claude Code。</p>
+<p>所以 Lab 0 先碰产品外壳，不是因为外壳最重要，而是因为它最适合作为"进入系统"的第一步。</p>
+<h3 id="labs">后续 Labs 学什么<a class="headerlink" href="#labs" title="Permanent link">&para;</a></h3>
+<p>从 Lab 1 开始，你会一层层往 Harness 里面走。</p>
+<p>Lab 1 先让模型真正"说起来"，你会开始理解最基础的调用和返回；Lab 2 给模型接上工具，让系统第一次从"会回答"变成"会动手"；Lab 3 实现最核心的 Agent Loop，让模型能根据工具结果继续行动；Lab 4 再往上加规划和子 Agent，让系统学会把复杂任务拆开处理；Lab 5 最后处理上下文压缩和长任务稳定性，让这套循环不只会跑，而且能跑得久。</p>
+<p>换句话说，后面的 Labs 并不是一堆分散的技巧，而是在逐层搭出一个完整的 coding agent Harness。</p>
+<p>更准确地说，后面的 Labs 是从一张图里依次拆层：先补工程地基，再理解模型通信，再让模型接工具，再把工具结果接回循环，最后才讨论真实产品里必不可少的权限、记忆、上下文压缩和任务分解。</p>
+<h2 id="lab-0-ui">为什么 Lab 0 要改 UI？<a class="headerlink" href="#lab-0-ui" title="Permanent link">&para;</a></h2>
+<p>后面的 Lab 会逐步实现 Agent Harness：消息协议、工具系统、Agent Loop、规划和上下文管理。这些能力很重要，但第一次接触时不一定马上能"看见"。</p>
+<p>Lab 0 先让你改一个非常直观的地方：</p>
+<ul>
+<li>打开 <code>Clawd-lab0.tsx</code> 等骨架文件</li>
+<li>先改品牌文字，再补小动物像素图</li>
+<li>运行 <code>node build.mjs --lab=0</code></li>
+<li>再启动 <code>node cli.js</code>，直接看到终端界面变化</li>
+</ul>
+<p>这一步不要求你理解 React、Ink、Claude Code 的完整架构，甚至不要求你一开始就把像素图全部画完。你只需要先完成一小段可见改动，感受"改代码 -&gt; 构建 -&gt; 看到真实产品变化"的闭环。</p>
+<h2 id="lab">这次 Lab 真正在改什么？<a class="headerlink" href="#lab" title="Permanent link">&para;</a></h2>
+<p>先把两个仓库分开：</p>
+<ul>
+<li><code>build-your-own-claude-code</code> / byocc 仓库：负责平台、文档和 Lab 页面</li>
+<li><code>claude-code-diy</code> 仓库：负责真实可运行的 Claude Code 源码</li>
+</ul>
+<p>Lab 0 的学习者任务发生在 <strong><code>claude-code-diy</code> 工作区</strong> 里，但左侧教程文档写在 byocc 仓库里。你这次不是去改原始 <code>Clawd.tsx</code>，而是去填已经为 Lab 0 准备好的 <code>*-lab0.*</code> 骨架文件。</p>
+<p>构建时运行：</p>
+<div class="language-text highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>node build.mjs --lab=0
+</code></pre></div></td></tr></table></div>
+<p><code>build.mjs</code> 会自动扫描 <code>-lab0</code> / <code>-lab-0</code> / <code>-lab00</code> / <code>-lab-00</code> 这些后缀的文件，把它们编译后的结果覆盖到对应原始文件的产物上。也就是说：</p>
+<div class="language-text highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>Clawd-lab0.tsx   -&gt; 编译后覆盖 dist/.../Clawd.js
+WelcomeV2-lab0.tsx -&gt; 编译后覆盖 dist/.../WelcomeV2.js
+</code></pre></div></td></tr></table></div>
+<p>所以对学习者来说，最重要的心智模型只有一句话：</p>
+<div class="language-text highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>填写 *-lab0 文件里的 TODO -&gt; node build.mjs --lab=0 -&gt; node cli.js -&gt; 看到真实 TUI 变化
+</code></pre></div></td></tr></table></div>
+<h2 id="lab-0_1">Lab 0 要填哪些文件？<a class="headerlink" href="#lab-0_1" title="Permanent link">&para;</a></h2>
+<p>Lab 0 对应 6 个可见区域，通常会在 <code>claude-code-diy</code> 里预先提供这 6 个骨架文件：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>学习者改什么</th>
+<th>最终影响哪里</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/components/LogoV2/Clawd-lab0.tsx</code></td>
+<td>像素画主体、颜色、眼睛</td>
+<td>左侧主 Logo 小动物</td>
+</tr>
+<tr>
+<td><code>src/components/LogoV2/WelcomeV2-lab0.tsx</code></td>
+<td>欢迎语</td>
+<td>首屏欢迎文字</td>
+</tr>
+<tr>
+<td><code>src/components/LogoV2/CondensedLogo-lab0.tsx</code></td>
+<td>品牌短名</td>
+<td>紧凑 Logo 文本</td>
+</tr>
+<tr>
+<td><code>src/components/LogoV2/LogoV2-lab0.tsx</code></td>
+<td>边框标题</td>
+<td>Logo 外框标题</td>
+</tr>
+<tr>
+<td><code>src/entrypoints/cli-lab0.tsx</code></td>
+<td>版本字符串</td>
+<td><code>node cli.js --version</code> 输出</td>
+</tr>
+<tr>
+<td><code>src/main-lab0.tsx</code></td>
+<td>程序名 / description / version</td>
+<td>CLI 描述与版本信息</td>
+</tr>
+</tbody>
+</table>
+<p>其中最核心的是 <code>Clawd-lab0.tsx</code>。它决定你的小动物长什么样；其余 5 个文件更多是在把品牌文字统一起来。</p>
+<h2 id="_4">实验任务<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>详见 <a href="tasks/">实验任务</a>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="页脚" >
+        
+          
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="上一页: 实验指南">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                上一页
+              </span>
+              <div class="md-ellipsis">
+                实验指南
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="tasks/" class="md-footer__link md-footer__link--next" aria-label="下一页: 实验任务">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                下一页
+              </span>
+              <div class="md-ellipsis">
+                实验任务
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.top", "navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "navigation.tracking", "navigation.instant", "navigation.instant.progress", "navigation.sections", "header.autohide", "content.code.copy", "content.code.select", "content.code.annotate", "content.tabs.link", "toc.follow", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/extra.js"></script>
+      
+    
+  </body>
+</html>
