@@ -259,7 +259,16 @@ export default function FloatingCodeBlocks({
             key={block.id}
             ref={(el) => { blockElsRef.current[i] = el; }}
             className="absolute left-0 top-0"
-            style={{ willChange: 'transform, opacity', pointerEvents: 'none' }}
+            style={{
+              willChange: 'transform, opacity',
+              pointerEvents: block.snippet.isEasterEgg ? 'auto' : 'none',
+              cursor: block.snippet.isEasterEgg ? 'pointer' : 'default',
+            }}
+            onClick={() => {
+              if (block.snippet.isEasterEgg) {
+                window.dispatchEvent(new CustomEvent('crab-egg-trigger'));
+              }
+            }}
           >
             <div
               style={{
@@ -270,10 +279,22 @@ export default function FloatingCodeBlocks({
                 padding: '12px 16px',
                 borderRadius: '8px',
                 background: theme === 'dark' ? 'rgba(13,17,23,0.3)' : 'rgba(248,246,241,0.35)',
-                border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
+                border: (() => {
+                  if (block.snippet.isEasterEgg && isHovered) {
+                    return `1px solid ${theme === 'dark' ? 'rgba(212,165,116,0.5)' : 'rgba(193,127,78,0.5)'}`;
+                  }
+                  if (block.snippet.isEasterEgg) {
+                    return `1px solid ${theme === 'dark' ? 'rgba(212,165,116,0.25)' : 'rgba(193,127,78,0.25)'}`;
+                  }
+                  return `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`;
+                })(),
                 backdropFilter: 'blur(2px)',
                 maxWidth: '360px',
                 overflow: 'hidden',
+                transition: 'border 0.3s ease, box-shadow 0.3s ease',
+                boxShadow: block.snippet.isEasterEgg && isHovered
+                  ? `0 0 12px ${theme === 'dark' ? 'rgba(212,165,116,0.08)' : 'rgba(193,127,78,0.08)'}`
+                  : 'none',
               }}
             >
               {visibleLines.map((line, li) => (

@@ -24,6 +24,7 @@ import { progressRouter } from './routes/progress.js';
 import { resetRouter } from './routes/reset.js';
 import { settingsRouter } from './routes/settings.js';
 import { llmProxyRouter } from './routes/llm-proxy.js';
+import { statsRouter } from './routes/stats.js';
 import { initDatabase } from './db/database.js';
 import { startContainerCleanupScheduler } from './services/container-cleanup-scheduler.js';
 import { assertEncryptionConfig } from './services/encryption.js';
@@ -77,6 +78,7 @@ app.use(progressRouter);
 app.use(resetRouter);
 app.use(settingsRouter);
 app.use(llmProxyRouter);
+app.use(statsRouter);
 
 // 健康检查
 app.get('/api/health', (_req, res) => {

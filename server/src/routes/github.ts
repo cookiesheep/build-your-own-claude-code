@@ -40,8 +40,9 @@ export const githubAuthRouter = Router();
 const OAUTH_STATE_COOKIE = 'byocc_oauth_state';
 const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 const GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
-const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
-const GITHUB_USER_URL = 'https://api.github.com/user';
+// 走 Cloudflare Worker 代理，解决华为云直连 GitHub 不稳定的问题
+const GITHUB_TOKEN_URL = 'https://byocc.cc/api/github-proxy/token';
+const GITHUB_USER_URL = 'https://byocc.cc/api/github-proxy/api/user';
 const GITHUB_USER_AGENT = 'byocc-platform';
 
 type StateRecord = {

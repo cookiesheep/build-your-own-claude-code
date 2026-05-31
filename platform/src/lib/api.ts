@@ -59,6 +59,19 @@ export type ProgressResponse = {
   labs: Array<{ labNumber: number; completed: boolean }>;
 };
 
+export type LeaderboardEntry = {
+  username: string | null;
+  nickname: string | null;
+  avatarUrl: string | null;
+  completedLabs: number;
+};
+
+export type LeaderboardData = {
+  totalLearners: number;
+  limit: number;
+  leaderboard: LeaderboardEntry[];
+};
+
 export type WorkspaceResponse = {
   labNumber: number;
   files: Record<string, string>;
@@ -502,6 +515,51 @@ export async function getProgress(
   }
 
   return (await response.json()) as ProgressResponse;
+}
+
+export async function getVisitorCount(): Promise<number> {
+  if (MOCK_MODE) {
+    await delay(200);
+    return 128;
+  }
+
+  const response = await fetch(apiUrl("/api/stats/visitors"), {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch visitor count");
+  }
+
+  const data = (await response.json()) as { total?: unknown };
+  return typeof data.total === "number" ? data.total : 0;
+}
+
+export async function getLeaderboard(): Promise<LeaderboardData> {
+  if (MOCK_MODE) {
+    await delay(250);
+    return {
+      totalLearners: 42,
+      limit: 10,
+      leaderboard: [
+        { username: "cookiesheep", nickname: "cookiesheep", avatarUrl: null, completedLabs: 6 },
+        { username: "teammateA", nickname: null, avatarUrl: null, completedLabs: 4 },
+        { username: "agent-loop-fan", nickname: "Agent Loop Fan", avatarUrl: null, completedLabs: 3 },
+        { username: "learner42", nickname: null, avatarUrl: null, completedLabs: 2 },
+        { username: "newbie", nickname: null, avatarUrl: null, completedLabs: 1 },
+      ],
+    };
+  }
+
+  const response = await fetch(apiUrl("/api/stats/leaderboard"), {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch leaderboard");
+  }
+
+  return (await response.json()) as LeaderboardData;
 }
 
 export async function getWorkspace(labNumber: number): Promise<WorkspaceResponse> {

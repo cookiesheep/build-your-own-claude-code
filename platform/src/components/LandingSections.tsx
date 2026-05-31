@@ -326,12 +326,10 @@ const SKILL_DATA = [
 
 function SkillNode({
   lab,
-  index,
   isActive,
   isLast,
 }: {
   lab: (typeof SKILL_DATA)[number];
-  index: number;
   isActive: boolean;
   isLast: boolean;
 }) {
@@ -474,7 +472,6 @@ export function SkillTreeSection() {
             <SkillNode
               key={lab.id}
               lab={lab}
-              index={i}
               isActive={i <= activeIdx}
               isLast={i === SKILL_DATA.length - 1}
             />
@@ -534,8 +531,8 @@ export function ArchitectureSection() {
     if (!visible) return;
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
-      setActiveIdx(ARCH_NODES.length - 1);
-      return;
+      const timer = setTimeout(() => setActiveIdx(ARCH_NODES.length - 1), 0);
+      return () => clearTimeout(timer);
     }
 
     const timers = ARCH_NODES.map((_, i) =>
@@ -571,7 +568,6 @@ export function ArchitectureSection() {
         >
           {ARCH_NODES.map((node, i) => {
             const isActive = i <= activeIdx;
-            const isCurrent = i === activeIdx;
             return (
               <div key={node.title} className="flex items-center">
                 <div

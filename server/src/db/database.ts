@@ -55,8 +55,26 @@ type ApiUsageCountRow = {
   request_count: number;
 };
 
-const DB_PATH = join(process.cwd(), 'byocc.sqlite');
+type CountRow = {
+  count: number;
+};
+
+type LearnerLeaderboardRow = {
+  id: string;
+  username: string | null;
+  nickname: string | null;
+  avatar_url: string | null;
+  completed_labs: number;
+  last_completed_at: string | null;
+};
+
+const LEADERBOARD_LIMIT = 10;
+
 let db: DatabaseHandle | undefined;
+
+function getDbPath(): string {
+  return process.env.BYOCC_DB_PATH ?? join(process.cwd(), 'byocc.sqlite');
+}
 
 export type EnvironmentStatus =
   | 'not_started'
@@ -116,6 +134,19 @@ export type UserSettingsRecord = {
   updatedAt: string;
 };
 
+export type LeaderboardEntry = {
+  username: string | null;
+  nickname: string | null;
+  avatarUrl: string | null;
+  completedLabs: number;
+};
+
+export type LeaderboardStats = {
+  totalLearners: number;
+  limit: number;
+  leaderboard: LeaderboardEntry[];
+};
+
 function getDb(): DatabaseHandle {
   if (!db) {
     throw new Error('Database has not been initialized');
@@ -134,7 +165,8 @@ export function initDatabase(): void {
     return;
   }
 
-  db = new BetterSqlite3(DB_PATH);
+  const dbPath = getDbPath();
+  db = new BetterSqlite3(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('busy_timeout = 5000');
   db.pragma('foreign_keys = ON');
@@ -214,6 +246,13 @@ export function initDatabase(): void {
 
     CREATE INDEX IF NOT EXISTS idx_api_usage_session
       ON api_usage(session_id);
+
+    CREATE TABLE IF NOT EXISTS page_views (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      total INTEGER NOT NULL DEFAULT 0
+    );
+
+    INSERT OR IGNORE INTO page_views (id, total) VALUES (1, 0);
   `);
 
   const sessionColumns = db
@@ -268,7 +307,16 @@ export function initDatabase(): void {
     db.exec('ALTER TABLE user_settings ADD COLUMN api_base_url TEXT');
   }
 
-  console.log(`💾 Database initialized: ${DB_PATH}`);
+  console.log(`💾 Database initialized: ${dbPath}`);
+}
+
+export function closeDatabaseForTests(): void {
+  if (!db) {
+    return;
+  }
+
+  db.close();
+  db = undefined;
 }
 
 function mapUser(row: UserRow): UserRecord {
@@ -982,4 +1030,66 @@ export function getUserDailyRemaining(userId: string): number {
   const dailyLimit = Number.parseInt(process.env.BYOCC_DEFAULT_KEY_DAILY_LIMIT ?? '500', 10);
   const normalizedDailyLimit = Number.isFinite(dailyLimit) && dailyLimit > 0 ? dailyLimit : 500;
   return Math.max(0, normalizedDailyLimit - getTodayUsage(userId));
+}
+
+export function incrementPageView(): void {
+  const database = getDb();
+  database.prepare('UPDATE page_views SET total = total + 1 WHERE id = 1').run();
+}
+
+export function getVisitorCount(): number {
+  const database = getDb();
+  const row = database
+    .prepare<[], CountRow>('SELECT total AS count FROM page_views WHERE id = 1')
+    .get();
+  return row?.count ?? 0;
+}
+
+export function getLearnerLeaderboard(): LeaderboardStats {
+  const database = getDb();
+  const totalRow = database
+    .prepare<[], CountRow>(
+      `
+        SELECT COUNT(*) AS count
+        FROM users
+        WHERE kind IN ('github', 'password')
+      `
+    )
+    .get();
+  const rows = database
+    .prepare<[number], LearnerLeaderboardRow>(
+      `
+        SELECT
+          u.id,
+          u.username,
+          u.nickname,
+          u.avatar_url,
+          COUNT(up.lab_number) AS completed_labs,
+          MAX(up.completed_at) AS last_completed_at
+        FROM users u
+        INNER JOIN user_progress up
+          ON up.user_id = u.id
+          AND up.completed = 1
+        WHERE u.kind IN ('github', 'password')
+        GROUP BY u.id, u.username, u.nickname, u.avatar_url
+        ORDER BY
+          completed_labs DESC,
+          last_completed_at IS NULL ASC,
+          last_completed_at DESC,
+          COALESCE(NULLIF(u.nickname, ''), NULLIF(u.username, ''), u.id) COLLATE NOCASE ASC
+        LIMIT ?
+      `
+    )
+    .all(LEADERBOARD_LIMIT);
+
+  return {
+    totalLearners: totalRow?.count ?? 0,
+    limit: LEADERBOARD_LIMIT,
+    leaderboard: rows.map((row) => ({
+      username: row.username,
+      nickname: row.nickname,
+      avatarUrl: row.avatar_url,
+      completedLabs: Math.min(6, Math.max(0, row.completed_labs)),
+    })),
+  };
 }

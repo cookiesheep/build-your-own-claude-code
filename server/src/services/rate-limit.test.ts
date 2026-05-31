@@ -1,11 +1,29 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
-import { createPasswordUser, initDatabase, recordApiUsage } from '../db/database.js';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  closeDatabaseForTests,
+  createPasswordUser,
+  initDatabase,
+  recordApiUsage,
+} from '../db/database.js';
 import { checkRateLimit } from './rate-limit.js';
 
 describe('API usage rate limit', () => {
+  let tempDir: string;
+
   beforeAll(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'byocc-rate-limit-test-'));
+    process.env.BYOCC_DB_PATH = join(tempDir, 'byocc.sqlite');
     initDatabase();
+  });
+
+  afterAll(() => {
+    closeDatabaseForTests();
+    delete process.env.BYOCC_DB_PATH;
+    rmSync(tempDir, { recursive: true, force: true });
   });
 
   function createTestUser(): string {

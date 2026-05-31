@@ -74,7 +74,7 @@ export default function LabDetailPanel({ lab, markdownContent }: LabDetailPanelP
   const { theme } = useTheme();
   const colors = theme === 'light' ? TOKEN_COLORS_LIGHT : TOKEN_COLORS_DARK;
 
-  const snippet = SNIPPETS.find((s) => s.labId === lab.id);
+  const snippet = SNIPPETS.find((s) => s.labId === lab.id && !s.isEasterEgg);
   const codeLines = snippet ? snippet.lines.slice(0, 8) : [];
   const statusStyle = STATUS_STYLES[lab.status] || STATUS_STYLES.not_started;
   const diffStyle = DIFFICULTY_STYLES[lab.difficulty] || DIFFICULTY_STYLES.easy;

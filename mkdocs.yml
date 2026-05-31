@@ -44,6 +44,8 @@ theme:
     code: JetBrains Mono
   icon:
     repo: fontawesome/brands/github
+  logo: assets/logo.png
+  favicon: assets/logo.png
 
 extra_css:
   - stylesheets/extra.css

@@ -4,6 +4,7 @@ import path from "node:path";
 import PlatformPageClient from "@/components/PlatformPageClient";
 import ScrollReactiveOrbs from "@/components/ScrollReactiveOrbs";
 import FloatingCodeBlocks from "@/components/FloatingCodeBlocks";
+import CrabPeekEasterEgg from "@/components/easter-eggs/CrabPeekEasterEgg";
 
 export const metadata = {
   title: "BYOCC — 选择 Lab",
@@ -37,6 +38,7 @@ export default async function PlatformPage() {
       <FloatingCodeBlocks />
       <ScrollReactiveOrbs />
       <PlatformPageClient labContents={labContents} />
+      <CrabPeekEasterEgg />
     </div>
   );
 }

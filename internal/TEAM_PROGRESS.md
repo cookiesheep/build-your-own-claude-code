@@ -1818,6 +1818,99 @@
 - 设计评测方案（Mock API + 行为测试）
 - 修复 owner 提到的平台 bug
 
+### 2026-05-30（会话 39 / 平台统计 + 粒子 Logo + 学习排行榜）
+
+**完成项**：
+- ✅ 按 `internal/prompt/codex-platform-features-prompt.md` 完成三项平台功能：Logo 粒子阶段、首页独立访客统计、`/platform` 学习排行榜
+- ✅ `HeroParticles` 新增 `logo` phase，复用 `sampleImageToPoints()` 和 `platform/public/logo-hero.png`
+- ✅ 新增 public stats API：`GET /api/stats/visitors`、`GET /api/stats/leaderboard`
+- ✅ 排行榜只展示至少完成 1 个 Lab 的 GitHub/password 学习者，人数 badge 仍表示注册学习者总数
+- ✅ 首页 Footer 新增异步访客 badge，文案与 users + legacy sessions 的独立访客口径对齐
+- ✅ 新增 `LeaderboardPanel`，桌面三栏展示，移动端折叠展示并支持复制分享链接
+- ✅ 新增 stats DB helper 测试与 route 契约测试，测试使用临时 SQLite，避免污染本地 `byocc.sqlite`
+- ✅ 修复 architect 复核指出的语义/验证/测试隔离问题
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `cd platform && npx tsc --noEmit`
+- `cd server && npx tsc --noEmit`
+- `cd platform && npx eslint src/components/HeroParticles.tsx src/components/LandingSections.tsx src/components/PlatformClientLayout.tsx src/components/LeaderboardPanel.tsx src/lib/api.ts`
+- `cd server && npx vitest run`（8 files / 19 tests passed）
+- `cd server && npm run build`
+- `cd platform && npm run build`
+- `git diff --check`
+- HTTP smoke: `/` 200, `/platform` 200, `/api/stats/visitors` 返回 `{ total: 224 }`, `/api/stats/leaderboard` 返回 `rows=4`
+- Playwright smoke: 首页 Footer 显示 `已接待 224 位独立访客`；`/platform` 排行榜展示完成进度行
+
+**下一步**：
+- 如需精确 PV/UV 统计，可后续新增隐私友好的 page-view/event 表；当前实现保持无新表、无新依赖
+- 全仓库 `platform npm run lint` 仍会被既有文件债阻塞，后续可单独清理 `login/page.tsx`、`MarkdownRenderer.tsx`、`FloatingCodeBlocks.tsx` 等历史问题
+
+### 2026-05-31（会话 40 / 首页统计首屏化 + 排行榜 Top 10）
+
+**完成项**：
+- ✅ 按 owner 反馈将首页独立访客统计从 Footer 移到 Hero 首屏，改为与粒子/终端视觉融合的 `public learning signal`
+- ✅ Hero 首屏同时展示访问信号与学习者信号，使用现有 public stats API 异步加载，不会创建匿名用户
+- ✅ Footer 已移除旧访客 badge，避免统计信息埋在页面末尾
+- ✅ `/platform` Learners 面板默认展示 Top 10；后端 SQL 是 10 条上限的唯一截断源，前端展示 API 返回的 `limit`
+- ✅ 补充 `.omx/plans/prd-stats-proof-hero-leaderboard-limit.md` 与测试规格，记录当前统计口径不是严格 UV/PV
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `cd server && npx vitest run src/db/stats.test.ts src/routes/stats.test.ts`（2 files / 7 tests passed）
+- `cd server && npx tsc --noEmit`
+- `cd platform && npx tsc --noEmit`
+- `cd platform && npx eslint src/components/LandingSections.tsx src/components/LeaderboardPanel.tsx src/lib/api.ts`
+- `cd server && npm run build`
+- `cd server && npx vitest run`（8 files / 21 tests passed）
+- `cd platform && npm run build`
+- `git diff --check`
+- HTTP smoke：`http://localhost:3001/` 返回 200；`http://127.0.0.1:3001/api/stats/visitors` 返回 `{ total: 230 }`；`/api/stats/leaderboard` 返回 `totalLearners=83`、4 行且后端限制为最多 10 行
+- Playwright smoke：`http://localhost:3001/` 首屏显示 `public learning signal`、`到访过 BYOCC`、`平台身份与历史会话`；Footer 不再显示访客 badge；`/platform` 桌面显示 `Top 10`；移动端 Learners 面板默认折叠并可展开
+
+**下一步**：
+- 若要精确“访问人数/UV/PV”，需要新增隐私友好的 visitor/event 表；当前实现仍是数据库身份与历史 session 的近似口径
+- 本机 `byocc.sqlite` 已包含历史/测试创建的本地数据，公开演示前建议使用干净生产库或迁移清理本地测试样例
+
+### 2026-05-31（会话 41 / 首页访客终端 + 粒子数字）
+
+**完成项**：
+- ✅ 保留现有首页 Hero 内容，不移除 `LandingSections` 里的首屏结构
+- ✅ 新增 [VisitorTerminal](D:/code/build-your-own-claude-code/platform/src/components/VisitorTerminal.tsx)：右下角小铜色脉冲点，hover/click/focus 展开微型终端卡片
+- ✅ 终端卡片调用 `getVisitorCount()` 展示当前 stats API 返回值，并生成稳定的假在线人数与 30 秒更新的假日志时间
+- ✅ 点击 `x` 会收回到圆点，并写入 `localStorage` 的 `byocc-visitor-terminal-collapsed`
+- ✅ [page.tsx](D:/code/build-your-own-claude-code/platform/src/app/page.tsx) 在 `<ScrollProgress />` 同层挂载 `VisitorTerminal`
+- ✅ [HeroParticles](D:/code/build-your-own-claude-code/platform/src/components/HeroParticles.tsx) 新增 `visitors` phase，`stable` 后显示 5 秒访客数字；若 count 为 `null/0` 则跳过并回到 scatter
+- ✅ 本轮没有修改 `server/` 目录；“访问首页次数/PV”需要后续后端事件计数才能准确实现
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- ⚠️ 当前 `/api/stats/visitors` 仍沿用已有后端口径，不是严格“首页访问次数”；本轮按约束未改后端
+
+**验证**：
+- `cd platform && npx tsc --noEmit`
+- `cd platform && npx eslint src/app/page.tsx src/components/VisitorTerminal.tsx src/components/HeroParticles.tsx`
+- `cd platform && npm run build`
+- `git diff --check`
+- HTTP smoke：`http://localhost:3001/` 返回 200；`http://127.0.0.1:3001/api/stats/visitors` 返回 `{ total: 230 }`
+- Playwright smoke：桌面终端展开宽 260px；移动端 390px 视口展开宽 220px、右/下边距 20px；关闭后 card opacity/max-height 回到 0，`localStorage` 写入 `true`
+
+**下一步**：
+- 若确认要把首页数字改成“访问次数/PV”，新增后端 page-view/event 计数表或原子计数接口
+- 另起一轮优化 `/platform` 排行榜 GitHub 头像展示
+
 ---
 
 ## 关键资源
