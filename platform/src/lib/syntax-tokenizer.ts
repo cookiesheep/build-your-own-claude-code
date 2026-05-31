@@ -108,6 +108,8 @@ export interface CodeSnippet {
   lines: string[];
   labId: number;
   labLabel: string;
+  /** If true, this block triggers the crab easter egg when clicked */
+  isEasterEgg?: boolean;
 }
 
 export const SNIPPETS: CodeSnippet[] = [
@@ -260,5 +262,16 @@ export const SNIPPETS: CodeSnippet[] = [
     ],
     labId: 5,
     labLabel: 'Lab 5 会教你实现这段代码',
+  },
+  {
+    lines: [
+      '// 👀 试试点击这块代码',
+      '// 点击这里，有惊喜',
+      'const secret = await discover();',
+      'console.log(secret);',
+    ],
+    labId: 0,
+    labLabel: '🦀 点击发现彩蛋',
+    isEasterEgg: true,
   },
 ];

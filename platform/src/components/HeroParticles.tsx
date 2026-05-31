@@ -29,24 +29,28 @@ type Target = { x: number; y: number; color?: string };
 type Phase =
   | 'scatter'       // random floating
   | 'terminal'       // particles form terminal window
+  | 'logo'           // particles form BYOCC logo
   | 'explode1'       // burst outward
   | 'buildYourOwn'   // form "BUILD YOUR OWN"
   | 'explode2'       // burst again
-  | 'stable';        // form "CLAUDE CODE" (final, loops back to scatter)
+  | 'stable'         // form "CLAUDE CODE"
+  | 'visitors';      // form visitor count, then loops back to scatter
 
 /* ─── Phase Timing (seconds) ─── */
 const PHASE_DURATION: Record<Phase, number> = {
-  scatter: 6,
+  scatter: 4,
   terminal: 12,
+  logo: 12,
   explode1: 4,
   buildYourOwn: 7,
   explode2: 4,
-  stable: 12,        // loops back to scatter after this
+  stable: 12,
+  visitors: 5,       // loops back to scatter after this
 };
 
 
 const PHASE_ORDER: Phase[] = [
-  'scatter', 'terminal', 'explode1', 'buildYourOwn', 'explode2', 'stable',
+  'scatter', 'terminal', 'logo', 'explode1', 'buildYourOwn', 'explode2', 'stable', 'visitors',
 ];
 
 /* ─── Config (user-tuned values preserved) ─── */
@@ -145,6 +149,44 @@ function preloadTerminalImage(): Promise<HTMLImageElement | null> {
   return terminalImgPromise;
 }
 
+let logoImg: HTMLImageElement | null = null;
+let logoImgPromise: Promise<HTMLImageElement | null> | null = null;
+let visitorCount: number | null = null;
+let visitorCountPromise: Promise<number | null> | null = null;
+
+function preloadLogoImage(): Promise<HTMLImageElement | null> {
+  if (logoImg) return Promise.resolve(logoImg);
+  if (logoImgPromise) return logoImgPromise;
+  logoImgPromise = new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => { logoImg = img; resolve(img); };
+    img.onerror = () => resolve(null);
+    img.src = '/logo-hero.png';
+  });
+  return logoImgPromise;
+}
+
+function preloadVisitorCount(): Promise<number | null> {
+  if (typeof visitorCount === 'number') return Promise.resolve(visitorCount);
+  if (visitorCountPromise) return visitorCountPromise;
+
+  visitorCountPromise = fetch('/api/stats/visitors')
+    .then((response) => {
+      if (!response.ok) return null;
+      return response.json() as Promise<{ total?: unknown }>;
+    })
+    .then((data) => {
+      visitorCount = typeof data?.total === 'number' ? data.total : null;
+      return visitorCount;
+    })
+    .catch(() => {
+      visitorCount = null;
+      return null;
+    });
+
+  return visitorCountPromise;
+}
+
 function sampleImageToPoints(
   img: HTMLImageElement, canvasW: number, canvasH: number, maxPoints: number,
 ): Target[] {
@@ -160,7 +202,7 @@ function sampleImageToPoints(
   const drawW = img.width * scale;
   const drawH = img.height * scale;
   const drawX = (canvasW - drawW) / 2;
-  const drawY = (canvasH - drawH) * 0.35;
+  const drawY = (canvasH - drawH) * 0.2;
 
   oc.drawImage(img, drawX, drawY, drawW, drawH);
 
@@ -298,7 +340,10 @@ export default function HeroParticles() {
   });
 
   const { theme } = useTheme();
-  themeRef.current = theme;
+
+  useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -399,6 +444,15 @@ export default function HeroParticles() {
           if (pts.length === 0) pts = generateFallbackPoints(w, h, count);
           break;
 
+        case 'logo':
+          if (logoImg) {
+            pts = sampleImageToPoints(logoImg, w, h, count);
+          } else {
+            pts = [];
+          }
+          if (pts.length === 0) pts = generateFallbackPoints(w, h, count);
+          break;
+
         case 'explode1':
           // Keep current positions as targets (just drifting during explosion)
           pts = S.particles.map((p) => ({ x: p.x, y: p.y }));
@@ -418,6 +472,18 @@ export default function HeroParticles() {
           if (pts.length === 0) pts = generateFallbackPoints(w, h, count);
           break;
 
+        case 'visitors': {
+          const total = visitorCount ?? 0;
+          if (total <= 0) {
+            pts = [];
+            break;
+          }
+          const formatted = total.toLocaleString();
+          pts = sampleWordsToPoints(w, h, ['VISITS', formatted], h * 0.42, Math.max(50, Math.min(w * 0.12, h * 0.25, 360)));
+          if (pts.length === 0) pts = generateFallbackPoints(w, h, count);
+          break;
+        }
+
         default:
           pts = generateScatterPositions(w, h, count);
       }
@@ -433,8 +499,15 @@ export default function HeroParticles() {
     /* ─── Phase transition ─── */
     function advancePhase() {
       const idx = PHASE_ORDER.indexOf(S.phase);
-      const nextIdx = (idx + 1) % PHASE_ORDER.length;
-      const nextPhase = PHASE_ORDER[nextIdx];
+      let nextIdx = (idx + 1) % PHASE_ORDER.length;
+      let nextPhase = PHASE_ORDER[nextIdx];
+
+      for (let attempts = 0; attempts < PHASE_ORDER.length; attempts++) {
+        if (nextPhase !== 'visitors' || (visitorCount ?? 0) > 0) break;
+        nextIdx = (nextIdx + 1) % PHASE_ORDER.length;
+        nextPhase = PHASE_ORDER[nextIdx];
+      }
+
       S.phase = nextPhase;
       S.phaseStart = S.time;
 
@@ -680,6 +753,8 @@ export default function HeroParticles() {
 
     /* ─── Start ─── */
     preloadTerminalImage();
+    preloadLogoImage();
+    preloadVisitorCount();
     resize();
     animate();
 

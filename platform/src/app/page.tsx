@@ -9,6 +9,8 @@ import {
 } from "@/components/LandingSections";
 import ScrollProgress from "@/components/ScrollProgress";
 import ScrollReactiveOrbs from "@/components/ScrollReactiveOrbs";
+import CrabTeacher from "@/components/CrabTeacher";
+import HomeCrabEasterEgg from "@/components/easter-eggs/HomeCrabEasterEgg";
 import CodePreview from "@/components/CodePreview";
 import ScrambleText from "@/components/ScrambleText";
 
@@ -17,6 +19,15 @@ export default function Home() {
     <div className="relative min-h-screen bg-[var(--bg-page)]">
       <ScrollProgress />
       <ScrollReactiveOrbs />
+      <CrabTeacher
+        scale={0.8}
+        style={{
+          position: "fixed",
+          left: "max(16px, env(safe-area-inset-left))",
+          bottom: "max(16px, env(safe-area-inset-bottom))",
+          zIndex: 40,
+        }}
+      />
 
       <div className="relative z-10">
         {/* Section 1: Hero */}
@@ -54,6 +65,9 @@ export default function Home() {
 
         {/* Footer */}
         <FooterSection />
+
+        {/* Easter Egg: sentinel at page bottom triggers crab animation */}
+        <HomeCrabEasterEgg />
       </div>
     </div>
   );
