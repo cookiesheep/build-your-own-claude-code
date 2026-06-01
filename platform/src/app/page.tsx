@@ -10,6 +10,7 @@ import {
 import ScrollProgress from "@/components/ScrollProgress";
 import ScrollReactiveOrbs from "@/components/ScrollReactiveOrbs";
 import CrabTeacher from "@/components/CrabTeacher";
+import ScrollNav from "@/components/ScrollNav";
 import HomeCrabEasterEgg from "@/components/easter-eggs/HomeCrabEasterEgg";
 import CodePreview from "@/components/CodePreview";
 import ScrambleText from "@/components/ScrambleText";
@@ -28,6 +29,7 @@ export default function Home() {
           zIndex: 40,
         }}
       />
+      <ScrollNav />
 
       <div className="relative z-10">
         {/* Section 1: Hero */}
