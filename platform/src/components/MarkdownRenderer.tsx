@@ -7,8 +7,10 @@ import remarkDirective from "remark-directive";
 
 import { preprocessAdmonitions } from "@/lib/remark/admonition-preprocessor";
 import { remarkAdmonition } from "@/lib/remark/remark-admonition";
+import { remarkQuiz } from "@/lib/remark/remark-quiz";
 
 import Admonition from "./Admonition";
+import QuizSingle from "./QuizSingle";
 import CodeBlock from "./CodeBlock";
 
 type MarkdownRendererProps = {
@@ -23,6 +25,18 @@ const components = {
       {children}
     </Admonition>
   ),
+
+  "quiz-block": ({ quizType, question, answer, explanation, children }: any) => {
+    if (quizType === "quiz-single") {
+      return (
+        <QuizSingle question={question} answer={answer} explanation={explanation}>
+          {children}
+        </QuizSingle>
+      );
+    }
+    /* Future: quiz-code etc. */
+    return <div>{children}</div>;
+  },
 
   pre: ({ children }: any) => {
     const codeElement = extractCodeElement(children);
@@ -54,7 +68,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
 
   return (
     <Markdown
-      remarkPlugins={[remarkGfm, remarkDirective, remarkAdmonition]}
+      remarkPlugins={[remarkGfm, remarkDirective, remarkAdmonition, remarkQuiz]}
       components={components as any}
     >
       {processed}
