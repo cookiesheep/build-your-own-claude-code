@@ -517,6 +517,10 @@ export async function getProgress(
   return (await response.json()) as ProgressResponse;
 }
 
+/**
+ * Read-only: fetch the current visitor count without incrementing.
+ * Safe to call from any component — no side effects.
+ */
 export async function getVisitorCount(): Promise<number> {
   if (MOCK_MODE) {
     await delay(200);
@@ -530,6 +534,39 @@ export async function getVisitorCount(): Promise<number> {
   if (!response.ok) {
     throw new Error("Failed to fetch visitor count");
   }
+
+  const data = (await response.json()) as { total?: unknown };
+  return typeof data.total === "number" ? data.total : 0;
+}
+
+const SESSION_KEY = "byocc_visit_recorded";
+
+/**
+ * Record a visit — increments the counter via POST.
+ * Deduplicated per browser session using sessionStorage:
+ * same tab survives refresh, but closing the tab/window starts a fresh session.
+ * Should be called exactly once from a top-level layout component.
+ */
+export async function recordVisit(): Promise<number> {
+  if (MOCK_MODE) {
+    await delay(200);
+    return 128;
+  }
+
+  /* Already recorded this session — skip */
+  if (sessionStorage.getItem(SESSION_KEY)) {
+    return getVisitorCount();
+  }
+
+  const response = await fetch(apiUrl("/api/stats/visitors"), {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to record visit");
+  }
+
+  sessionStorage.setItem(SESSION_KEY, "1");
 
   const data = (await response.json()) as { total?: unknown };
   return typeof data.total === "number" ? data.total : 0;

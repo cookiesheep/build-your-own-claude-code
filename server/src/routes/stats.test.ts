@@ -14,7 +14,7 @@ import {
 } from '../db/database.js';
 import { statsRouter } from './stats.js';
 
-function requestJson(path: string): Promise<{ statusCode: number; body: unknown }> {
+function requestJson(path: string, method = 'GET'): Promise<{ statusCode: number; body: unknown }> {
   const app = express();
   app.use(statsRouter);
   const handleApp = app as Express & {
@@ -27,7 +27,7 @@ function requestJson(path: string): Promise<{ statusCode: number; body: unknown 
 
   return new Promise((resolve, reject) => {
     const req = {
-      method: 'GET',
+      method,
       url: path,
       headers: {},
     };
@@ -67,14 +67,28 @@ describe('stats routes', () => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('returns visitor total through the public route', async () => {
-    createAnonymousUser();
-    createSession(`legacy-${randomUUID()}`);
+  it('GET returns visitor total without incrementing', async () => {
+    /* GET is read-only — calling it twice must not change the count */
+    const first = await requestJson('/api/stats/visitors');
+    const second = await requestJson('/api/stats/visitors');
 
-    const response = await requestJson('/api/stats/visitors');
+    expect(first.statusCode).toBe(200);
+    expect(second.statusCode).toBe(200);
+    expect(first.body).toEqual(second.body);
+  });
+
+  it('POST increments the visitor count', async () => {
+    const before = await requestJson('/api/stats/visitors');
+    const beforeTotal = (before.body as { total: number }).total;
+
+    const response = await requestJson('/api/stats/visitors', 'POST');
 
     expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual({ total: 2 });
+    expect((response.body as { total: number }).total).toBe(beforeTotal + 1);
+
+    /* Subsequent GET must reflect the new count without further increment */
+    const after = await requestJson('/api/stats/visitors');
+    expect((after.body as { total: number }).total).toBe(beforeTotal + 1);
   });
 
   it('returns only learners with completed labs through the leaderboard route', async () => {

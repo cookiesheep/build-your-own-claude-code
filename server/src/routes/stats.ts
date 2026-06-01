@@ -10,7 +10,15 @@ import { getLearnerLeaderboard, getVisitorCount, incrementPageView } from '../db
 
 export const statsRouter = Router();
 
+/* GET — read-only, no side effects */
 statsRouter.get('/api/stats/visitors', (_req, res) => {
+  res.json({
+    total: getVisitorCount(),
+  });
+});
+
+/* POST — record a new visit (called once per browser session) */
+statsRouter.post('/api/stats/visitors', (_req, res) => {
   incrementPageView();
   res.json({
     total: getVisitorCount(),

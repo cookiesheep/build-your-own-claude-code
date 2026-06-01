@@ -4,6 +4,7 @@ import Script from "next/script";
 
 import Navbar from "@/components/Navbar";
 import ThemeProvider from "@/components/ThemeProvider";
+import VisitRecorder from "@/components/VisitRecorder";
 
 import "./globals.css";
 
@@ -44,6 +45,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full bg-[var(--bg-page)]">
         <ThemeProvider>
+          <VisitRecorder />
           <Navbar />
           <main>{children}</main>
         </ThemeProvider>
