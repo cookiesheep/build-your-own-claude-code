@@ -1913,6 +1913,32 @@
 
 ---
 
+### 2026-05-13（会话 39 / Lab 01 渐进式文档优化）
+
+**完成项**：
+- ✅ 在 `docs/labs/lab-01/index.md` 中重写 Lab 01 教学定位，明确“让 Agent 第一次开口”的语言通道目标与能力边界。
+- ✅ 在 `docs/labs/lab-01/tasks.md` 中将任务顺序改为“真实对话 -> 标注 -> JSON 填空 -> 从零写 JSON -> TypeScript 类型 -> Conversation 类 -> demo -> TUI 观察”。
+- ✅ 新增 `internal/LAB01_PLATFORM_INTERACTION_SPEC.md`，记录左侧进度条、选择题按钮、即时判题、JSON diff、Live API Echo、Conversation 微阶段反馈等平台侧后续需求。
+- ✅ 在 Lab 01 文档中明确 `tool_result` 的 `role` 是 `user` 但不是人类用户发的，并新增 `请读取 README.md 第一行` 的能力边界观察 TODO。
+- ✅ 已切换到文档分支 `docs/lab01-progressive-feedback`；`claude-code-diy` 当前未修改，仍停留在 `main`。
+
+**进行中**：
+- 🔄 Claude Code 后续需要继续打磨选择题解释、错误选项反馈、JSON diff 文案、Live API Echo 请求序列和 Conversation stage 测试细节。
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `git -c safe.directory='D:/2026-Spring(2)/BYOCC/build-your-own-claude-code' diff --check`
+- `Select-String` 检查 Lab 01 文档标题层级、`CLAUDE_CODE_TODO`、`tool_result` 和 `请读取 README.md 第一行` 关键内容。
+- 未运行构建或测试；本次只改 Markdown 文档与内部规格。
+
+**下一步**：
+- 让 Claude Code 根据 `CLAUDE_CODE_TODO` 补充教学解释、题目变体和平台题目内容。
+- 后续若进入平台实现，再根据 `internal/LAB01_PLATFORM_INTERACTION_SPEC.md` 拆分组件任务。
+
+---
+
 ## 关键资源
 
 | 资源 | 位置 |
@@ -1942,4 +1968,30 @@
 5. **发现新问题** 加入阻塞项，不要默默绕过
 
 
+---
+
+### 2026-06-01（会话 42 / 双仓远端同步）
+
+**完成项**：
+- ✅ 已同步 `claude-code-diy`：`main` fast-forward 到 `origin/main`，当前 `HEAD = 6151748`。
+- ✅ 已同步 `build-your-own-claude-code`：当前 `docs/lab01-progressive-feedback` 分支 fast-forward 到 `origin/main`，当前 `HEAD = f454156`。
+- ✅ 同步前已用 stash 保护并恢复 `build-your-own-claude-code` 原有 Lab 01 文档改动与未跟踪规格文件。
+- ✅ 后续提交标题建议：`docs: record BYOCC repo sync progress`。
+
+**进行中**：
+- 🔄 `build-your-own-claude-code` 仍保留同步前已有的 Lab 01 文档与内部规格未提交改动。
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `git status --short --branch`
+- `git rev-parse HEAD`
+- `git rev-parse origin/main`
+- `git merge-base --is-ancestor`
+- `git diff --name-only --diff-filter=U`
+
+**下一步**：
+- 继续处理 Lab 01 文档改动，必要时将工作日志和文档改动拆分为单独提交。
+- 后续 PR 描述按既有格式包含 Summary 与 Test plan，说明双仓同步和原有 Lab 01 改动已保留。
 
