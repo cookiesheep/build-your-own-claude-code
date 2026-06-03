@@ -7,6 +7,8 @@ import {
   validateContainerSessionToken,
 } from '../services/container-manager.js';
 import { fetchWithTimeout } from '../services/http-timeout.js';
+import { resolvePinnedAddresses, SsrfBlockedError } from '../services/api-base-url.js';
+import { createPinnedDispatcher, pinnedFetch } from '../services/ssrf-pinned-fetch.js';
 import { checkRateLimit } from '../services/rate-limit.js';
 
 export const llmProxyRouter = Router();
@@ -165,12 +167,12 @@ async function proxyRequest(req: Request, res: Response, input: {
   userId: string;
   keySource: 'default' | 'user';
 }): Promise<void> {
-  // apiBaseUrl 已在保存设置时校验；代理热路径避免每次 DNS lookup。
   const targetUrl = `${input.apiBaseUrl.replace(/\/$/, '')}${getAnthropicPath(req)}`;
   const controller = new AbortController();
   req.on('close', () => controller.abort());
   res.on('close', () => controller.abort());
-  const response = await fetchWithTimeout(targetUrl, {
+
+  const fetchInit: RequestInit = {
     method: req.method,
     headers: {
       'Content-Type': req.header('content-type') || 'application/json',
@@ -180,7 +182,26 @@ async function proxyRequest(req: Request, res: Response, input: {
     },
     body: req.method === 'GET' || req.method === 'HEAD' ? undefined : JSON.stringify(req.body ?? {}),
     signal: controller.signal,
-  });
+  };
+
+  // 只有“用户自带 key”才会用到用户填的 api_base_url（攻击者可控）。把它解析一次、校验
+  // 非私网，并把出站连接钉死到这组已校验的 IP——杜绝校验之后再被低 TTL DNS 翻转到内网
+  // （SSRF / DNS rebinding）。默认 key 走 env 可信地址，保持原有 fetchWithTimeout。
+  // 注意：本文件的 Response 是 express 的类型，出站响应要显式用 globalThis.Response。
+  let response: globalThis.Response;
+  if (input.keySource === 'user') {
+    const { hostname } = new URL(targetUrl);
+    const addresses = await resolvePinnedAddresses(hostname); // 私网/被封 → 抛 SsrfBlockedError
+    const dispatcher = createPinnedDispatcher(addresses);
+    // 流式响应要等流读完才能关；res 'close'（res.end/json 之后或连接断开）触发时再关，
+    // 覆盖所有出口，避免 socket 句柄堆积。
+    res.once('close', () => {
+      void dispatcher.close().catch(() => undefined);
+    });
+    response = await pinnedFetch(targetUrl, fetchInit, dispatcher);
+  } else {
+    response = await fetchWithTimeout(targetUrl, fetchInit);
+  }
 
   const contentType = response.headers.get('content-type') ?? 'application/json';
   res.status(response.status);
@@ -310,6 +331,19 @@ llmProxyRouter.all('/api/llm/*', async (req, res) => {
       keySource: apiConfig.keySource,
     });
   } catch (error) {
+    if (error instanceof SsrfBlockedError) {
+      if (!res.headersSent) {
+        res.status(403).json({
+          type: 'error',
+          error: {
+            type: 'forbidden_base_url',
+            message: '自定义 API 地址指向了内网或不被允许的地址，已拒绝。',
+          },
+        });
+      }
+      return;
+    }
+
     console.error('[llm-proxy] Failed to proxy request', error);
     if (!res.headersSent) {
       res.status(502).json({
