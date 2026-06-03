@@ -8,9 +8,10 @@ import {
 } from '../db/database.js';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth.js';
 import { checkApiKeyValidationRateLimit } from '../services/api-key-validation-rate-limit.js';
-import { assertSafeApiBaseUrl, normalizeApiBaseUrl } from '../services/api-base-url.js';
+import { assertSafeApiBaseUrl, normalizeApiBaseUrl, resolvePinnedAddresses } from '../services/api-base-url.js';
+import { createPinnedDispatcher, pinnedFetch } from '../services/ssrf-pinned-fetch.js';
+import type { Agent } from 'undici';
 import { encrypt } from '../services/encryption.js';
-import { fetchWithTimeout } from '../services/http-timeout.js';
 
 type ApiKeySettingsResponse = {
   source: ApiKeySource;
@@ -181,21 +182,30 @@ settingsRouter.post('/api/settings/validate-key', async (req, res) => {
     return;
   }
 
+  let dispatcher: Agent | undefined;
   try {
-    const safeApiBaseUrl = await assertSafeApiBaseUrl(apiBaseUrl);
-    const response = await fetchWithTimeout(`${safeApiBaseUrl.replace(/\/$/, '')}/v1/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+    // 与代理热路径同一套钉 IP 逻辑：解析一次、校验非私网、把出站连接钉死到这组 IP，
+    // 避免“校验后 fetch 再解析”被 DNS rebinding 翻转到内网。
+    const { hostname } = new URL(apiBaseUrl);
+    const addresses = await resolvePinnedAddresses(hostname);
+    dispatcher = createPinnedDispatcher(addresses);
+    const response = await pinnedFetch(
+      `${apiBaseUrl.replace(/\/$/, '')}/v1/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'hi' }],
+        }),
       },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1,
-        messages: [{ role: 'user', content: 'hi' }],
-      }),
-    });
+      dispatcher
+    );
 
     if (response.ok || response.status === 400) {
       res.json({ valid: true } satisfies ApiKeyValidationResponse);
@@ -231,6 +241,9 @@ settingsRouter.post('/api/settings/validate-key', async (req, res) => {
       valid: false,
       message: `无法连接到 API 服务：${error instanceof Error ? error.message : 'Unknown error'}`,
     } satisfies ApiKeyValidationResponse);
+  } finally {
+    // validate-key 是非流式、响应已在 try 内读完，这里直接关掉钉 IP 连接池。
+    await dispatcher?.close().catch(() => undefined);
   }
 });
 
