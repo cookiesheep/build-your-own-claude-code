@@ -1,0 +1,30 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+coverage/
+*.tsbuildinfo
+
+# Agent runtime state / local AI tooling artifacts
+.omx/
+.omc/
+.claude/
+
+# MkDocs build output
+site/
+
+# Solution files can be optionally gitignored for "no-spoiler" mode
+# labs/**/solution/
+
+# Local SQLite runtime files
+server/*.sqlite
+server/*.sqlite-shm
+server/*.sqlite-wal
+
+# Temporary Docker build context
+.tmp/

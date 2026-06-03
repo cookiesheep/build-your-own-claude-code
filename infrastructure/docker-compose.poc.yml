@@ -1,0 +1,20 @@
+# PoC: Verify ttyd works in Docker container via browser
+# Usage: docker compose -f docker-compose.poc.yml up --build
+# Then open: http://localhost:7681
+
+services:
+  lab-terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile.lab
+    ports:
+      - "7681:7681"
+    # Resource limits (per container)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+    # Security: no network access from container (except mapped ports)
+    # Uncomment for production:
+    # network_mode: "none"

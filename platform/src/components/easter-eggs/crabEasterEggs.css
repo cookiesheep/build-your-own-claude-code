@@ -1,0 +1,125 @@
+/*
+ * Crab Easter Egg Animations
+ * Prefix: crabEgg_ — avoids conflicts with CrabTeacher's crab_* keyframes
+ *
+ * Layers (all z-30):
+ *   Navbar z-50 > CrabTeacher z-40 > Easter Eggs z-30 > Content z-10
+ */
+
+/* ═══════════════════════════════════════════════════════════
+ *  Keyframes
+ * ═══════════════════════════════════════════════════════════ */
+
+/* Jump: pop up from bottom with bounce, hold, then fade out.
+ * Uses CSS custom property --jump-peak for per-crab height. */
+@keyframes crabEgg_jump {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  7% {
+    opacity: 1;
+  }
+  32% {
+    transform: translateY(var(--jump-peak, -60px));
+  }
+  52% {
+    transform: translateY(calc(var(--jump-peak, -60px) * 0.12));
+  }
+  67% {
+    transform: translateY(calc(var(--jump-peak, -60px) * 0.48));
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(calc(var(--jump-peak, -60px) * 0.48));
+    opacity: 0;
+  }
+}
+
+/* Peek idle: gentle vertical float (applied to inner wrapper) */
+@keyframes crabEgg_peek_idle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+
+/* Bottom idle: gentle vertical bob (applied to inner wrapper) */
+@keyframes crabEgg_bottom_idle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+/* Hint button: visible attention pulse */
+@keyframes crabEgg_hint_pulse {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+ *  Peek crab hover — lean into the screen on hover
+ *  Applied to interaction wrapper (separate from idle animation element)
+ * ═══════════════════════════════════════════════════════════ */
+
+.crab-egg-peek-left {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.35s ease;
+}
+.crab-egg-peek-left:hover {
+  transform: translateX(10px) scale(1.03);
+  filter: drop-shadow(0 0 10px rgba(212, 165, 116, 0.12));
+}
+
+.crab-egg-peek-right {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.35s ease;
+}
+.crab-egg-peek-right:hover {
+  transform: translateX(-10px) scale(1.03);
+  filter: drop-shadow(0 0 10px rgba(212, 165, 116, 0.12));
+}
+
+/* ═══════════════════════════════════════════════════════════
+ *  Bottom crab hover — peek up a bit more
+ * ═══════════════════════════════════════════════════════════ */
+
+.crab-egg-bottom-hover {
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+.crab-egg-bottom-hover:hover {
+  transform: translateY(-8px);
+  filter: drop-shadow(0 0 10px rgba(212, 165, 116, 0.12));
+}
+
+/* ═══════════════════════════════════════════════════════════
+ *  Hint button style
+ * ═══════════════════════════════════════════════════════════ */
+
+.crab-egg-hint {
+  border: none;
+  background: rgba(128, 128, 128, 0.15);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 8px 16px;
+  animation: crabEgg_hint_pulse 2.5s ease-in-out infinite;
+  transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease,
+              box-shadow 0.2s ease;
+}
+.crab-egg-hint:hover {
+  background: rgba(128, 128, 128, 0.25);
+  color: var(--accent);
+  animation: none;
+  opacity: 1;
+  box-shadow: 0 0 12px rgba(212, 165, 116, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════
+ *  Reduced motion: disable all easter egg animations
+ * ═══════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .crab-egg-peek-left,
+  .crab-egg-peek-right,
+  .crab-egg-bottom-hover {
+    transition: none !important;
+  }
+}
