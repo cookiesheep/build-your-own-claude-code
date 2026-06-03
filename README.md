@@ -1,6 +1,6 @@
-<<<<<<< HEAD
 <div align="center">
-<img src="docs\assets\logo.jpg" alt="logo" style="zoom:15%;" />
+<img src="docs/assets/logo.jpg" alt="logo" width=450/>
+
 
 
 # Build Your Own Claude Code
@@ -33,19 +33,19 @@ Claude Code、Cursor Agent 这类 AI 编程工具的能力，不只来自大模�
 
 入口页面
 
-![entrance](docs\assets\images\entrance.png)
+![entrance](docs/assets/images/entrance.png)
 
 彩蛋预览
 
-![stinger](docs\assets\images\stinger.png)
+![stinger](docs/assets/images/stinger.png)
 
 教程主页
 
-![mainpage](docs\assets\images\mainpage.png)
+![mainpage](docs/assets/images/mainpage.png)
 
 教程文档
 
-![document](docs\assets\images\document.png)
+![document](docs/assets/images/document.png)
 
 
 
