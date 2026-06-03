@@ -1995,6 +1995,7 @@
 - 继续处理 Lab 01 文档改动，必要时将工作日志和文档改动拆分为单独提交。
 - 后续 PR 描述按既有格式包含 Summary 与 Test plan，说明双仓同步和原有 Lab 01 改动已保留。
 
+<<<<<<< HEAD
 ---
 
 ### 2026-06-03（会话 43 / README 网页平台口径改写）
@@ -2017,4 +2018,5 @@
 - `Select-String -Path README.md -Pattern "git clone|npm install|克隆|安装依赖|配置环境|本地配置"`（仅剩否定说明与 FAQ 问句，无旧式快速开始命令）
 
 **下一步**：
-- 如需同步公开文档首页，可后续把 `docs/index.md` 中仍偏本地命令的 CTA 一并改成 `byocc.cc` 网页入口。
+
+如需同步公开文档首页，可后续把 `docs/index.md` 中仍偏本地命令的 CTA 一并改成 `byocc.cc` 网页入口。

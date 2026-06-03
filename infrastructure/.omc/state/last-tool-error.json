@@ -1,0 +1,7 @@
+{
+  "tool_name": "Grep",
+  "tool_input_preview": "{\"pattern\":\"query-lab\",\"path\":\"D:\\\\test-claude-code\\\\claude-code\\\\src\",\"output_mode\":\"content\"}",
+  "error": "Ripgrep search timed out after 20 seconds. The search may have matched files but did not complete in time. Try searching a more specific path or pattern.",
+  "timestamp": "2026-04-08T05:50:22.479Z",
+  "retry_count": 1
+}
