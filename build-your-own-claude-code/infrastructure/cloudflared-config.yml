@@ -1,0 +1,22 @@
+# Cloudflare Tunnel 配置
+#
+# 路径路由规则：
+#   /api/terminal/* → Express (3001)  — WebSocket 必须直达后端，Next.js rewrite 无法代理 WS
+#   其他            → Next.js (3000)  — 页面、HTTP API 走 Next.js rewrite 到后端
+#
+# 使用方式：
+#   cloudflared tunnel --config infrastructure/cloudflared-config.yml run byocc
+#
+# 初次使用需要先登录：
+#   cloudflared tunnel login
+
+tunnel: byocc
+credentials-file: ~/.cloudflared/byocc.json
+
+ingress:
+  - hostname: byocc.cc
+    path: ^/api/terminal/.*
+    service: http://localhost:3001
+  - hostname: byocc.cc
+    service: http://localhost:3000
+  - service: http_status:404

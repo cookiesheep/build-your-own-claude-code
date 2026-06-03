@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "skills": {
+    "darwin-skill": {
+      "source": "alchaincyf/darwin-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "fdb8f9a7b62a8e1ce232db33d4d31a90e54b6e1a10bf84ee67a442601f6abfc8"
+    },
+    "huashu-design": {
+      "source": "alchaincyf/huashu-design",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "ff11eb1138deff68d52244fc64554db4218d42ec6ed039a8ea0fc030af51b28c"
+    },
+    "huashu-md-html": {
+      "source": "alchaincyf/huashu-md-html",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "baac7bed6b10b8a86cbaa13be34476a0598ae900b191d1e8d120e25a81c13d95"
+    },
+    "karpathy-llm-wiki": {
+      "source": "Astro-Han/karpathy-llm-wiki",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "436e5022fb4d78b6cf5cca0b5eaf59effa9eb18948a7b01fb2e48aaf86060f07"
+    },
+    "web-access": {
+      "source": "eze-is/web-access",
+      "sourceType": "github",
+      "computedHash": "efed30ab531947ac10dfbb44e93d3b6d9c8b43d662b227d8bf6b7431078c2901"
+    }
+  }
+}
