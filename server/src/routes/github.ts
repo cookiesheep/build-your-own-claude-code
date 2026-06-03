@@ -214,6 +214,41 @@ async function exchangeCodeForToken(
   return payload.access_token;
 }
 
+// GitHub 的 name / avatar_url 是用户在 GitHub 上自填的，进入我们系统前在这个
+// 信任边界上净化一次。当前渲染端（React 文本节点 / CSS background-image）已能兜住
+// XSS，这里是防御纵深：限长 + 强制 avatar 为 http(s) URL，避免畸形值进库。
+const MAX_NICKNAME_LENGTH = 100;
+const MAX_AVATAR_URL_LENGTH = 2048;
+
+function sanitizeNickname(value: string | null): string | null {
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.slice(0, MAX_NICKNAME_LENGTH);
+}
+
+// 只接受 http(s) 的合法 URL；其余（畸形、javascript: 等其他 scheme、超长）一律
+// 退化为 null，前端会回落到首字母头像。头像非关键字段，不因此让登录失败。
+function sanitizeAvatarUrl(value: string | null): string | null {
+  if (value === null || value.length > MAX_AVATAR_URL_LENGTH) {
+    return null;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return null;
+  }
+  return parsed.toString();
+}
+
 async function fetchGithubUser(accessToken: string): Promise<{
   githubId: string;
   username: string;
@@ -240,8 +275,8 @@ async function fetchGithubUser(accessToken: string): Promise<{
   return {
     githubId: String(payload.id),
     username: payload.login,
-    nickname: payload.name ?? null,
-    avatarUrl: payload.avatar_url ?? null,
+    nickname: sanitizeNickname(payload.name ?? null),
+    avatarUrl: sanitizeAvatarUrl(payload.avatar_url ?? null),
   };
 }
 
