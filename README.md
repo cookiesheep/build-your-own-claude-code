@@ -1,6 +1,5 @@
 <div align="center">
-<img src="docs/assets/logo.jpg" alt="logo" width=450/>
-
+<img src="docs/assets/logo.png" alt="logo" width=200/>
 
 
 # Build Your Own Claude Code
