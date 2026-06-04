@@ -1,11 +1,19 @@
 param(
-  [string]$RuntimeRepoPath = "D:\test-claude-code\claude-code",
+  [string]$RuntimeRepoPath = "",
   [string]$ImageName = "byocc-lab"
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+
+if ([string]::IsNullOrWhiteSpace($RuntimeRepoPath)) {
+  $workspaceRoot = Split-Path -Parent $repoRoot
+  $RuntimeRepoPath = Join-Path $workspaceRoot "claude-code-diy"
+} elseif (-not [System.IO.Path]::IsPathRooted($RuntimeRepoPath)) {
+  $RuntimeRepoPath = Join-Path $repoRoot $RuntimeRepoPath
+}
+
 $contextRoot = Join-Path $repoRoot ".tmp\lab-image-context"
 $runtimeDest = Join-Path $contextRoot "runtime"
 
@@ -76,6 +84,10 @@ foreach ($directory in $runtimeDirectories) {
 
 Write-Host "Building Docker image..." -ForegroundColor Yellow
 docker build -t $ImageName -f (Join-Path $PSScriptRoot "Dockerfile.lab") $contextRoot
+
+if ($LASTEXITCODE -ne 0) {
+  throw "docker build failed with exit code $LASTEXITCODE"
+}
 
 Write-Host ""
 Write-Host "Build complete." -ForegroundColor Green

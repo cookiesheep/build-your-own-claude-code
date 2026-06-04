@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+
+import { extractQuizIdsFromMarkdown } from "@/lib/quiz-state";
+
 import MarkdownRenderer from "./MarkdownRenderer";
+import QuizProgress from "./QuizProgress";
 
 type DocsPanelProps = {
   indexContent: string;
@@ -15,6 +19,10 @@ export default function DocsPanel({ indexContent, tasksContent }: DocsPanelProps
   const hasTasks = Boolean(tasksContent);
 
   const content = activeTab === "tasks" && hasTasks ? tasksContent : indexContent;
+  const quizIds = useMemo(
+    () => (activeTab === "tasks" ? extractQuizIdsFromMarkdown(content) : []),
+    [activeTab, content],
+  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--bg-panel)]">
@@ -51,6 +59,7 @@ export default function DocsPanel({ indexContent, tasksContent }: DocsPanelProps
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         <div className="markdown-body">
+          <QuizProgress quizIds={quizIds} />
           <MarkdownRenderer content={content} />
         </div>
       </div>

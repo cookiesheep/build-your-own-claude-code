@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
 
 import { fetchFileContent } from "@/lib/file-reader";
@@ -22,6 +22,11 @@ import {
   type EnvironmentStatus,
   SESSION_STORAGE_KEY,
 } from "@/lib/api";
+import {
+  publishQuizCodeApplyResult,
+  subscribeQuizCodeApplyRequest,
+  type QuizCodeApplyRequest,
+} from "@/lib/quiz-code-actions";
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState as useReactState } from "react";
@@ -99,6 +104,7 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
   const [readOnlyError, setReadOnlyError] = useReactState<string | null>(null);
   const saveRequestIdRef = useRef(0);
   const readOnlyRequestIdRef = useRef(0);
+  const workspaceFilesRef = useRef(workspaceFiles);
 
   // Bootstrap session
   useEffect(() => {
@@ -159,6 +165,75 @@ export default function LabRightArea({ lab, onToggleDocs, docsCollapsed }: LabRi
     void bootstrap();
     return () => { cancelled = true; };
   }, [lab.id]);
+
+  // Auto-save
+  useEffect(() => {
+    workspaceFilesRef.current = workspaceFiles;
+  }, [workspaceFiles]);
+
+  const handleQuizCodeApply = useCallback(
+    (request: QuizCodeApplyRequest) => {
+      const currentFiles = workspaceFilesRef.current;
+      const currentCode = currentFiles[request.filePath];
+
+      if (typeof currentCode !== "string") {
+        publishQuizCodeApplyResult({
+          requestId: request.requestId,
+          success: false,
+          message: "目标文件不在当前 Lab 的可编辑文件中。",
+        });
+        return;
+      }
+
+      const markerIndex = currentCode.indexOf(request.marker);
+      if (markerIndex === -1) {
+        publishQuizCodeApplyResult({
+          requestId: request.requestId,
+          success: false,
+          message: `未找到插入位置：${request.marker}`,
+        });
+        return;
+      }
+
+      const replacement = request.code.trimEnd();
+      const nextCode =
+        currentCode.slice(0, markerIndex) +
+        replacement +
+        currentCode.slice(markerIndex + request.marker.length);
+      const nextFiles = {
+        ...currentFiles,
+        [request.filePath]: nextCode,
+      };
+
+      workspaceFilesRef.current = nextFiles;
+      saveRequestIdRef.current += 1;
+      readOnlyRequestIdRef.current += 1;
+      setWorkspaceFiles(nextFiles);
+      setActiveEditableFile(request.filePath);
+      setViewingFile(null);
+      setReadOnlyContent(null);
+      setReadOnlyError(null);
+      setReadOnlyLoading(false);
+      setSaveState("dirty");
+
+      publishQuizCodeApplyResult({
+        requestId: request.requestId,
+        success: true,
+        message: `已写入 ${request.filePath}，请检查后提交。`,
+      });
+    },
+    [
+      setActiveEditableFile,
+      setReadOnlyContent,
+      setReadOnlyError,
+      setReadOnlyLoading,
+      setSaveState,
+      setViewingFile,
+      setWorkspaceFiles,
+    ],
+  );
+
+  useEffect(() => subscribeQuizCodeApplyRequest(handleQuizCodeApply), [handleQuizCodeApply]);
 
   // Auto-save
   useEffect(() => {

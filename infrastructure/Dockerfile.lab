@@ -2,7 +2,7 @@
 #
 # 这一版不再只是 ttyd + bash 的 PoC。
 # 它会把 claude-code-diy 的运行底座放进镜像里，让容器真正具备：
-#   1. 接收 query-lab.ts 注入
+#   1. 接收当前 Lab 的 *-labN 源码变体注入
 #   2. 执行 node build.mjs --lab N
 #   3. 后续在终端里运行 node cli.js
 #
@@ -63,7 +63,7 @@ RUN printf '#!/bin/bash\n'\
 'echo "ttyd version: $(ttyd --version 2>&1 | head -1)"\n'\
 'echo ""\n'\
 'echo "Ready for Lab workflow:"\n'\
-'echo "  1. POST /api/submit will inject src/query-lab.ts"\n'\
+'echo "  1. POST /api/submit will inject the current Lab files"\n'\
 'echo "  2. node build.mjs --lab 3   # or another lab number"\n'\
 'echo "  3. node cli.js"\n'\
 'echo ""\n'\

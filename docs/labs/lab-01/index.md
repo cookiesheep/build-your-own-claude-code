@@ -12,7 +12,7 @@ Lab 0 让你先看到一个完整 Claude Code 风格的 TUI。Lab 1 往回拆一
 2. 区分 `role`、`content` 和 `ContentBlock`。
 3. 看懂 `text`、`tool_use`、`tool_result` 三种核心 block。
 4. 明白最反直觉的一点：`tool_result` 的 `role` 是 `"user"`，但它不是人类用户发的。
-5. 把一段真实对话抽象成 TypeScript 类型和 `Conversation` 类。
+5. 在真实 `query-lab1.ts` 变体里接通 LLM 流式回复。
 6. 观察 Lab 1 Agent 的能力边界：会说话，但不会动手做事。
 
 !!! note "关于 thinking block"
@@ -27,27 +27,26 @@ Lab 0 让你先看到一个完整 Claude Code 风格的 TUI。Lab 1 往回拆一
 看真实对话
   -> 标注 role 和 block
   -> 补全 JSON
-  -> 从零写 JSON
-  -> 抽象成 TypeScript 类型
-  -> 用 Conversation 类复现这段对话
-  -> 跑 demo 看格式化输出
+  -> 进入 query-lab1.ts
+  -> 补全 system prompt / messages / callModel / completed
+  -> 提交构建
   -> 在 TUI 里观察：Agent 现在还不能读文件
 ```
 
-别被上面的”TypeScript 类型”吓到。你不会一开始就面对一个空文件猜字段名。
+别被真实源码吓到。你不会一开始就面对完整的 `query.ts`，右侧只会打开精简过的 `query-lab1.ts`。
 
-整个 Lab 1 的节奏是**从具体到抽象**：你先看一段真实的 Agent 对话，像读聊天记录一样标注它；然后补全一段几乎写好的 JSON；等你已经能从零写 JSON 了，才把 JSON 里的规律总结成类型
+整个 Lab 1 的节奏是**从协议到源码**：你先看一段真实的 Agent 对话，像读聊天记录一样标注它；然后补全几段 JSON，确认自己理解 role 和 content block；最后把这个理解放回真实运行路径，补全 `query-lab1.ts` 里的最短 LLM 调用链。
 
-最后一小步是跑 demo、看 TUI，亲眼确认：你的 Agent 会说话了，但还没有”手”。
+最后一小步是构建、看 TUI，亲眼确认：你的 Agent 会说话了，但还没有“手”。
 
 ```
 I.  看     →  读一段带注释的真实对话，理解每条消息为什么存在
 II.  标注   →  选择题：识别、推理、预测，确认你理解了 role 和 block
 III. 填空   →  补全不完整 JSON（你只需要填几个空）
-IV.  写     →  从零写一段完整 JSON（这时候你已经很熟了）
-V.  抽象   →  把 JSON 规律变成 TypeScript 类型（水到渠成）
-VI.  实现   →  用 Conversation 类把前面的一切变成代码
-VII. 观察  →  跑 demo、看 TUI，确认 Agent 能说话但不能做事
+IV.  源码   →  打开 src/query-lab1.ts，看到真实 query() 的精简版本
+V.  实现   →  补全 system prompt、messages、deps.callModel 和 completed
+VI.  构建   →  提交后运行 build.mjs --lab 1，替换真实 query.js
+VII. 观察  →  启动 TUI，确认 Agent 能说话但不能做事
 ```
 
 ## 一段真实对话的协议形状
@@ -162,7 +161,7 @@ Lab 代码不应该硬编码 API Key，也不应该把某个模型写死在代�
 - 平台后端把可用的 LLM 配置注入实验环境。
 - 本地运行时可以用 `ANTHROPIC_API_KEY`、`ANTHROPIC_BASE_URL` 或项目约定的环境变量。
 
-Lab 1 的重点不是“管理密钥”，而是理解：`Conversation` 管理的是消息历史，`LLMClient` 负责把这些消息交给底层模型。
+Lab 1 的重点不是“管理密钥”，而是理解：`query-lab1.ts` 会接收 TUI 传入的消息历史，把它交给底层 LLM，再把流式回复 `yield` 回 TUI。
 
 ## Lab 1 的能力边界
 
@@ -171,7 +170,7 @@ Lab 1 的重点不是“管理密钥”，而是理解：`Conversation` 管理�
 - 接收用户输入。
 - 调用底层 LLM。
 - 流式展示模型文本回复。
-- 在 `Conversation` 里保留消息历史。
+- 通过 `query-lab1.ts` 使用 TUI 传入的消息历史。
 
 它还不能：
 

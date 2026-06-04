@@ -1995,7 +1995,139 @@
 - 继续处理 Lab 01 文档改动，必要时将工作日志和文档改动拆分为单独提交。
 - 后续 PR 描述按既有格式包含 Summary 与 Test plan，说明双仓同步和原有 Lab 01 改动已保留。
 
-<<<<<<< HEAD
+---
+
+### 2026-06-02（会话 43 / Lab 1 平台反馈 MVP）
+
+**完成项**：
+- ✅ 在 `feat/lab01-platform-feedback` 上扩展平台 Markdown quiz 管线，支持稳定 `id`、`quiz-single` 和 `quiz-code`。
+- ✅ 新增 `QuizCode`、`QuizProgress` 和 quiz 选项解析工具；`QuizSingle` 改用 Markdown 稳定 id 存储答题状态。
+- ✅ 在 Lab 1 tasks 中接入 7 个理解检查：6 个单选题和 1 个代码理解题。
+- ✅ 增加任务 tab 顶部软进度，只读 `localStorage`，不新增后端 API。
+- ✅ 让 `NEXT_PUBLIC_MOCK_MODE=true` 同时放行前端 auth mock，方便单独本地预览 `/lab/1`。
+- ✅ 修复极窄移动视口下 quiz 选项和代码题内部溢出；代码题关闭行号以降低窄屏占宽。
+
+**进行中**：
+- 🔄 这仍是本地预览 MVP，暂不部署、不合并，也不覆盖 `quiz-order`、`quiz-reflection`、`quiz-poll`。
+- 🔄 工作台整体移动端三栏布局仍值得后续单独优化；本轮只保证 quiz 组件内部不撑出容器。
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `cd platform && npx tsc --noEmit`
+- `cd platform && npx eslint src/lib/auth.ts src/components/CodeBlock.tsx src/components/MarkdownRenderer.tsx src/components/QuizSingle.tsx src/components/QuizCode.tsx src/components/QuizProgress.tsx src/lib/remark/remark-quiz.ts src/lib/quiz-state.ts src/lib/quiz-options.ts`
+- `cd platform && npm run build`
+- Playwright 本地预览 `http://localhost:3002/lab/1`：确认 7 个 quiz、1 个代码题、提交反馈、刷新恢复、进度更新、代码题与选项不重叠、移动端 quiz 内部无溢出。
+- Playwright 快速检查 `http://localhost:3002/lab/0`：页面仍可渲染，未出现 quiz 进度条。
+
+**下一步**：
+- 人工体验 `/lab/1` 的题目文案节奏，决定是否继续把 Step 3 的 JSON 练习做成交互题。
+- 如需提交 PR，建议标题：`feat: add Lab 1 platform quiz feedback MVP`。
+
+---
+
+### 2026-06-02（会话 44 / Lab 1 Quiz-to-Code 联动）
+
+**完成项**：
+- ✅ 执行轻量 preflight：远端 `main` 仍为 `f415c55`，当前 `feat/lab01-platform-feedback` 的 `HEAD` 与 `origin/main` 一致，因此未 stash、未 pull、未 merge。
+- ✅ 新增 quiz-to-code 前端事件总线，让左侧 `quiz-code` 在答对后可以请求右侧编辑器写入草稿，不新增后端 API。
+- ✅ 扩展 `quiz-code` Markdown 指令属性：支持 `applyFile`、`applyMarker`、`applyLabel` 和 `typescript apply` 代码块。
+- ✅ 在 Lab 1 的 `tool_result` 代码理解题中加入可应用片段：答对后展示目标文件、插入位置、代码全文，并由用户点击后写入 `src/messages-lab1.ts`。
+- ✅ 右侧工作台只替换明确 marker；找不到目标文件或 marker 时只提示错误，不改草稿、不重复写入。
+- ✅ 错误选项不会展示代码应用面板，普通 `quiz-single` 不出现代码应用按钮。
+
+**进行中**：
+- 🔄 这仍是本地平台预览尝试，暂不部署、不合并、不提交、不 push。
+- 🔄 后续可以继续把 Step 3 的 JSON 练习做成第二个 `quiz-code`，但本轮先只验证一个最小可用联动。
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `git ls-remote --heads origin main`
+- `git rev-parse HEAD origin/main`
+- `git merge-base --is-ancestor origin/main HEAD`
+- `cd platform && npx tsc --noEmit`
+- `cd platform && npx eslint src/lib/quiz-code-actions.ts src/components/LabRightArea.tsx src/components/MarkdownRenderer.tsx src/components/QuizCode.tsx src/lib/remark/remark-quiz.ts src/lib/quiz-state.ts src/lib/quiz-options.ts`（0 errors；`LabRightArea.tsx` 仍有既有 hook deps / unused state warnings）
+- `cd platform && npm run build`（通过；保留 Next.js 多 lockfile root 推断 warning）
+- `git diff --check`（通过；仅 Git CRLF 提示）
+- Playwright 本地预览 `http://localhost:3002/lab/1`：确认 7 个 quiz、1 个 `quiz-code`、答对后显示应用面板、点击后写入右侧编辑器、再次点击因 marker 缺失报错且不重复写入、错误答案不显示应用面板。
+- Playwright 本地预览 `http://localhost:3002/lab/0`：确认不出现 Lab 1 quiz progress 和代码应用面板。
+
+**下一步**：
+- 人工体验答题与写入节奏，决定是否把“选择题解释”进一步联动到更精确的代码位置提示。
+- 如需提交 PR，建议标题仍沿用：`feat: add Lab 1 platform quiz feedback MVP`。
+
+---
+
+### 2026-06-03（会话 45 / Lab 1 Step 3-5 教学与审查重构）
+
+**完成项**：
+- ✅ 修复 Step 1 平台渲染问题：把原 raw `<details>` 参考答案改成平台支持的 `!!! note`。
+- ✅ 清理 Step 2.5：删除提前给答案的非交互正文和“平台 Diff 反馈设计”，把错误解析迁移为选项级反馈。
+- ✅ 扩展 `quiz-single` / `quiz-code` 选项级反馈：答错后展示对应解析并允许重选，答对后才锁定并计入软进度。
+- ✅ 删除正式步骤里的 Step 3.5 Live API Echo；Step 3 改为右侧 `src/messages-lab1.ts` 的结构审查，不再做百分制评分。
+- ✅ 新增 Lab 1 右侧文件配置：`src/messages-lab1.ts`、`src/types-lab1.ts`、`src/conversation-lab1.ts`，并同步平台与服务端文件白名单。
+- ✅ 新增客户端 Lab 1 messages 审查工具：基于 TypeScript AST 读取 `messages`，不 eval 用户代码，忽略缩进、换行和普通空格，只检查 role、content block、tool_use/tool_result 配对、工具名、path 和关键字段。
+- ✅ 重写 Step 4/5 引导：加入 TypeScript 联合类型、interface、`string | ContentBlock[]`、Conversation 封装和 `addToolResult` 的选择题铺垫。
+
+**进行中**：
+- 🔄 这仍是 `feat/lab01-platform-feedback` 上的本地平台预览改动，暂不部署、不合并、不提交、不 push。
+- 🔄 `LabRightArea.tsx` 仍保留既有 hook dependency / unused state ESLint warnings；本轮未扩大范围重构。
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `cd platform && npx tsc --noEmit`
+- `cd platform && npx eslint src/lib/lab1-review.ts src/lib/quiz-options.ts src/lib/quiz-state.ts src/lib/remark/remark-quiz.ts src/components/QuizSingle.tsx src/components/QuizCode.tsx src/components/MarkdownRenderer.tsx src/components/LabRightArea.tsx src/components/DocsPanel.tsx`（0 errors；`LabRightArea.tsx` 仍有 5 个既有 warnings）
+- `cd platform && npm run build`（通过；保留 Next.js 多 lockfile root 推断 warning）
+- `git diff --check`（通过；仅 Git CRLF 提示）
+- Playwright 本地预览 `http://localhost:3002/lab/1`：确认无裸 `<details>`、无 “平台 Diff 反馈设计”、无 Step 3.5、无泄漏的 `:::` directive；13 个 quiz、3 个 `quiz-code` 正常渲染；错题不计进度且可重选；Step 4 类型代码可应用到右侧；正确 messages 审查通过；错误 `tool_result.tool_use_id` 给出明确反馈。
+- Playwright 本地预览 `http://localhost:3002/lab/0`：确认未出现 Lab 1 的代码应用 UI。
+
+**下一步**：
+- 人工体验 Step 3 审查反馈的措辞，决定是否继续把 Step 4/5 的右侧 TODO 做成更细的代码应用片段。
+- 如需提交 PR，建议标题：`feat: refine Lab 1 platform feedback workflow`。
+
+---
+
+### 2026-06-04（会话 46 / Lab 1 真实构建链路修复）
+
+**完成项**：
+- ✅ 确认当前三文件 Lab 1（`messages/types/conversation`）不符合 `claude-code-diy/build.mjs --lab 1` 的真实变体发现规则。
+- ✅ 在 `claude-code-diy` 新增 `src/query-lab1.ts`，作为 `src/query.ts` 的 Lab 1 变体；保留真实 TUI + 模型流式路径，但刻意关闭 tools / agent loop。
+- ✅ 将平台 Lab 1 可编辑文件改为唯一 `src/query-lab1.ts`，并重新生成 `server/src/services/lab-files-generated.ts`。
+- ✅ 更新 Lab 1 文档，把右侧实作步骤改为 `query-lab1.ts` 的 4 个 TODO：system prompt、messages、`deps.callModel()`、completed 返回。
+- ✅ 移除右侧 “审查消息” 按钮和 `lab1-review` 工具，避免 `messages-lab1.ts` 审查通过但真实构建失败的假反馈。
+- ✅ 修正 `infrastructure/build-lab-image.ps1` 默认 runtime 路径为当前 workspace 的 `..\claude-code-diy`，并让 `docker build` 失败时返回非 0。
+- ✅ 更新 `Dockerfile.lab` 中的 Lab 文件说明，避免继续指向旧的 `src/query-lab.ts`。
+
+**进行中**：
+- 🔄 仍保留进入本次任务前已有的前端 quiz / docs / auth 等未提交改动；本轮只在其上做 Lab 1 构建链路修复。
+
+**阻塞项**：
+- ⚠️ Docker Desktop daemon 未运行，无法完成真实镜像构建；脚本已验证会正确解析 runtime 路径并在 Docker 连接失败时退出非 0。
+- ⚠️ `platform npm run lint` 仍被既有文件拦住（`login/page.tsx`、`CodePreview.tsx`、`FloatingCodeBlocks.tsx`、easter-eggs、`remark-admonition.ts` 等），不属于本轮 Lab 1 修复范围。
+- ⚠️ `server npm test` 全量仍有既有 `src/db/stats.test.ts` 失败；本轮相关的 `lab-workspace` 测试通过。
+
+**验证**：
+- `cd claude-code-diy && npm ci`
+- `cd claude-code-diy && node build.mjs --lab 1`（通过；输出 `Swapped dist\src\query.js ← dist\src\query-lab1.js`）
+- `cd claude-code-diy && node cli.js --version`（通过，输出 `2.1.88 (cookiesheep's claude-code)`）
+- `cd build-your-own-claude-code/server && npm ci`
+- `cd build-your-own-claude-code/server && npm test -- lab-workspace`（2 tests passed）
+- `cd build-your-own-claude-code/server && npm test`（21 passed / 1 failed，失败为既有 stats 测试）
+- `cd build-your-own-claude-code/platform && npm ci`（首次被 Windows EPERM 锁住 `lightningcss`，重试通过）
+- `cd build-your-own-claude-code/platform && npx eslint src/components/LabRightArea.tsx`（0 errors，保留 5 个既有 warnings）
+- `cd build-your-own-claude-code/platform && npm run build`（通过；保留 Next.js 多 lockfile root warning）
+- `cd build-your-own-claude-code && .\infrastructure\build-lab-image.ps1 -ImageName byocc-lab`（默认 runtime 路径正确；Docker daemon 未运行，脚本返回非 0）
+
+**下一步**：
+- 启动 Docker Desktop 后重跑 `.\infrastructure\build-lab-image.ps1 -RuntimeRepoPath ..\claude-code-diy -ImageName byocc-lab`，再走一次 Lab 1 提交流程做容器内验证。
+- 单独清理 platform 既有 lint 债和 server stats 测试失败，避免后续 Lab 修复被历史问题干扰。
+
 ---
 
 ### 2026-06-03（会话 43 / README 网页平台口径改写）
