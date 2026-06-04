@@ -2128,3 +2128,27 @@
 - 启动 Docker Desktop 后重跑 `.\infrastructure\build-lab-image.ps1 -RuntimeRepoPath ..\claude-code-diy -ImageName byocc-lab`，再走一次 Lab 1 提交流程做容器内验证。
 - 单独清理 platform 既有 lint 债和 server stats 测试失败，避免后续 Lab 修复被历史问题干扰。
 
+---
+
+### 2026-06-03（会话 43 / README 网页平台口径改写）
+
+**完成项**：
+- ✅ 按 `docs/labs` 当前 Lab 0-5 教程内容重写根目录 `README.md`。
+- ✅ 将 README 从旧版“本地克隆 / 安装依赖 / 配置环境”学习口径改为“访问 `byocc.cc` 网页端直接学习和运行”的产品口径。
+- ✅ 参考样例 README 的结构，补充居中标题、徽章、Why、Preview、学习路线、Features、FAQ、Documentation、Project Structure、Architecture Overview、Contributing 和 License。
+- ✅ 明确 Lab 3 是 Agent Loop 核心，并总结 Lab 0-5 的能力递进。
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- 无
+
+**验证**：
+- `Get-Content -Raw docs/labs/index.md`
+- `Get-Content -Raw docs/labs/lab-00..05/index.md`
+- `Select-String -Path README.md -Pattern "git clone|npm install|克隆|安装依赖|配置环境|本地配置"`（仅剩否定说明与 FAQ 问句，无旧式快速开始命令）
+
+**下一步**：
+
+如需同步公开文档首页，可后续把 `docs/index.md` 中仍偏本地命令的 CTA 一并改成 `byocc.cc` 网页入口。
