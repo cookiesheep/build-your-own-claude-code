@@ -1,96 +1,66 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
-import { isQuizAnswered, getQuizAnswer, recordQuizAnswer } from "@/lib/quiz-state";
+import { useState, useSyncExternalStore } from "react";
+
+import { parseQuizFeedback, parseQuizOptions } from "@/lib/quiz-options";
+import { getQuizAnswer, recordQuizAnswer, subscribeQuizState } from "@/lib/quiz-state";
 
 type QuizSingleProps = {
   quizType?: string;
+  quizId?: string;
   question?: string;
   answer?: string;
   explanation?: string;
+  feedback?: string;
   children?: React.ReactNode;
 };
 
-type Option = { key: string; text: string };
-
-/** Parse markdown list children into structured options:
- *  "- A) Option text" → { key: "A", text: "Option text" }
- */
-function parseOptions(children: React.ReactNode): Option[] {
-  const options: Option[] = [];
-  const items = flattenListItems(children);
-
-  for (const item of items) {
-    const text = extractText(item);
-    const match = text.match(/^([A-Z])\)\s*(.+)/);
-    if (match) {
-      options.push({ key: match[1], text: match[2] });
-    }
+function stableFallbackId(question: string, answer: string): string {
+  const seed = `${question}:${answer}`;
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
   }
-  return options;
-}
-
-function flattenListItems(node: React.ReactNode): React.ReactNode[] {
-  if (!node) return [];
-  if (Array.isArray(node)) return node.flatMap(flattenListItems);
-  if (typeof node === "object" && "props" in (node as any)) {
-    const el = node as React.ReactElement;
-    const type = (el.props as any)?.className;
-    /* If this is an <li>, return it directly */
-    if ((el.type === "li") || (typeof type === "string" && type.includes("task-list")) || (el.type === "ul" || el.type === "ol")) {
-      if (el.type === "ul" || el.type === "ol") {
-        return flattenListItems((el.props as any).children);
-      }
-      return [el];
-    }
-    /* Otherwise recurse into children */
-    return flattenListItems((el.props as any).children);
-  }
-  return [];
-}
-
-function extractText(node: React.ReactNode): string {
-  if (typeof node === "string") return node;
-  if (typeof node === "number") return String(node);
-  if (!node) return "";
-  if (Array.isArray(node)) return node.map(extractText).join("");
-  if (typeof node === "object" && "props" in node) {
-    return extractText((node as React.ReactElement<Record<string, unknown>>).props?.children as React.ReactNode);
-  }
-  return "";
+  return `quiz-${hash.toString(36)}`;
 }
 
 export default function QuizSingle({
+  quizId,
   question = "",
   answer = "",
   explanation = "",
+  feedback = "",
   children,
 }: QuizSingleProps) {
-  const uid = useId();
-  const quizId = `quiz-${uid.replace(/:/g, "")}`;
-  const options = parseOptions(children);
+  const resolvedQuizId = quizId || stableFallbackId(question, answer);
+  const options = parseQuizOptions(children);
+  const feedbackByOption = parseQuizFeedback(feedback);
   const correctKey = answer.toUpperCase();
 
-  const [selected, setSelected] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
-
-  /* Restore state from localStorage */
-  useEffect(() => {
-    const record = getQuizAnswer(quizId);
-    if (record?.answered) {
-      setSelected(record.answer);
-      setSubmitted(true);
-      setIsCorrect(record.correct);
-    }
-  }, [quizId]);
+  const storedRecord = useSyncExternalStore(
+    subscribeQuizState,
+    () => getQuizAnswer(resolvedQuizId),
+    () => null,
+  );
+  const [draftSelected, setDraftSelected] = useState<string | null>(null);
+  const [wrongAttempt, setWrongAttempt] = useState<string | null>(null);
+  const completed = Boolean(storedRecord?.answered && storedRecord.correct);
+  const selected = completed ? storedRecord?.answer ?? null : draftSelected;
+  const showingWrongAttempt = Boolean(wrongAttempt && !completed);
+  const activeFeedbackKey = completed ? correctKey : wrongAttempt;
+  const feedbackText = activeFeedbackKey
+    ? feedbackByOption[activeFeedbackKey] ?? explanation
+    : explanation;
 
   const handleSubmit = () => {
-    if (!selected || submitted) return;
+    if (!selected || completed) return;
     const correct = selected === correctKey;
-    setIsCorrect(correct);
-    setSubmitted(true);
-    recordQuizAnswer(quizId, selected, correct);
+    if (correct) {
+      recordQuizAnswer(resolvedQuizId, selected, true);
+      setWrongAttempt(null);
+      return;
+    }
+    setWrongAttempt(selected);
   };
 
   return (
@@ -104,25 +74,28 @@ export default function QuizSingle({
       <div className="quiz-options" role="radiogroup" aria-label="选项">
         {options.map((opt) => {
           const isSelected = selected === opt.key;
-          const showCorrect = submitted && opt.key === correctKey;
-          const showWrong = submitted && isSelected && opt.key !== correctKey;
+          const showCorrect = completed && opt.key === correctKey;
+          const showWrong = showingWrongAttempt && isSelected && opt.key !== correctKey;
 
           return (
             <label
               key={opt.key}
               className={`quiz-option ${
-                submitted ? "quiz-option--disabled" : ""
+                completed ? "quiz-option--disabled" : ""
               } ${isSelected ? "quiz-option--selected" : ""} ${
                 showCorrect ? "quiz-option--correct" : ""
               } ${showWrong ? "quiz-option--wrong" : ""}`}
             >
               <input
                 type="radio"
-                name={quizId}
+                name={resolvedQuizId}
                 value={opt.key}
                 checked={isSelected}
-                disabled={submitted}
-                onChange={() => setSelected(opt.key)}
+                disabled={completed}
+                onChange={() => {
+                  setDraftSelected(opt.key);
+                  setWrongAttempt(null);
+                }}
                 className="quiz-radio"
               />
               <span className="quiz-option-key">{opt.key}</span>
@@ -139,29 +112,29 @@ export default function QuizSingle({
       </div>
 
       {/* Submit button */}
-      {!submitted && (
+      {!completed && (
         <button
           type="button"
           className="quiz-submit"
           disabled={!selected}
           onClick={handleSubmit}
         >
-          提交答案
+          {showingWrongAttempt ? "重新提交" : "提交答案"}
         </button>
       )}
 
       {/* Result feedback */}
-      {submitted && (
+      {(completed || showingWrongAttempt) && (
         <div
-          className={`quiz-result ${isCorrect ? "quiz-result--correct" : "quiz-result--wrong"}`}
+          className={`quiz-result ${completed ? "quiz-result--correct" : "quiz-result--wrong"}`}
           role="alert"
           aria-live="polite"
         >
           <span className="quiz-result-label">
-            {isCorrect ? "✓ 正确" : "✗ 不正确"}
+            {completed ? "✓ 正确" : "✗ 这项还不对，可以重新选择"}
           </span>
-          {explanation && (
-            <p className="quiz-result-explanation">{explanation}</p>
+          {feedbackText && (
+            <p className="quiz-result-explanation">{feedbackText}</p>
           )}
         </div>
       )}

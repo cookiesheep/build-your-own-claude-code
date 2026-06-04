@@ -9,6 +9,7 @@ import { useTheme } from "./ThemeProvider";
 type CodeBlockProps = {
   language?: string;
   code: string;
+  showLineNumbers?: boolean;
 };
 
 function CopyButton({ text }: { text: string }) {
@@ -42,9 +43,10 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export default function CodeBlock({ language, code }: CodeBlockProps) {
+export default function CodeBlock({ language, code, showLineNumbers }: CodeBlockProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const shouldShowLineNumbers = showLineNumbers ?? Boolean(language);
 
   return (
     <div className="code-block-wrapper">
@@ -59,7 +61,7 @@ export default function CodeBlock({ language, code }: CodeBlockProps) {
       <SyntaxHighlighter
         language={language || "text"}
         style={isDark ? oneDark : oneLight}
-        showLineNumbers={!!language}
+        showLineNumbers={shouldShowLineNumbers}
         customStyle={{
           margin: 0,
           borderRadius: "0 0 8px 8px",

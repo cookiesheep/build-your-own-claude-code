@@ -12,6 +12,13 @@ export interface AuthState {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === "true";
+const MOCK_USER: User = {
+  id: "mock-user-byocc",
+  username: "mock-learner",
+  role: "learner",
+  kind: "anonymous",
+};
 
 function shouldUseSameOriginApi(): boolean {
   if (!API_BASE) {
@@ -31,6 +38,10 @@ function apiUrl(path: string): string {
 }
 
 export async function checkAuth(): Promise<AuthState> {
+  if (MOCK_MODE) {
+    return { isAuthenticated: true, user: MOCK_USER, loading: false };
+  }
+
   try {
     const res = await fetch(apiUrl("/api/auth/me"), { credentials: "include" });
     if (res.ok) {
@@ -51,6 +62,10 @@ export async function login(
   username: string,
   password: string,
 ): Promise<{ success: boolean; user?: User; error?: string }> {
+  if (MOCK_MODE) {
+    return { success: true, user: { ...MOCK_USER, username: username || MOCK_USER.username } };
+  }
+
   try {
     const res = await fetch(apiUrl("/api/auth/login"), {
       method: "POST",
@@ -69,6 +84,8 @@ export async function login(
 }
 
 export async function logout(): Promise<void> {
+  if (MOCK_MODE) return;
+
   try {
     await fetch(apiUrl("/api/auth/logout"), {
       method: "POST",
