@@ -118,7 +118,8 @@ function rewriteModelForProvider(body: unknown, apiBaseUrl: string): unknown {
   try {
     const host = new URL(apiBaseUrl).hostname;
     if (host === 'api.deepseek.com' || host.endsWith('.deepseek.com')) {
-      const mapped = model.includes('opus') ? 'deepseek-reasoner' : 'deepseek-chat';
+      // deepseek-chat 2026/07/24 弃用，用新模型名
+      const mapped = model.includes('opus') ? 'deepseek-v4-pro' : 'deepseek-v4-flash';
       if (model !== mapped) {
         console.log(`[llm-proxy] model rewrite: ${model} → ${mapped}`);
         return { ...obj, model: mapped };
