@@ -92,6 +92,45 @@ function readRequestModel(body: unknown): string | null {
   return typeof model === 'string' ? model : null;
 }
 
+/**
+ * 当后端 LLM 不是 Anthropic 时，把 Claude 模型名映射为对应提供商的模型名。
+ * 比如 DeepSeek 不认识 claude-sonnet-4-6，需要换成 deepseek-chat。
+ * 如果 apiBaseUrl 是 Anthropic 官方则不做任何改写。
+ */
+function rewriteModelForProvider(body: unknown, apiBaseUrl: string): unknown {
+  if (typeof body !== 'object' || body === null) return body;
+
+  // Anthropic 官方不改写
+  try {
+    const host = new URL(apiBaseUrl).hostname;
+    if (host === 'api.anthropic.com' || host.endsWith('.anthropic.com')) {
+      return body;
+    }
+  } catch {
+    return body;
+  }
+
+  const obj = body as Record<string, unknown>;
+  const model = typeof obj.model === 'string' ? obj.model : null;
+  if (!model) return body;
+
+  // 检测 DeepSeek
+  try {
+    const host = new URL(apiBaseUrl).hostname;
+    if (host === 'api.deepseek.com' || host.endsWith('.deepseek.com')) {
+      const mapped = model.includes('opus') ? 'deepseek-reasoner' : 'deepseek-chat';
+      if (model !== mapped) {
+        console.log(`[llm-proxy] model rewrite: ${model} → ${mapped}`);
+        return { ...obj, model: mapped };
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return body;
+}
+
 function readUsageFromBody(body: unknown): AnthropicUsage {
   if (typeof body !== 'object' || body === null) {
     return {};
@@ -178,6 +217,11 @@ async function proxyRequest(req: Request, res: Response, input: {
   req.on('close', () => controller.abort());
   res.on('close', () => controller.abort());
 
+  // 当后端不是 Anthropic 官方时，重写请求体中的 model 字段
+  const rewrittenBody = req.method !== 'GET' && req.method !== 'HEAD' && req.body
+    ? rewriteModelForProvider(req.body, input.apiBaseUrl)
+    : req.body;
+
   const fetchInit: RequestInit = {
     method: req.method,
     headers: {
@@ -186,7 +230,7 @@ async function proxyRequest(req: Request, res: Response, input: {
       'anthropic-version': req.header('anthropic-version') || '2023-06-01',
       ...(req.header('anthropic-beta') ? { 'anthropic-beta': req.header('anthropic-beta') ?? '' } : {}),
     },
-    body: req.method === 'GET' || req.method === 'HEAD' ? undefined : JSON.stringify(req.body ?? {}),
+    body: req.method === 'GET' || req.method === 'HEAD' ? undefined : JSON.stringify(rewrittenBody ?? {}),
     signal: controller.signal,
   };
 
