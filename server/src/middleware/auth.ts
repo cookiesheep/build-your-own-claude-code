@@ -59,6 +59,16 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
+  // 被禁用的账号挡在所有需要认证的接口之外（建 session、起容器等）。
+  // user.disabled 由 getUser 实时从 DB 读出——cookie 与 bearer 两条路径都经 getUser，
+  // 所以这里零额外查询，且反映的是当下状态而非过期 JWT 里的旧值。
+  if (user.disabled) {
+    res.status(403).json({
+      message: 'Account disabled.',
+    });
+    return;
+  }
+
   (req as AuthenticatedRequest).user = user;
   next();
 }

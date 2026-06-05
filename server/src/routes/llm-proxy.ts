@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { once } from 'node:events';
-import { getSession, recordApiUsage } from '../db/database.js';
+import { getSession, isUserDisabled, recordApiUsage } from '../db/database.js';
 import {
   getContainerStatus,
   resolveContainerApiConfig,
@@ -295,6 +295,19 @@ llmProxyRouter.all('/api/llm/*', async (req, res) => {
   const tokenPayload = await validateSessionToken(token);
   if (!tokenPayload) {
     res.status(403).json({ message: 'Invalid or expired LLM proxy session token.' });
+    return;
+  }
+
+  // 薅 token 的咽喉：代理 token 不走 requireAuth，被禁用户全靠这里拦。
+  // 已发出的旧代理 token 在下一次调用即被 re-check，无需吊销机制。
+  if (isUserDisabled(tokenPayload.userId)) {
+    res.status(403).json({
+      type: 'error',
+      error: {
+        type: 'account_disabled',
+        message: 'Account disabled.',
+      },
+    });
     return;
   }
 

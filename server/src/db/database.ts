@@ -29,6 +29,7 @@ type UserRow = {
   role: string | null;
   nickname: string | null;
   avatar_url: string | null;
+  disabled: number;
 };
 
 type ProgressRow = {
@@ -95,6 +96,7 @@ export type UserRecord = {
   role: UserRole | null;
   nickname: string | null;
   avatarUrl: string | null;
+  disabled: boolean;
 };
 
 export type PasswordUserRecord = UserRecord & {
@@ -299,6 +301,10 @@ export function initDatabase(): void {
     db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
   }
 
+  if (!userColumns.includes('disabled')) {
+    db.exec('ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0');
+  }
+
   db.exec(
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL'
   );
@@ -328,6 +334,7 @@ function mapUser(row: UserRow): UserRecord {
     role: row.role as UserRole | null,
     nickname: row.nickname,
     avatarUrl: row.avatar_url,
+    disabled: row.disabled === 1,
   };
 }
 
@@ -387,7 +394,7 @@ export function getUser(userId: string): UserRecord | null {
   const row = database
     .prepare<[string], UserRow>(
       `
-        SELECT id, kind, github_id, username, password_hash, role, nickname, avatar_url
+        SELECT id, kind, github_id, username, password_hash, role, nickname, avatar_url, disabled
         FROM users
         WHERE id = ?
       `
@@ -402,7 +409,7 @@ export function getPasswordUserByUsername(username: string): PasswordUserRecord 
   const row = database
     .prepare<[string], UserRow>(
       `
-        SELECT id, kind, github_id, username, password_hash, role, nickname, avatar_url
+        SELECT id, kind, github_id, username, password_hash, role, nickname, avatar_url, disabled
         FROM users
         WHERE username = ? AND password_hash IS NOT NULL
       `
@@ -427,7 +434,7 @@ export function getGithubUser(githubId: string): UserRecord | null {
   const row = database
     .prepare<[string], UserRow>(
       `
-        SELECT id, kind, github_id, username, password_hash, role, nickname, avatar_url
+        SELECT id, kind, github_id, username, password_hash, role, nickname, avatar_url, disabled
         FROM users
         WHERE github_id = ?
       `
@@ -1026,10 +1033,13 @@ export function getSessionUsage(sessionId: string): number {
   return row?.request_count ?? 0;
 }
 
-export function getUserDailyRemaining(userId: string): number {
+export function getDefaultKeyDailyLimit(): number {
   const dailyLimit = Number.parseInt(process.env.BYOCC_DEFAULT_KEY_DAILY_LIMIT ?? '500', 10);
-  const normalizedDailyLimit = Number.isFinite(dailyLimit) && dailyLimit > 0 ? dailyLimit : 500;
-  return Math.max(0, normalizedDailyLimit - getTodayUsage(userId));
+  return Number.isFinite(dailyLimit) && dailyLimit > 0 ? dailyLimit : 500;
+}
+
+export function getUserDailyRemaining(userId: string): number {
+  return Math.max(0, getDefaultKeyDailyLimit() - getTodayUsage(userId));
 }
 
 export function incrementPageView(): void {
@@ -1091,5 +1101,293 @@ export function getLearnerLeaderboard(): LeaderboardStats {
       avatarUrl: row.avatar_url,
       completedLabs: Math.min(6, Math.max(0, row.completed_labs)),
     })),
+  };
+}
+
+// ============================================================================
+// 管理后台：反滥用监控 + 禁用/解禁
+//
+// 监控只看 key_source = 'default'（平台共享 key，平台掏钱的部分）。用户自带 key
+// 的调用与平台成本无关，不计入。禁用通过 users.disabled 列实现，拦截点在 requireAuth
+// 与 llm-proxy（见各自文件）。
+// ============================================================================
+
+export type AdminOverview = {
+  date: string;
+  defaultKeyRequests: number;
+  defaultKeyInputTokens: number;
+  defaultKeyOutputTokens: number;
+  activeUsers: number;
+  dailyLimit: number;
+};
+
+export type TopConsumer = {
+  userId: string;
+  username: string | null;
+  nickname: string | null;
+  kind: UserKind;
+  disabled: boolean;
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export type AdminTopConsumers = {
+  date: string;
+  limit: number;
+  consumers: TopConsumer[];
+};
+
+export type UserUsageDay = {
+  date: string;
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export type UserUsageSession = {
+  sessionId: string;
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+  lastUsedAt: string | null;
+};
+
+export type AdminUserDetail = {
+  user: {
+    userId: string;
+    username: string | null;
+    nickname: string | null;
+    kind: UserKind;
+    role: UserRole | null;
+    disabled: boolean;
+  };
+  byDay: UserUsageDay[];
+  bySession: UserUsageSession[];
+};
+
+export type AnomalyUser = TopConsumer & { remaining: number };
+
+export type AdminAnomalies = {
+  date: string;
+  dailyLimit: number;
+  threshold: number;
+  users: AnomalyUser[];
+};
+
+type OverviewRow = {
+  requests: number;
+  input_tokens: number;
+  output_tokens: number;
+  active_users: number;
+};
+
+type TopConsumerRow = {
+  user_id: string;
+  username: string | null;
+  nickname: string | null;
+  kind: string;
+  disabled: number;
+  requests: number;
+  input_tokens: number;
+  output_tokens: number;
+};
+
+type UserUsageDayRow = {
+  date: string;
+  requests: number;
+  input_tokens: number;
+  output_tokens: number;
+};
+
+type UserUsageSessionRow = {
+  session_id: string;
+  requests: number;
+  input_tokens: number;
+  output_tokens: number;
+  last_used_at: string | null;
+};
+
+/**
+ * 当前 user 是否被禁用。
+ *
+ * 热路径（llm-proxy 每次调用）专用：单列主键查询。查不到行（用户不存在）返回 false，
+ * 即 fail-open——DB 抖动或脏 token 绝不会把全员误锁在外。
+ */
+export function isUserDisabled(userId: string): boolean {
+  const row = getDb()
+    .prepare<[string], { disabled: number }>('SELECT disabled FROM users WHERE id = ?')
+    .get(userId);
+  return row?.disabled === 1;
+}
+
+export function setUserDisabled(userId: string, disabled: boolean): UserRecord {
+  getDb()
+    .prepare('UPDATE users SET disabled = ? WHERE id = ?')
+    .run(disabled ? 1 : 0, userId);
+  const user = getUser(userId);
+  if (!user) {
+    throw new Error(`User not found: ${userId}`);
+  }
+  return user;
+}
+
+export function getDefaultKeyOverview(): AdminOverview {
+  const row = getDb()
+    .prepare<[], OverviewRow>(
+      `
+        SELECT
+          COUNT(*) AS requests,
+          COALESCE(SUM(input_tokens), 0) AS input_tokens,
+          COALESCE(SUM(output_tokens), 0) AS output_tokens,
+          COUNT(DISTINCT user_id) AS active_users
+        FROM api_usage
+        WHERE key_source = 'default' AND date(created_at) = date('now')
+      `
+    )
+    .get();
+
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    defaultKeyRequests: row?.requests ?? 0,
+    defaultKeyInputTokens: row?.input_tokens ?? 0,
+    defaultKeyOutputTokens: row?.output_tokens ?? 0,
+    activeUsers: row?.active_users ?? 0,
+    dailyLimit: getDefaultKeyDailyLimit(),
+  };
+}
+
+function mapTopConsumer(row: TopConsumerRow): TopConsumer {
+  return {
+    userId: row.user_id,
+    username: row.username,
+    nickname: row.nickname,
+    kind: row.kind as UserKind,
+    disabled: row.disabled === 1,
+    requests: row.requests,
+    inputTokens: row.input_tokens,
+    outputTokens: row.output_tokens,
+  };
+}
+
+export function getDefaultKeyTopConsumers(limit = 50): AdminTopConsumers {
+  const normalizedLimit = Math.min(200, Math.max(1, Math.floor(limit)));
+  const rows = getDb()
+    .prepare<[number], TopConsumerRow>(
+      `
+        SELECT
+          au.user_id,
+          u.username,
+          u.nickname,
+          u.kind,
+          u.disabled,
+          COUNT(*) AS requests,
+          COALESCE(SUM(au.input_tokens), 0) AS input_tokens,
+          COALESCE(SUM(au.output_tokens), 0) AS output_tokens
+        FROM api_usage au
+        JOIN users u ON u.id = au.user_id
+        WHERE au.key_source = 'default' AND date(au.created_at) = date('now')
+        GROUP BY au.user_id, u.username, u.nickname, u.kind, u.disabled
+        ORDER BY requests DESC, input_tokens DESC
+        LIMIT ?
+      `
+    )
+    .all(normalizedLimit);
+
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    limit: normalizedLimit,
+    consumers: rows.map(mapTopConsumer),
+  };
+}
+
+export function getUserUsageDetail(userId: string, days = 14): AdminUserDetail | null {
+  const user = getUser(userId);
+  if (!user) {
+    return null;
+  }
+
+  const normalizedDays = Math.min(90, Math.max(1, Math.floor(days)));
+  const sinceModifier = `-${normalizedDays - 1} days`;
+
+  const byDay = getDb()
+    .prepare<[string, string], UserUsageDayRow>(
+      `
+        SELECT
+          date(created_at) AS date,
+          COUNT(*) AS requests,
+          COALESCE(SUM(input_tokens), 0) AS input_tokens,
+          COALESCE(SUM(output_tokens), 0) AS output_tokens
+        FROM api_usage
+        WHERE user_id = ? AND key_source = 'default'
+          AND date(created_at) >= date('now', ?)
+        GROUP BY date(created_at)
+        ORDER BY date DESC
+      `
+    )
+    .all(userId, sinceModifier);
+
+  const bySession = getDb()
+    .prepare<[string], UserUsageSessionRow>(
+      `
+        SELECT
+          session_id,
+          COUNT(*) AS requests,
+          COALESCE(SUM(input_tokens), 0) AS input_tokens,
+          COALESCE(SUM(output_tokens), 0) AS output_tokens,
+          MAX(created_at) AS last_used_at
+        FROM api_usage
+        WHERE user_id = ? AND key_source = 'default'
+        GROUP BY session_id
+        ORDER BY requests DESC
+        LIMIT 100
+      `
+    )
+    .all(userId);
+
+  return {
+    user: {
+      userId: user.id,
+      username: user.username,
+      nickname: user.nickname,
+      kind: user.kind,
+      role: user.role,
+      disabled: user.disabled,
+    },
+    byDay: byDay.map((row) => ({
+      date: row.date,
+      requests: row.requests,
+      inputTokens: row.input_tokens,
+      outputTokens: row.output_tokens,
+    })),
+    bySession: bySession.map((row) => ({
+      sessionId: row.session_id,
+      requests: row.requests,
+      inputTokens: row.input_tokens,
+      outputTokens: row.output_tokens,
+      lastUsedAt: row.last_used_at,
+    })),
+  };
+}
+
+export function getDefaultKeyAnomalies(threshold = 0.8): AdminAnomalies {
+  const normalizedThreshold = Math.min(1, Math.max(0, threshold));
+  const dailyLimit = getDefaultKeyDailyLimit();
+  const cutoff = Math.ceil(dailyLimit * normalizedThreshold);
+
+  // 复用 top-consumers 的当日聚合，再按 cutoff 过滤。limit 取 200 足够覆盖逼近上限的账号。
+  const consumers = getDefaultKeyTopConsumers(200).consumers;
+  const users: AnomalyUser[] = consumers
+    .filter((consumer) => consumer.requests >= cutoff)
+    .map((consumer) => ({
+      ...consumer,
+      remaining: Math.max(0, dailyLimit - consumer.requests),
+    }));
+
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    dailyLimit,
+    threshold: normalizedThreshold,
+    users,
   };
 }
