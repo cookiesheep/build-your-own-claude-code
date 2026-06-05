@@ -25,6 +25,12 @@ type SseUsageState = {
 };
 
 function extractSessionToken(req: Request): string | null {
+  // Anthropic SDK 默认用 x-api-key header，也支持 Authorization: Bearer
+  const xApiKey = req.header('x-api-key')?.trim();
+  if (xApiKey) {
+    return xApiKey;
+  }
+
   const authorization = req.header('authorization');
   if (!authorization?.startsWith('Bearer ')) {
     return null;
