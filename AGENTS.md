@@ -37,7 +37,7 @@ A progressive teaching project based on real Claude Code source code (416,500 li
   - in-progress work
   - blockers
   - verification performed
-- If the work changes project-wide understanding, also update `internal/PROJECT_BRIEFING.md` and/or `SESSION_STARTER.md`
+- If the work changes project-wide understanding, also update `internal/PROJECT_BRIEFING.md` and/or `internal/PROJECT_BRIEFING.md`
 - Lab 3 (Agent Loop) is the core — gets 80% of effort
 - TypeScript strict mode, ESM, conventional commits
 - Cost-conscious: implementation tasks → Codex/omx; design/review → Claude

@@ -75,8 +75,8 @@
 
 ## 部署备忘
 
-- 服务器: root@122.9.207.35:6543（密钥 ~/.ssh/KeyPair-7353.pem）
-- SSH config 建议配置: `Host byocc → HostName 122.9.207.35 → Port 6543 → User root → IdentityFile ~/.ssh/KeyPair-7353.pem`
+- 服务器: root@122.9.99.104:6543（密钥 ~/.ssh/KeyPair-7353.pem）
+- SSH config 建议配置: `Host byocc → HostName 122.9.99.104 → Port 6543 → User root → IdentityFile ~/.ssh/KeyPair-7353.pem`
 - 服务: `systemctl restart byocc-server byocc-platform`
 - 构建顺序: `cd server && npm run build` → `cd platform && npm run build`
 - 项目目录: /root/build-your-own-claude-code/

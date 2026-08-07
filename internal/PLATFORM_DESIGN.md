@@ -181,7 +181,7 @@ Lab 页面从固定双栏改为四区域可调整布局，参考 VS Code + LeetC
 │                  Docker 容器（每个学习者一个）                     │
 │                                                                  │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Base Image: node:18 + claude-code-diy（预克隆）         │   │
+│  │  Base Image: node:22-bookworm-slim + claude-code-diy（预克隆）         │   │
 │  │                                                          │   │
 │  │  /workspace/                                            │   │
 │  │    ├── src/query-lab.ts  ← 学习者代码注入到这里          │   │
@@ -265,7 +265,7 @@ Lab 页面从固定双栏改为四区域可调整布局，参考 VS Code + LeetC
 
 | 层次 | 选型 | 理由 |
 |------|------|------|
-| 前端框架 | Next.js 14 | 前后端同构，团队熟悉 React |
+| 前端框架 | Next.js 16 | 前后端同构，团队熟悉 React |
 | 终端前端 | xterm.js | 业界标准，文档完善 |
 | 代码编辑器 | Monaco Editor | VS Code 同款，TypeScript 支持好 |
 | 终端后端 | ttyd | 最简单，二进制，一行命令启动 |

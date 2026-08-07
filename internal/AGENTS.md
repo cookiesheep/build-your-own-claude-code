@@ -12,11 +12,11 @@ Internal project documents: architecture design, platform design decisions, team
 |------|-------------|
 | `PLATFORM_DESIGN.md` | **Critical**: Web Terminal + Docker platform architecture (pwn.college model) |
 | `TEAM_PROGRESS.md` | Team division, sprint plan, progress log — update after every work session |
-| `ARCHITECTURE.md` | Technical architecture deep-dive with system diagram |
-| `PRD.md` | Product requirements document |
-| `MVP_SCOPE.md` | MVP scope definition |
-| `TEAM_BRIEF.md` | Team briefing document |
-| `ai-study-prompts.md` | AI-assisted study prompts for team members |
+| ~~ARCHITECTURE.md~~ | 已删除（旧方案，不准确） |
+| ~~PRD.md~~ | 已删除（旧方案，不准确） |
+| ~~MVP_SCOPE.md~~ | 已移除（不存在） |
+| ~~TEAM_BRIEF.md~~ | 已移除（不存在） |
+| ~~ai-study-prompts.md~~ | 已移除（不存在） |
 | `claude-code-source-guide.md` | Guide to navigating Claude Code source code |
 
 ## For AI Agents

@@ -89,7 +89,7 @@
 - `internal/PROJECT_BRIEFING.md`
   - 当项目阶段、优先级、平台方案、Lab 结构、默认阅读顺序发生明显变化时
 
-- `SESSION_STARTER.md`
+- （已移除 SESSION_STARTER.md 引用——该文件不存在）
   - 当你希望未来新会话改变启动阅读顺序或工作方式时
 
 - `HANDOFF.md`

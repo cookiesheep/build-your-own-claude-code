@@ -17,7 +17,7 @@
   - 下一步建议
   - 关键验证方式
 - 如果本次工作改变了项目整体认知或默认接手方式，还应同步更新：
-  - `internal/PROJECT_BRIEFING.md`
+  - `CLAUDE.md（项目指令）+ README.md（项目概览）`
   - `SESSION_STARTER.md`
   - `HANDOFF.md`（仅重大变更）
 
@@ -71,7 +71,7 @@
 > 注：成员 B/C/D/E 为占位符，待 Leader 确认实际分工后更新姓名。
 > 每个成员在自己的 `internal/work-X-xxx/` 文件夹的 README.md 中记录进度。
 > **台式机限制**：只有 Leader 能访问台式机，后端部署由 Leader 负责。其他方向可在任何电脑上开发。
-> **部署方案**：Leader 闲置台式机（Intel Core Ultra 5, 10核, 16GB RAM, Win11）+ Cloudflare Tunnel 免费穿透。
+> **部署方案**：华为云服务器（16vCPU/62GB）（Intel Core Ultra 5, 10核, 16GB RAM, Win11）+ Cloudflare Tunnel（systemd 守护）。
 
 ---
 
@@ -92,7 +92,7 @@
 ### 1. 教学平台形式确认 🔴
 
 - [x] 团队确认采用 Web Terminal + Docker 方案（见 `internal/PLATFORM_DESIGN.md`）✅ 2026-04-07
-- [x] 确认部署环境：Leader 闲置台式机 + Cloudflare Tunnel ✅ 2026-04-07
+- [x] 确认部署环境：华为云服务器（16vCPU/62GB） + Cloudflare Tunnel ✅ 2026-04-07
 - [x] 技术栈最终确认：Next.js + xterm.js + ttyd + dockerode + SQLite ✅ 2026-04-07
 - [x] Docker 基础镜像确认：node:18-bookworm-slim + ttyd ✅ 2026-04-07
 - [x] Docker + ttyd PoC 验证 ✅ 2026-04-07（node:18 + ttyd 1.7.7，阿里云镜像源，localhost:7681 返回 200）
@@ -196,7 +196,7 @@
   - 决策 C（Lab 设计）：⚠️ 三处修正建议（见下方）
 - ✅ 平台架构方案确认（GPT 交叉验证通过）：
   - Next.js + dockerode + ttyd + Cloudflare Tunnel
-  - 部署在 Leader 闲置台式机（10核/16GB/Win11）
+  - 部署在 华为云服务器（16vCPU/62GB）（10核/16GB/Win11）
   - 支持 20-30 并发用户
   - ~2500 行自定义代码
 - ✅ 否决 pwn.college 源码魔改方案（太复杂，技术栈不匹配）

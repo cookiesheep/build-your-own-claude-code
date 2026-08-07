@@ -1,3 +1,7 @@
+> ⚠️ **此文档描述的 Vitest + Mock LLM + demo.ts 方案已于 2026-05-09 被 owner 明确否决。**
+> **当前 Lab 设计使用：变体文件注入 + 编译验证（build.mjs exit 0）+ TUI 行为观察。请勿据此实现，仅作历史参考。**
+> **正确的设计文档在 internal/lab/ 和 docs/labs/lab-0X/。**
+
 # 方向 E：文档站 + 测试基础设施 + CI/CD
 
 > **负责人**：待定

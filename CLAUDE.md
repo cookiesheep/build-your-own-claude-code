@@ -53,10 +53,10 @@ Claude Code TUI 是固定的壳，Agent 大脑从空开始逐步获得能力（�
 ## 技术架构
 
 - 基线: claude-code-diy (Node.js)
-- 测试: Vitest + Mock LLM
+- Lab 评估: 变体文件注入 + 编译验证 + TUI 观察（无测试框架）；后端单测: Vitest（8 文件 22 用例）
 - 文档: Material for MkDocs
-- Web 编辑器: Monaco Editor (浏览器内写代码 + 测试)
-- 部署: GitHub Pages + GitHub Actions
+- Web 平台: Next.js 16 + Monaco Editor + xterm.js + Docker 容器
+- 部署: 华为云 + Cloudflare Tunnel + systemd 三服务；文档站: GitHub Pages
 
 ## Agent 成本优化与 Codex 分工
 
