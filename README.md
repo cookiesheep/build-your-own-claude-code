@@ -16,12 +16,6 @@
 
 </div>
 
-## 认可与资助
-
-BYOCC 入选 **青年开源专项基金 · 种子计划**，获得专项基金资助。
-
-该计划由沐曦股份联合 CCF 开源发展技术委员会、木兰开源社区、启悟学习社区、AI Infra 开源社区，携手中国光华科技基金会青年开源基金共同发起，聚焦 AI Infra、AI Agent、AIGC 三大赛道。BYOCC 作为 **AI Agent 方向的教学型开源项目** 入选；镜像仓库同步在 [GitLink](https://www.gitlink.org.cn/cookesheep/build-your-own-claude-code)。
-
 ## Why BYOCC?
 
 Claude Code、Cursor Agent 这类 AI 编程工具的能力，不只来自大模型。模型负责理解意图和生成判断，而真正让它能读文件、改代码、跑命令、循环验证的，是外层的 **Agent Harness**：消息协议、工具系统、Agent Loop、规划机制和上下文管理。
@@ -215,6 +209,12 @@ Isolated lab runtime
 BYOCC 的产品目标是让学习者留在浏览器里完成实验。底层平台负责创建隔离运行环境、注入学习者代码、执行验证，并把构建结果和 TUI 反馈返回网页。
 
 </details>
+
+## 认可与资助
+
+BYOCC 入选 **青年开源专项基金 · 种子计划**，获得专项基金资助。
+
+该计划由沐曦股份联合 CCF 开源发展技术委员会、木兰开源社区、启悟学习社区、AI Infra 开源社区，携手中国光华科技基金会青年开源基金共同发起，聚焦 AI Infra、AI Agent、AIGC 三大赛道。BYOCC 作为 **AI Agent 方向的教学型开源项目** 入选；镜像仓库同步在 [GitLink](https://www.gitlink.org.cn/cookesheep/build-your-own-claude-code)。
 
 ## Contributing
 
