@@ -53,6 +53,31 @@ Claude Code、Cursor Agent 这类 AI 编程工具的能力，不只来自大模�
 
 ![document](docs/assets/images/document.png)
 
+## 蟹老师 · 全模态助教（Powered by MiniCPM-o 4.5）
+
+点击首页左下角的蟹老师即可唤醒全模态助教。它能截取并理解当前屏幕、接收语音或文字问题，再用语音进行苏格拉底式讲解，帮助学习者梳理 Agent Loop、工具调用、规划与上下文压缩等概念。
+
+这项功能展示了 MiniCPM-o 4.5 的多模态场景理解、视觉理解、文本生成，以及模型支持的实时语音能力。BYOCC 当前网页交互采用按住说话的语音输入与主动语音播报；浏览器会真实采集语音、绘制波形、截取页面并叠加视觉标注。需要端到端全双工时，可进一步接入 MiniCPM-o 的实时流式服务。
+
+无需配置即可运行：未设置模型端点时，助教自动进入 `Demo` 模式，用本地苏格拉底式消息库回答；截图、语音识别、波形和浏览器语音合成仍会真实执行。
+
+接入真实模型时，推荐让浏览器请求 BYOCC 服务端代理：
+
+```dotenv
+# platform/.env.local
+NEXT_PUBLIC_MINICPM_API_URL=http://127.0.0.1:3001/api/crab-tutor
+NEXT_PUBLIC_MINICPM_MODEL=MiniCPM-O-4.5-9B
+
+# server/.env
+MINICPM_API_URL=https://api.modelbest.cn/v1
+MINICPM_API_KEY=your-server-side-key
+MINICPM_MODEL=MiniCPM-O-4.5-9B
+```
+
+`NEXT_PUBLIC_MINICPM_API_KEY` 只保留给受控的本地直连调试；它会进入浏览器 bundle，不应在生产环境中保存密钥。完整说明见 [全模态助教技术文档](docs/agent-tutor.md)。
+
+![蟹老师全模态助教面板](docs/assets/crab-tutor.png)
+
 
 
 ## What You'll Learn

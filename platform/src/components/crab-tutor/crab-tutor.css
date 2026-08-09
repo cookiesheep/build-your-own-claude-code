@@ -1,0 +1,569 @@
+.crab-tutor-panel {
+  --chalk: var(--text-primary);
+  --chalk-dim: var(--text-secondary);
+  position: absolute;
+  left: 0;
+  bottom: var(--crab-tutor-bottom, 120px);
+  width: min(540px, calc(100vw - 24px));
+  height: min(610px, calc(100dvh - var(--crab-tutor-bottom, 120px) - 24px));
+  min-height: 420px;
+  z-index: 70;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate3d(0, 28px, 0) rotate(-0.35deg) scale(0.97);
+  transform-origin: 72px 100%;
+  transition:
+    opacity 220ms ease,
+    transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 360ms;
+  color: var(--chalk);
+  font-family: Georgia, "Noto Serif SC", "Songti SC", serif;
+}
+.crab-tutor-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  transition-delay: 0s;
+}
+
+.crab-tutor-panel::before {
+  content: "";
+  position: absolute;
+  left: 56px;
+  bottom: -18px;
+  width: 30px;
+  height: 30px;
+  z-index: -1;
+  border-right: 1px solid var(--accent-border);
+  border-bottom: 1px solid var(--accent-border);
+  background: var(--bg-panel);
+  transform: rotate(45deg) skew(-5deg, -5deg);
+}
+
+.crab-tutor-panel-inner {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--accent-border);
+  outline: 1px dashed color-mix(in srgb, var(--accent) 24%, transparent);
+  outline-offset: -7px;
+  border-radius: 5px 8px 4px 7px;
+  background-color: var(--bg-panel);
+  background-image:
+    radial-gradient(circle at 17% 23%, color-mix(in srgb, var(--text-primary) 3%, transparent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 74% 61%, color-mix(in srgb, var(--accent) 5%, transparent) 0 1px, transparent 1.5px),
+    linear-gradient(112deg, color-mix(in srgb, var(--bg-page) 74%, transparent), transparent 48%);
+  background-size: 13px 11px, 19px 17px, auto;
+  box-shadow:
+    0 24px 70px color-mix(in srgb, var(--bg-page) 82%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--bg-page) 55%, transparent),
+    inset 0 0 40px color-mix(in srgb, var(--bg-page) 45%, transparent);
+}
+
+.crab-tutor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 19px 13px;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.crab-tutor-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.19em;
+}
+
+.crab-tutor-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(17px, 3vw, 21px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 9px color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+
+.crab-tutor-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.crab-tutor-model-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 9px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, transparent);
+  border-radius: 3px 5px 2px 4px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent-light);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.15;
+  white-space: nowrap;
+  transform: rotate(0.5deg);
+}
+
+.crab-tutor-model-badge small {
+  color: var(--text-secondary);
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.crab-tutor-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px dashed var(--border-hover);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.crab-tutor-close:hover,
+.crab-tutor-close:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: rotate(5deg);
+  outline: none;
+}
+
+.crab-tutor-close svg,
+.crab-tutor-mode-button svg,
+.crab-tutor-text-entry button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.crab-tutor-intro {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.crab-tutor-intro > span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 24%, transparent);
+  border-radius: 50%;
+  color: var(--text-primary);
+  font-size: 10px;
+}
+
+.crab-tutor-intro > i {
+  width: 13px;
+  border-top: 1px dashed color-mix(in srgb, var(--accent) 44%, transparent);
+}
+
+.crab-tutor-intro p {
+  flex: 1;
+  margin: 0 0 0 2px;
+  line-height: 1.45;
+}
+
+.crab-tutor-intro b {
+  padding: 2px 5px;
+  border: 1px solid var(--border-hover);
+  border-radius: 2px;
+  color: var(--text-muted);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.crab-tutor-conversation {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 18px 15px;
+  scrollbar-color: color-mix(in srgb, var(--accent) 35%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.crab-tutor-message {
+  position: relative;
+  width: min(88%, 430px);
+  margin: 12px 0;
+  padding: 10px 12px 9px;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 16%, transparent);
+  border-radius: 3px 7px 4px 5px;
+  background: color-mix(in srgb, var(--bg-page) 30%, transparent);
+}
+
+.crab-tutor-message.is-user {
+  margin-left: auto;
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  transform: rotate(0.2deg);
+}
+
+.crab-tutor-message.is-assistant {
+  transform: rotate(-0.14deg);
+}
+
+.crab-tutor-message.is-error {
+  border-color: color-mix(in srgb, var(--status-error) 58%, transparent);
+}
+
+.crab-tutor-message-author {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--accent);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.crab-tutor-message p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.72;
+  text-wrap: pretty;
+}
+
+.crab-tutor-message footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed color-mix(in srgb, var(--text-primary) 13%, transparent);
+}
+
+.crab-tutor-message footer span {
+  color: var(--text-muted);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.crab-tutor-message footer span + span::before {
+  content: "·";
+  margin-right: 5px;
+  color: var(--accent);
+}
+
+.crab-tutor-vision-preview {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin: 7px 0 9px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 2px;
+  background: var(--bg-page);
+}
+
+.crab-tutor-vision-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.72;
+  filter: saturate(0.72) contrast(1.04);
+}
+
+.crab-tutor-vision-preview figcaption {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  z-index: 3;
+  padding: 2px 5px;
+  background: color-mix(in srgb, var(--bg-page) 78%, transparent);
+  color: var(--accent-light);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.crab-tutor-vision-mark {
+  position: absolute;
+  z-index: 2;
+  min-width: 28px;
+  min-height: 18px;
+  border: 1px dashed var(--accent-light);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.crab-tutor-vision-mark::after {
+  content: "";
+  position: absolute;
+  right: -14px;
+  top: -1px;
+  width: 13px;
+  border-top: 1px solid var(--accent-light);
+  transform: rotate(-28deg);
+  transform-origin: left;
+}
+
+.crab-tutor-vision-mark b {
+  position: absolute;
+  left: -1px;
+  top: -12px;
+  padding: 1px 3px;
+  background: var(--accent);
+  color: var(--bg-page);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 7px;
+}
+
+.crab-tutor-vision-mark em {
+  position: absolute;
+  left: 100%;
+  top: -14px;
+  max-width: 120px;
+  margin-left: 15px;
+  color: var(--accent-light);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 7px;
+  font-style: normal;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px var(--bg-page);
+}
+
+.crab-tutor-live-strip {
+  display: grid;
+  grid-template-columns: auto minmax(80px, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 0 18px 8px;
+  padding: 5px 9px;
+  border-top: 1px dashed color-mix(in srgb, var(--accent) 35%, transparent);
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.crab-tutor-live-strip canvas {
+  display: block;
+  width: 100%;
+  height: 28px;
+}
+
+.crab-tutor-status {
+  margin: 0 18px 8px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.crab-tutor-status.is-error {
+  color: var(--status-error);
+}
+
+.crab-tutor-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px 88px;
+  gap: 8px;
+  padding: 12px 18px 17px;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 19%, transparent);
+}
+
+.crab-tutor-text-entry > label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.crab-tutor-text-entry > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  height: 42px;
+  border-bottom: 1px solid var(--border-hover);
+  background: color-mix(in srgb, var(--bg-page) 38%, transparent);
+}
+
+.crab-tutor-text-entry input {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0 9px;
+  color: var(--text-primary);
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: 12px;
+  outline: none;
+}
+
+.crab-tutor-text-entry input::placeholder {
+  color: var(--text-muted);
+}
+
+.crab-tutor-text-entry > div:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.crab-tutor-text-entry button {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.crab-tutor-text-entry button:disabled,
+.crab-tutor-mode-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.crab-tutor-mode-button {
+  position: relative;
+  align-self: end;
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  column-gap: 5px;
+  height: 42px;
+  padding: 4px 7px;
+  border: 1px solid var(--border-hover);
+  border-radius: 2px 5px 3px 4px;
+  background: color-mix(in srgb, var(--bg-page) 30%, transparent);
+  color: var(--text-primary);
+  cursor: pointer;
+  touch-action: none;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.crab-tutor-mode-button:hover,
+.crab-tutor-mode-button:focus-visible,
+.crab-tutor-mode-button.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--accent-light);
+  outline: none;
+}
+
+.crab-tutor-mode-button svg {
+  grid-row: 1 / 3;
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+}
+
+.crab-tutor-mode-button span {
+  align-self: end;
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: 10px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.crab-tutor-mode-button small {
+  align-self: start;
+  color: var(--text-muted);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.crab-tutor-message.is-thinking p {
+  display: flex;
+  gap: 5px;
+  padding: 4px 0 2px;
+}
+
+.crab-tutor-message.is-thinking p i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: crabTutor_think 900ms ease-in-out infinite;
+}
+
+.crab-tutor-message.is-thinking p i:nth-child(2) { animation-delay: 120ms; }
+.crab-tutor-message.is-thinking p i:nth-child(3) { animation-delay: 240ms; }
+
+@keyframes crabTutor_think {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+
+@media (max-width: 620px) {
+  .crab-tutor-panel {
+    left: calc(-1 * max(0px, env(safe-area-inset-left)));
+    width: min(420px, calc(100vw - 20px));
+    min-height: 390px;
+  }
+
+  .crab-tutor-header {
+    align-items: flex-start;
+    padding: 15px 14px 11px;
+  }
+
+  .crab-tutor-header h2 { font-size: 16px; }
+  .crab-tutor-model-badge { font-size: 8px; padding: 6px; }
+  .crab-tutor-model-badge small { font-size: 6px; }
+  .crab-tutor-intro { padding: 8px 14px; }
+  .crab-tutor-intro p { font-size: 9px; }
+  .crab-tutor-intro > span { width: 19px; height: 19px; font-size: 9px; }
+  .crab-tutor-intro > i { width: 7px; }
+  .crab-tutor-conversation { padding: 5px 13px 11px; }
+  .crab-tutor-message { width: 94%; }
+  .crab-tutor-message p { font-size: 12px; }
+
+  .crab-tutor-composer {
+    grid-template-columns: 1fr 1fr;
+    padding: 10px 13px 14px;
+  }
+
+  .crab-tutor-text-entry { grid-column: 1 / 3; }
+  .crab-tutor-mode-button { width: 100%; }
+  .crab-tutor-live-strip,
+  .crab-tutor-status { margin-left: 13px; margin-right: 13px; }
+}
+
+@media (max-height: 620px) {
+  .crab-tutor-panel {
+    height: calc(100dvh - var(--crab-tutor-bottom, 96px) - 12px);
+    min-height: 340px;
+  }
+  .crab-tutor-intro { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crab-tutor-panel,
+  .crab-tutor-close,
+  .crab-tutor-mode-button {
+    transition-duration: 0.01ms !important;
+  }
+
+  .crab-tutor-message.is-thinking p i {
+    animation: none;
+    opacity: 0.7;
+  }
+}

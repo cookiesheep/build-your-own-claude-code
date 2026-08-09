@@ -31,7 +31,7 @@ export default function Home() {
       />
       <ScrollNav />
 
-      <div className="relative z-10">
+      <div className="relative z-10" data-crab-vision-root>
         {/* Section 1: Hero */}
         <HeroSection />
 

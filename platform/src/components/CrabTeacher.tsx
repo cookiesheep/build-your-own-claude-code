@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getVisitorCount } from "@/lib/api";
+import CrabTutorPanel from "@/components/crab-tutor/CrabTutorPanel";
 
 /* ─── Props ─── */
 interface CrabTeacherProps {
@@ -122,6 +123,8 @@ export default function CrabTeacher({
 }: CrabTeacherProps) {
   const [blinking, setBlinking] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [tutorOpen, setTutorOpen] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [total, setTotal] = useState<number | null>(null);
   const counted = useCountUp(total);
 
@@ -149,6 +152,15 @@ export default function CrabTeacher({
     };
   }, [animate]);
 
+  useEffect(() => {
+    if (!tutorOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setTutorOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [tutorOpen]);
+
   const num = counted !== null ? counted.toLocaleString() : "";
   const vpScale = useViewportScale();
   const s = scale * vpScale; // user scale × responsive viewport scale
@@ -159,6 +171,8 @@ export default function CrabTeacher({
   const bb = LAYOUT.blackboard;
   const tx = LAYOUT.text;
   const cr = LAYOUT.crab;
+  const excited = hovered || tutorOpen || speaking;
+  const tutorBottom = Math.max(88, Math.round(150 * s));
 
   /* Helper: image style for a layer */
   const imgStyle = (x: number, y: number, w: number, h: number): React.CSSProperties => ({
@@ -175,6 +189,8 @@ export default function CrabTeacher({
   return (
     <div
       className={className}
+      data-crab-tutor-root
+      data-html2canvas-ignore="true"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -182,10 +198,32 @@ export default function CrabTeacher({
         width: SW,
         height: SH,
         flexShrink: 0,
-        cursor: "pointer",
+        overflow: "visible",
         ...style,
+        ...({ "--crab-tutor-bottom": `${tutorBottom}px` } as React.CSSProperties),
       }}
     >
+      <CrabTutorPanel
+        open={tutorOpen}
+        onClose={() => setTutorOpen(false)}
+        onSpeakingChange={setSpeaking}
+      />
+
+      {!tutorOpen && (
+        <div
+          className={`crab-teacher-wake-hint${hovered ? " is-visible" : ""}`}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: Math.round((cr.x + cr.w / 2) * s),
+            top: Math.round((cr.y - 42) * s),
+            zIndex: 25,
+          }}
+        >
+          点击唤醒助教
+        </div>
+      )}
+
       {/* ═══ 黑板 (static) ═══ */}
       <img
         src="/crab-teacher/crab-teacher-blackboard.png"
@@ -264,9 +302,11 @@ export default function CrabTeacher({
           height: Math.round(cr.h * s),
           zIndex: 10,
           animation: animate
-            ? `crab_breathe ${hovered ? "1.6s" : "3s"} ease-in-out infinite`
+            ? speaking
+              ? "crab_talk 0.44s ease-in-out infinite"
+              : `crab_breathe ${excited ? "1.6s" : "3s"} ease-in-out infinite`
             : "none",
-          filter: hovered
+          filter: excited
             ? "brightness(1.2) drop-shadow(0 0 14px rgba(212,165,116,0.18))"
             : "none",
           transition: "filter 0.35s ease",
@@ -281,7 +321,7 @@ export default function CrabTeacher({
             ...imgStyle(cr.rightArm.dx, cr.rightArm.dy, cr.rightArm.w ?? cr.w, cr.rightArm.h ?? cr.h),
             transformOrigin: `${cr.pivotX} ${cr.pivotY}`,
             animation: animate
-              ? `crab_swing${hovered ? "_excited" : ""} ${hovered ? "1.2s" : "2.1s"} ease-in-out infinite`
+              ? `crab_swing${excited ? "_excited" : ""} ${excited ? "1.2s" : "2.1s"} ease-in-out infinite`
               : "none",
           }}
         />
@@ -298,7 +338,13 @@ export default function CrabTeacher({
           src="/crab-teacher/crab-teacher-body.png"
           alt=""
           draggable={false}
-          style={imgStyle(cr.body.dx, cr.body.dy, cr.body.w ?? cr.w, cr.body.h ?? cr.h)}
+          style={{
+            ...imgStyle(cr.body.dx, cr.body.dy, cr.body.w ?? cr.w, cr.body.h ?? cr.h),
+            transformOrigin: "50% 72%",
+            animation: speaking && animate
+              ? "crab_talk_body 240ms steps(2, end) infinite"
+              : "none",
+          }}
         />
 
         
@@ -330,6 +376,25 @@ export default function CrabTeacher({
         
       </div>
 
+      <button
+        type="button"
+        aria-label={tutorOpen ? "收起蟹老师全模态助教" : "唤醒蟹老师全模态助教"}
+        aria-expanded={tutorOpen}
+        onClick={() => setTutorOpen((current) => !current)}
+        style={{
+          position: "absolute",
+          left: Math.round((cr.x - 35) * s),
+          top: Math.round((cr.y - 22) * s),
+          width: Math.round((cr.w + 105) * s),
+          height: Math.round((cr.h + 25) * s),
+          zIndex: 22,
+          padding: 0,
+          border: 0,
+          background: "transparent",
+          cursor: "pointer",
+        }}
+      />
+
       {/* ── Keyframes ── */}
       <style>{`
         @keyframes crab_breathe {
@@ -347,6 +412,57 @@ export default function CrabTeacher({
           0%, 100% { transform: rotate(0deg); }
           25%      { transform: rotate(-3.5deg); }
           75%      { transform: rotate(3.5deg); }
+        }
+
+        @keyframes crab_talk {
+          0%, 100% { transform: translateY(0) rotate(-0.4deg); }
+          50% { transform: translateY(-3px) rotate(0.6deg); }
+        }
+
+        @keyframes crab_talk_body {
+          0%, 100% { transform: scaleY(1) translateY(0); }
+          50% { transform: scaleY(0.965) translateY(2px); }
+        }
+
+        .crab-teacher-wake-hint {
+          padding: 7px 11px;
+          border: 1px solid var(--accent-border);
+          border-radius: 3px 6px 4px 5px;
+          background: color-mix(in srgb, var(--bg-panel) 94%, transparent);
+          color: var(--text-primary);
+          font-family: Georgia, 'Noto Serif SC', serif;
+          font-size: 11px;
+          letter-spacing: 0.06em;
+          white-space: nowrap;
+          opacity: 0;
+          pointer-events: none;
+          transform: translate(-50%, 7px) rotate(-1deg);
+          transition: opacity 180ms ease, transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-page) 68%, transparent);
+        }
+
+        .crab-teacher-wake-hint::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          bottom: -5px;
+          width: 8px;
+          height: 8px;
+          border-right: 1px solid var(--accent-border);
+          border-bottom: 1px solid var(--accent-border);
+          background: var(--bg-panel);
+          transform: translateX(-50%) rotate(45deg);
+        }
+
+        .crab-teacher-wake-hint.is-visible {
+          opacity: 1;
+          transform: translate(-50%, 0) rotate(-1deg);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .crab-teacher-wake-hint {
+            transition: none;
+          }
         }
       `}</style>
     </div>

@@ -2152,3 +2152,35 @@
 **下一步**：
 
 如需同步公开文档首页，可后续把 `docs/index.md` 中仍偏本地命令的 CTA 一并改成 `byocc.cc` 网页入口。
+
+---
+
+### 2026-08-09（会话 47 / 蟹老师全模态助教）
+
+**完成项**：
+- ✅ 在既有 `CrabTeacher` 分层 PNG、访问计数、呼吸/眨眼/教鞭动画基础上接入点击唤醒、悬停提示、说话状态和响应式助教面板。
+- ✅ 新增文字、按住说话、真实视口截图三种入口；语音采集/识别/合成与 Canvas 波形、截图缩略图与粉笔风视觉标注均可独立运行。
+- ✅ 新增 `minicpm-client.ts`，支持无密钥 Demo 消息库和 OpenAI-compatible MiniCPM-o 4.5 文本/图像/音频请求。
+- ✅ 新增 Express `/api/crab-tutor` 轻量代理，让生产密钥可保留在服务端。
+- ✅ 补充 README、MkDocs 技术说明、前后端环境变量示例，并将文档挂入导航。
+
+**进行中**：
+- 无
+
+**阻塞项**：
+- 无；真实模型端点需要部署者自行配置 MiniCPM-o 4.5 服务与密钥。
+
+**验证**：
+- `cd platform && npx tsc --noEmit`
+- `cd server && npx tsc --noEmit`
+- `cd server && npm run build`（通过）
+- `cd server && npx vitest run src/routes/crab-tutor.test.ts`（4 tests passed）
+- `cd server && npx vitest run`（23 passed / 3 failed；失败来自既有 stats、container-manager 与当前未提交 Lab 文件配置，不属于本功能）
+- `cd platform && npm run build`（通过）
+- Playwright 桌面 1440×900 与移动 390×844：悬停提示、展开/收起、Demo 文本问答、真实截图、视觉标注、模态标签、明暗主题均正常。
+- 视觉一致性检查：与既有黑板资源对照为 94/100，粉笔/暖铜/衬线语言一致，无移动端溢出。
+- 本机 Python 环境未安装 MkDocs，未执行文档站构建；已人工检查新增导航项的层级与目标文件。
+
+**下一步**：
+- 部署前通过服务端 `MINICPM_API_URL` / `MINICPM_API_KEY` 做一次真实 MiniCPM-o 4.5 端到端联调。
+- 在有实体麦克风的 Chrome/Edge 中验证现场设备权限与中文语音识别质量。

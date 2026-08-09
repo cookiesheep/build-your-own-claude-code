@@ -26,6 +26,7 @@ import { settingsRouter } from './routes/settings.js';
 import { llmProxyRouter } from './routes/llm-proxy.js';
 import { statsRouter } from './routes/stats.js';
 import { adminRouter } from './routes/admin.js';
+import { crabTutorRouter } from './routes/crab-tutor.js';
 import { initDatabase } from './db/database.js';
 import { startContainerCleanupScheduler } from './services/container-cleanup-scheduler.js';
 import { assertEncryptionConfig } from './services/encryption.js';
@@ -81,6 +82,7 @@ app.use(settingsRouter);
 app.use(llmProxyRouter);
 app.use(statsRouter);
 app.use(adminRouter);
+app.use(crabTutorRouter);
 
 // 健康检查
 app.get('/api/health', (_req, res) => {
