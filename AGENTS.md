@@ -10,8 +10,11 @@ A progressive teaching project based on real Claude Code source code (416,500 li
 | File | Description |
 |------|-------------|
 | `CLAUDE.md` | Project overview, Lab design, tech stack, Codex cost optimization guidelines |
-| `HANDOFF.md` | Complete context handoff: research, PoC results, design decisions, priorities |
-| `SECOND_BRAIN_PROMPT.md` | Prompt for the "second brain" session (project coordinator) |
+| `项目大脑启动提示词.md` | Prompt to bootstrap a new "project brain" coordinator session |
+| `README.md` | Public-facing project intro (byocc.cc web platform) |
+| `platform/src/lib/lab-files.json` | Single source of truth for Lab skeletons (variant file injection) |
+
+> Historical research/handoff docs (HANDOFF, LAB_DESIGN, old prompts, etc.) live in `internal/_archive/` — they are stale snapshots, not current truth.
 
 ## Subdirectories
 
@@ -28,16 +31,13 @@ A progressive teaching project based on real Claude Code source code (416,500 li
 ## For AI Agents
 
 ### Working In This Directory
-- Read `HANDOFF.md` before making any architectural decisions
-- Read `WORK_LOG.md` for the project logging contract
-- Read `internal/TEAM_PROGRESS.md` before starting work to check current state
-- After every substantive work session, update `internal/TEAM_PROGRESS.md` with:
-  - date/session marker
-  - completed work
-  - in-progress work
-  - blockers
-  - verification performed
-- If the work changes project-wide understanding, also update `internal/PROJECT_BRIEFING.md` and/or `internal/PROJECT_BRIEFING.md`
+- Treat **code + `platform/src/lib/lab-files.json`** as the only source of truth for current state; docs (including this file) may lag
+- Read `CLAUDE.md` and `项目大脑启动提示词.md` before making architectural decisions
+- Read `internal/TEAM_PROGRESS.md` (May-onward) for recent work history; pre-May history is in `internal/_archive/`
+- After every substantive work session, append to `internal/TEAM_PROGRESS.md`:
+  - date/theme marker
+  - completed work / in-progress / blockers
+  - verification performed (commands run + observed result)
 - Lab 3 (Agent Loop) is the core — gets 80% of effort
 - TypeScript strict mode, ESM, conventional commits
 - Cost-conscious: implementation tasks → Codex/omx; design/review → Claude

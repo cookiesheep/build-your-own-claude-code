@@ -11,17 +11,13 @@
 - **Sister project**: [claude-code-diy](https://github.com/cookiesheep/claude-code-diy) — 可运行的 Claude Code 源码（416,500 行 TypeScript）
 - **License**: MIT
 
-## 完整的调研记录、设计决策、需求说明
+## 历史调研与设计推理
 
-**请务必阅读 [HANDOFF.md](./HANDOFF.md)**——那里记录了项目的完整上下文，包括：
-- 项目 owner 的背景和核心需求
-- 所有调研过的参考项目及其分析
-- 被否决的方案及原因
-- 最终方案的详细设计
-- 待验证的 PoC 计划
-- 待做事项清单
+项目早期（2026-04）的调研记录、被否决方案、设计推理已归档到 [`internal/_archive/`](./internal/_archive/)。**这些是历史快照，不代表现状**——例如 `HANDOFF.md` 描述的是 4 月「5 人团队 Sprint」状态，`LAB_DESIGN.md` 描述的「独立模块+DI」架构与实际采用的「变体文件机制」矛盾。
 
-HANDOFF.md 是从前一个 AI 会话传递到本会话的完整交接文档。
+判断项目现状的唯一可靠来源是：**本文件 + [`README.md`](./README.md) + 实际代码 + [`platform/src/lib/lab-files.json`](./platform/src/lib/lab-files.json)**。需要回溯某个设计为什么这么定，再去翻归档。
+
+新会话/新 Agent 接手项目，看根目录的 **[项目大脑启动提示词.md](./项目大脑启动提示词.md)**。
 
 ## 核心理念
 
