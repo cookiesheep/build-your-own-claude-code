@@ -28,3 +28,7 @@ server/*.sqlite-wal
 
 # Temporary Docker build context
 .tmp/
+
+# Local scratch / tool artifacts
+output/
+.playwright-cli/
