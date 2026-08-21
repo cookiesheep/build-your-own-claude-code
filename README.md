@@ -1,3 +1,5 @@
+
+
 <div align="center">
 <img src="docs/assets/logo.png" alt="logo" width=200/>
 
@@ -147,7 +149,7 @@ Lab 1 让 Agent 会说话，Lab 2 让 Agent 能执行一次工具，但它们还
 <details>
 <summary><strong>没有 API Key 可以完成实验吗？</strong></summary>
 
-可以。主线实验使用 Mock LLM 和确定性测试来验证你的实现。真实模型体验属于增强体验，平台会在需要时提供对应入口或说明。
+可以。主线实验使用变体文件注入后的编译验证（`node build.mjs --lab=N`，exit 0 即通过）和真实 TUI 观察来验证你的实现。真实模型体验属于增强体验，平台会在需要时提供对应入口或说明。
 
 </details>
 
